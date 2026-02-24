@@ -9,7 +9,7 @@ import SwiftUI
 
 struct HomeView: View {
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        SearchBar(placeholder: "종목을 검색하세요")
     }
 }
 
