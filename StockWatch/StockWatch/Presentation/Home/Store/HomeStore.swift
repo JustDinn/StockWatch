@@ -13,17 +13,17 @@ final class HomeStore: ObservableObject {
     // MARK: - Properties
     
     @Published private(set) var state: HomeState
-    private let searchTickerUseCase: SearchTickerUseCaseProtocol
+    private let tickerUseCase: TickerUseCaseProtocol
 
     // MARK: - Init
     
     init(
-        searchTickerUseCase: SearchTickerUseCaseProtocol = SearchTickerUseCase(
-            repository: SearchRepository()
+        tickerUseCase: TickerUseCaseProtocol = TickerUseCase(
+            repository: TickerRepository()
         ),
         state: HomeState = HomeState()
     ) {
-        self.searchTickerUseCase = searchTickerUseCase
+        self.tickerUseCase = tickerUseCase
         self.state = state
     }
 
@@ -51,7 +51,7 @@ extension HomeStore {
 
         Task {
             do {
-                let results = try await searchTickerUseCase.execute(query: query)
+                let results = try await tickerUseCase.search(query: query)
                 state.searchResults = results
                 print("<< 검색 결과: \(results)")
             } catch {

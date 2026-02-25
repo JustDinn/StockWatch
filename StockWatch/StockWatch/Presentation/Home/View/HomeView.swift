@@ -10,8 +10,8 @@ import SwiftUI
 struct HomeView: View {
     
     @StateObject private var store = HomeStore(
-        searchTickerUseCase: SearchTickerUseCase(
-            repository: SearchRepository()
+        tickerUseCase: TickerUseCase(
+            repository: TickerRepository()
         )
     )
     
