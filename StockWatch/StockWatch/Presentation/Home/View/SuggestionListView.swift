@@ -11,7 +11,7 @@ import SwiftUI
 
 private struct SuggestionStock: Identifiable {
     let id = UUID()
-    let symbol: String
+    let ticker: String
     let name: String
 }
 
@@ -22,11 +22,11 @@ struct SuggestionListView: View {
     // MARK: - Properties
 
     private let suggestions: [SuggestionStock] = [
-        SuggestionStock(symbol: "AAPL", name: "Apple Inc."),
-        SuggestionStock(symbol: "NVDA", name: "NVIDIA Corporation"),
-        SuggestionStock(symbol: "TQQQ", name: "ProShares UltraPro QQQ"),
-        SuggestionStock(symbol: "SOXL", name: "Direxion Daily Semiconductor Bull 3X Shares"),
-        SuggestionStock(symbol: "PLTR", name: "Palantir Technologies Inc.")
+        SuggestionStock(ticker: "AAPL", name: "Apple Inc."),
+        SuggestionStock(ticker: "NVDA", name: "NVIDIA Corporation"),
+        SuggestionStock(ticker: "TQQQ", name: "ProShares UltraPro QQQ"),
+        SuggestionStock(ticker: "SOXL", name: "Direxion Daily Semiconductor Bull 3X Shares"),
+        SuggestionStock(ticker: "PLTR", name: "Palantir Technologies Inc.")
     ]
 
     // MARK: - Body
@@ -48,7 +48,7 @@ private struct SuggestionRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(stock.symbol)
+                Text(stock.ticker)
                     .font(.headline)
                     .fontWeight(.bold)
 
