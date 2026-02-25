@@ -19,10 +19,10 @@ final class SearchRepository: SearchRepositoryProtocol {
         self.networkService = networkService
         self.apiKey = apiKey
     }
-
+    
     func search(query: String) async throws -> [SearchResult] {
         let router = FinnhubSearchRouter(query: query, apiKey: apiKey)
-        let response = try await networkService.request(router: router, model: SymbolSearchResponseDTO.self)
-        return SearchResultMapper.map(response.result)
+        let response = try await networkService.request(router: router, model: TickerSearchResponseDTO.self)
+        return response.result.map(SearchResultMapper.map)
     }
 }
