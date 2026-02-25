@@ -8,10 +8,27 @@
 import SwiftUI
 
 struct HomeView: View {
+    
+    @StateObject private var store = HomeStore(
+        searchTickerUseCase: SearchTickerUseCase(
+            repository: SearchRepository()
+        )
+    )
+    
     var body: some View {
-        SearchBar(placeholder: "종목을 검색하세요")
-        SuggestionListView()
-        Spacer()
+        VStack {
+            SearchBar(placeholder: "종목을 검색하세요") { keyword in
+                store.action(.search(keyword))
+            }
+            
+            if store.state.isLoading {
+                ProgressView()
+            }
+            
+            SuggestionListView()
+
+            Spacer()
+        }
     }
 }
 
