@@ -8,7 +8,7 @@ import XCTest
 
 // MARK: - Mock
 
-final class MockSearchRepository: SearchRepositoryProtocol {
+final class MockTickerRepository: TickerRepositoryProtocol {
     var stubbedResult: [SearchResult] = []
     var stubbedError: Error?
     var lastReceivedQuery: String?
@@ -24,13 +24,13 @@ final class MockSearchRepository: SearchRepositoryProtocol {
 
 final class SearchTickerUseCaseTests: XCTestCase {
 
-    private var sut: SearchTickerUseCase!
-    private var mockRepository: MockSearchRepository!
+    private var sut: TickerUseCase!
+    private var mockRepository: MockTickerRepository!
 
     override func setUp() {
         super.setUp()
-        mockRepository = MockSearchRepository()
-        sut = SearchTickerUseCase(repository: mockRepository)
+        mockRepository = MockTickerRepository()
+        sut = TickerUseCase(repository: mockRepository)
     }
 
     override func tearDown() {
@@ -48,7 +48,7 @@ final class SearchTickerUseCaseTests: XCTestCase {
         mockRepository.stubbedResult = expected
 
         // When
-        let result = try await sut.execute(query: "AAPL")
+        let result = try await sut.search(query: "AAPL")
 
         // Then
         XCTAssertEqual(result, expected)
@@ -63,7 +63,7 @@ final class SearchTickerUseCaseTests: XCTestCase {
         ]
 
         // When
-        let result = try await sut.execute(query: "")
+        let result = try await sut.search(query: "")
 
         // Then
         XCTAssertTrue(result.isEmpty)
@@ -77,7 +77,7 @@ final class SearchTickerUseCaseTests: XCTestCase {
 
         // When / Then
         do {
-            _ = try await sut.execute(query: "AAPL")
+            _ = try await sut.search(query: "AAPL")
             XCTFail("에러가 전파되어야 한다")
         } catch {
             XCTAssertTrue(error is NetworkError)
