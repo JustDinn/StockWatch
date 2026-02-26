@@ -25,13 +25,13 @@ final class MockNetworkService: NetworkServiceProtocol {
 
 final class SearchRepositoryTests: XCTestCase {
 
-    private var sut: SearchRepository!
+    private var sut: TickerRepository!
     private var mockNetworkService: MockNetworkService!
 
     override func setUp() {
         super.setUp()
         mockNetworkService = MockNetworkService()
-        sut = SearchRepository(networkService: mockNetworkService, apiKey: "test-api-key")
+        sut = TickerRepository(networkService: mockNetworkService, apiKey: "test-api-key")
     }
 
     override func tearDown() {
