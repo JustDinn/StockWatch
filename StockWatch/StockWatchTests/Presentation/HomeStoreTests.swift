@@ -8,13 +8,13 @@ import XCTest
 
 // MARK: - Mock UseCase
 
-final class MockSearchTickerUseCase: SearchTickerUseCaseProtocol {
+final class MockTickerUseCase: TickerUseCaseProtocol {
     var stubbedResult: [SearchResult] = []
     var stubbedError: Error?
     var executeCallCount = 0
     var lastReceivedQuery: String?
 
-    func execute(query: String) async throws -> [SearchResult] {
+    func search(query: String) async throws -> [SearchResult] {
         executeCallCount += 1
         lastReceivedQuery = query
         if let error = stubbedError { throw error }
@@ -28,12 +28,12 @@ final class MockSearchTickerUseCase: SearchTickerUseCaseProtocol {
 final class HomeStoreTests: XCTestCase {
 
     private var sut: HomeStore!
-    private var mockUseCase: MockSearchTickerUseCase!
+    private var mockUseCase: MockTickerUseCase!
 
     override func setUp() {
         super.setUp()
-        mockUseCase = MockSearchTickerUseCase()
-        sut = HomeStore(searchTickerUseCase: mockUseCase)
+        mockUseCase = MockTickerUseCase()
+        sut = HomeStore(tickerUseCase: mockUseCase)
     }
 
     override func tearDown() {
