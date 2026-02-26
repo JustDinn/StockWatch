@@ -145,7 +145,8 @@ iOSInjectionProject/
 Secret.swift
 Secret/
 
-# Claude 
+# Claude
 CLAUDE.md
+.claude/
 
 # End of https://www.toptal.com/developers/gitignore/api/xcode,swift,cocoapods,macos
