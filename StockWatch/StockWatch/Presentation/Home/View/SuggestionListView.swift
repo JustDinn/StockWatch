@@ -7,34 +7,20 @@
 
 import SwiftUI
 
-// MARK: - Model
-
-private struct SuggestionStock: Identifiable {
-    let id = UUID()
-    let ticker: String
-    let name: String
-}
-
 // MARK: - SuggestionListView
 
 struct SuggestionListView: View {
 
     // MARK: - Properties
 
-    private let suggestions: [SuggestionStock] = [
-        SuggestionStock(ticker: "AAPL", name: "Apple Inc."),
-        SuggestionStock(ticker: "NVDA", name: "NVIDIA Corporation"),
-        SuggestionStock(ticker: "TQQQ", name: "ProShares UltraPro QQQ"),
-        SuggestionStock(ticker: "SOXL", name: "Direxion Daily Semiconductor Bull 3X Shares"),
-        SuggestionStock(ticker: "PLTR", name: "Palantir Technologies Inc.")
-    ]
+    let results: [SearchResult]
 
     // MARK: - Body
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(suggestions) { stock in
-                SuggestionRow(stock: stock)
+            ForEach(results, id: \.ticker) { result in
+                SuggestionRow(result: result)
             }
         }
     }
@@ -43,16 +29,16 @@ struct SuggestionListView: View {
 // MARK: - SuggestionRow
 
 private struct SuggestionRow: View {
-    let stock: SuggestionStock
+    let result: SearchResult
 
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(stock.ticker)
+                Text(result.displayTicker)
                     .font(.headline)
                     .fontWeight(.bold)
 
-                Text(stock.name)
+                Text(result.description)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -66,5 +52,8 @@ private struct SuggestionRow: View {
 }
 
 #Preview {
-    SuggestionListView()
+    SuggestionListView(results: [
+        SearchResult(description: "Apple Inc.", displayTicker: "AAPL", ticker: "AAPL", type: "Common Stock"),
+        SearchResult(description: "NVIDIA Corporation", displayTicker: "NVDA", ticker: "NVDA", type: "Common Stock")
+    ])
 }
