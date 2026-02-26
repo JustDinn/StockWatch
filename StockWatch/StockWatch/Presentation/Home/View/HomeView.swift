@@ -23,9 +23,13 @@ struct HomeView: View {
             
             if store.state.isLoading {
                 ProgressView()
+            } else if let errorMessage = store.state.errorMessage {
+                Text(errorMessage)
+                    .foregroundStyle(.red)
+                    .padding()
+            } else {
+                SuggestionListView(results: store.state.searchResults)
             }
-            
-            SuggestionListView()
 
             Spacer()
         }

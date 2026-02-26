@@ -53,7 +53,6 @@ extension HomeStore {
             do {
                 let results = try await tickerUseCase.search(query: query)
                 state.searchResults = results
-                print("<< 검색 결과: \(results)")
             } catch {
                 state.errorMessage = error.localizedDescription
             }
