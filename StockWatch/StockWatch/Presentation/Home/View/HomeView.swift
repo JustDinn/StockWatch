@@ -16,22 +16,32 @@ struct HomeView: View {
     )
     
     var body: some View {
-        VStack {
-            SearchBar(placeholder: "종목을 검색하세요") { keyword in
-                store.action(.search(keyword))
+        NavigationStack {
+            VStack {
+                SearchBar(placeholder: "종목을 검색하세요") { keyword in
+                    store.action(.search(keyword))
+                }
+                
+                if store.state.isLoading {
+                    ProgressView()
+                } else if let errorMessage = store.state.errorMessage {
+                    Text(errorMessage)
+                        .foregroundStyle(.red)
+                        .padding()
+                } else {
+                    SuggestionListView(
+                        results: store.state.searchResults,
+                        onSelect: { result in
+                            store.action(.selectStock(result))
+                        }
+                    )
+                }
+                
+                Spacer()
             }
-            
-            if store.state.isLoading {
-                ProgressView()
-            } else if let errorMessage = store.state.errorMessage {
-                Text(errorMessage)
-                    .foregroundStyle(.red)
-                    .padding()
-            } else {
-                SuggestionListView(results: store.state.searchResults)
+            .navigationDestination(item: store.selectedStockBinding) { result in
+                StockDetailView(ticker: result.displayTicker, companyName: result.description)
             }
-
-            Spacer()
         }
     }
 }
