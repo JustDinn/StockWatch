@@ -14,6 +14,7 @@ struct SuggestionListView: View {
     // MARK: - Properties
 
     let results: [SearchResult]
+    var onSelect: (SearchResult) -> Void = { _ in }
 
     // MARK: - Body
 
@@ -21,6 +22,10 @@ struct SuggestionListView: View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(results, id: \.ticker) { result in
                 SuggestionRow(result: result)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        onSelect(result)
+                    }
             }
         }
     }

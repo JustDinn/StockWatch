@@ -3,7 +3,7 @@
 //  StockWatch
 //
 
-import Foundation
+import SwiftUI
 
 /// Home 화면 Store
 /// Intent를 처리하고 UseCase를 호출하여 State를 업데이트한다.
@@ -33,12 +33,28 @@ final class HomeStore: ObservableObject {
         switch intent {
         case .search(let keyword):
             searchTicker(query: keyword)
+        case .selectStock(let result):
+            navigateToDetail(result: result)
         }
+    }
+
+    // MARK: - Navigation Binding
+
+    var selectedStockBinding: Binding<SearchResult?> {
+        Binding(
+            get: { self.state.selectedStock },
+            set: { self.state.selectedStock = $0 }
+        )
     }
 }
 
 extension HomeStore {
     
+    /// 종목 선택 → 상세 화면 이동
+    private func navigateToDetail(result: SearchResult) {
+        state.selectedStock = result
+    }
+
     /// 티커 검색
     private func searchTicker(query: String) {
         guard !query.isEmpty else {
