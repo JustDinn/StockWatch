@@ -19,6 +19,8 @@ struct SearchBar: View {
     
     var body: some View {
         TextField(placeholder, text: $keyword)
+            .autocorrectionDisabled(true)
+            .textInputAutocapitalization(.characters)
             .padding(10)
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
