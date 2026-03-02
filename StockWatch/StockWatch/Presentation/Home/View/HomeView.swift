@@ -40,7 +40,7 @@ struct HomeView: View {
                 Spacer()
             }
             .navigationDestination(item: store.selectedStockBinding) { result in
-                StockDetailView(ticker: result.displayTicker, companyName: result.description)
+                StockDetailView(ticker: result.displayTicker)
             }
         }
     }
