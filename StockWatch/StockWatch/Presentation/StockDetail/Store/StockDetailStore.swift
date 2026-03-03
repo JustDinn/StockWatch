@@ -34,6 +34,8 @@ final class StockDetailStore: ObservableObject {
             loadDetail()
         case .dismiss:
             break
+        case .toggleFavorite:
+            state.isFavorite.toggle()
         }
     }
 }

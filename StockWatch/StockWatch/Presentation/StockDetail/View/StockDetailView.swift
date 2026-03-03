@@ -34,10 +34,19 @@ struct StockDetailView: View {
                         Text(state.ticker)
                             .font(.title.bold())
 
-                        Text(state.companyName)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
+                        HStack(spacing: 4) {
+                            Text(state.companyName)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+
+                            Button {
+                                store.action(.toggleFavorite)
+                            } label: {
+                                Image(systemName: state.isFavorite ? "heart.fill" : "heart")
+                                    .foregroundStyle(.red)
+                            }
+                        }
                     }
 
                     // 가격 정보
