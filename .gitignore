@@ -148,5 +148,6 @@ Secret/
 # Claude
 CLAUDE.md
 .claude/
+docs/
 
 # End of https://www.toptal.com/developers/gitignore/api/xcode,swift,cocoapods,macos
