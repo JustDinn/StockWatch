@@ -13,10 +13,10 @@ enum StockDetailMapper {
     ) -> StockDetail {
         StockDetail(
             ticker: ticker,
-            companyName: profile.name,
+            companyName: profile.name ?? ticker,
             currentPrice: quote.c,
             priceChangePercent: quote.dp ?? 0.0,    // 시장 폐장 시 null → 0으로 처리
-            logoURL: profile.logo
+            logoURL: profile.logo ?? ""
         )
     }
 }

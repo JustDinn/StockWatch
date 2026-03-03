@@ -49,10 +49,7 @@ extension StockDetailStore {
         Task {
             do {
                 let detail = try await fetchStockDetailUseCase.execute(ticker: state.ticker)
-                print("<< [StockDetailStore] companyName: \(detail.companyName)")
-                print("<< [StockDetailStore] currentPrice: \(detail.currentPrice)")
-                print("<< [StockDetailStore] priceChangePercent: \(detail.priceChangePercent)")
-                print("<< [StockDetailStore] logoURL: '\(detail.logoURL)'")
+                
                 state.companyName = detail.companyName
                 state.currentPrice = detail.currentPrice
                 state.priceChangePercent = detail.priceChangePercent
