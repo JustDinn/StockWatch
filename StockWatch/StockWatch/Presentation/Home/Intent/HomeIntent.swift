@@ -9,4 +9,6 @@ enum HomeIntent {
     case search(String)
     /// 검색 결과 셀 탭 → 상세 화면 이동
     case selectStock(SearchResult)
+    /// 조건 추가 버튼 탭
+    case addCondition
 }
