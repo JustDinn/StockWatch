@@ -43,6 +43,9 @@ struct HomeView: View {
                 .navigationDestination(item: store.selectedStockBinding) { result in
                     StockDetailView(ticker: result.displayTicker)
                 }
+                .navigationDestination(isPresented: store.isAddingConditionBinding) {
+                    ConditionView()
+                }
             }
 
             Button {
