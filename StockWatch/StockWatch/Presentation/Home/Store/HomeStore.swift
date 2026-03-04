@@ -36,7 +36,7 @@ final class HomeStore: ObservableObject {
         case .selectStock(let result):
             navigateToDetail(result: result)
         case .addCondition:
-            break
+            navigateToCondition()
         }
     }
 
@@ -48,6 +48,13 @@ final class HomeStore: ObservableObject {
             set: { self.state.selectedStock = $0 }
         )
     }
+
+    var isAddingConditionBinding: Binding<Bool> {
+        Binding(
+            get: { self.state.isAddingCondition },
+            set: { self.state.isAddingCondition = $0 }
+        )
+    }
 }
 
 extension HomeStore {
@@ -55,6 +62,11 @@ extension HomeStore {
     /// 종목 선택 → 상세 화면 이동
     private func navigateToDetail(result: SearchResult) {
         state.selectedStock = result
+    }
+
+    /// 조건 추가 → 조건 추가 화면 이동
+    private func navigateToCondition() {
+        state.isAddingCondition = true
     }
 
     /// 티커 검색
