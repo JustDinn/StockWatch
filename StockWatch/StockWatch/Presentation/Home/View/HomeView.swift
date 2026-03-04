@@ -16,32 +16,42 @@ struct HomeView: View {
     )
     
     var body: some View {
-        NavigationStack {
-            VStack {
-                SearchBar(placeholder: "종목을 검색하세요") { keyword in
-                    store.action(.search(keyword))
+        ZStack(alignment: .bottomTrailing) {
+            NavigationStack {
+                VStack {
+                    SearchBar(placeholder: "종목을 검색하세요") { keyword in
+                        store.action(.search(keyword))
+                    }
+
+                    if store.state.isLoading {
+                        ProgressView()
+                    } else if let errorMessage = store.state.errorMessage {
+                        Text(errorMessage)
+                            .foregroundStyle(.red)
+                            .padding()
+                    } else {
+                        SuggestionListView(
+                            results: store.state.searchResults,
+                            onSelect: { result in
+                                store.action(.selectStock(result))
+                            }
+                        )
+                    }
+
+                    Spacer()
                 }
-                
-                if store.state.isLoading {
-                    ProgressView()
-                } else if let errorMessage = store.state.errorMessage {
-                    Text(errorMessage)
-                        .foregroundStyle(.red)
-                        .padding()
-                } else {
-                    SuggestionListView(
-                        results: store.state.searchResults,
-                        onSelect: { result in
-                            store.action(.selectStock(result))
-                        }
-                    )
+                .navigationDestination(item: store.selectedStockBinding) { result in
+                    StockDetailView(ticker: result.displayTicker)
                 }
-                
-                Spacer()
             }
-            .navigationDestination(item: store.selectedStockBinding) { result in
-                StockDetailView(ticker: result.displayTicker)
+
+            Button {
+                store.action(.addCondition)
+            } label: {
+                Label("조건 추가", systemImage: "plus")
             }
+            .buttonStyle(.borderedProminent)
+            .padding()
         }
     }
 }
