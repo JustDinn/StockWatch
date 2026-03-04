@@ -35,6 +35,8 @@ final class HomeStore: ObservableObject {
             searchTicker(query: keyword)
         case .selectStock(let result):
             navigateToDetail(result: result)
+        case .addCondition:
+            break
         }
     }
 
