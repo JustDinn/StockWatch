@@ -48,13 +48,15 @@ struct HomeView: View {
                 }
             }
 
-            Button {
-                store.action(.addCondition)
-            } label: {
-                Label("조건 추가", systemImage: "plus")
+            if !store.state.isAddingCondition {
+                Button {
+                    store.action(.addCondition)
+                } label: {
+                    Label("조건 추가", systemImage: "plus")
+                }
+                .buttonStyle(.borderedProminent)
+                .padding()
             }
-            .buttonStyle(.borderedProminent)
-            .padding()
         }
     }
 }
