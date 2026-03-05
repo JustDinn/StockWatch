@@ -35,8 +35,8 @@ final class HomeStore: ObservableObject {
             searchTicker(query: keyword)
         case .selectStock(let result):
             navigateToDetail(result: result)
-        case .addCondition:
-            navigateToCondition()
+        case .showStrategyCatalog:
+            navigateToStrategyCatalog()
         }
     }
 
@@ -49,10 +49,10 @@ final class HomeStore: ObservableObject {
         )
     }
 
-    var isAddingConditionBinding: Binding<Bool> {
+    var isShowingStrategyCatalogBinding: Binding<Bool> {
         Binding(
-            get: { self.state.isAddingCondition },
-            set: { self.state.isAddingCondition = $0 }
+            get: { self.state.isShowingStrategyCatalog },
+            set: { self.state.isShowingStrategyCatalog = $0 }
         )
     }
 }
@@ -64,9 +64,9 @@ extension HomeStore {
         state.selectedStock = result
     }
 
-    /// 조건 추가 → 조건 추가 화면 이동
-    private func navigateToCondition() {
-        state.isAddingCondition = true
+    /// 전략 카탈로그 화면 이동
+    private func navigateToStrategyCatalog() {
+        state.isShowingStrategyCatalog = true
     }
 
     /// 티커 검색

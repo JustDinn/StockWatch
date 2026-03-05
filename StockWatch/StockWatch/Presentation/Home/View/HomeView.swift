@@ -43,16 +43,16 @@ struct HomeView: View {
                 .navigationDestination(item: store.selectedStockBinding) { result in
                     StockDetailView(ticker: result.displayTicker)
                 }
-                .navigationDestination(isPresented: store.isAddingConditionBinding) {
-                    ConditionView()
+                .navigationDestination(isPresented: store.isShowingStrategyCatalogBinding) {
+                    StrategyView()
                 }
             }
 
-            if !store.state.isAddingCondition {
+            if !store.state.isShowingStrategyCatalog {
                 Button {
-                    store.action(.addCondition)
+                    store.action(.showStrategyCatalog)
                 } label: {
-                    Label("조건 추가", systemImage: "plus")
+                    Label("전략 탐색", systemImage: "list.bullet.rectangle")
                 }
                 .buttonStyle(.borderedProminent)
                 .padding()

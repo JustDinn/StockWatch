@@ -14,6 +14,6 @@ struct StockWatchApp: App {
         WindowGroup {
             HomeView()
         }
-        .modelContainer(for: FavoriteStock.self)
+        .modelContainer(for: [FavoriteStock.self, SavedStrategy.self])
     }
 }

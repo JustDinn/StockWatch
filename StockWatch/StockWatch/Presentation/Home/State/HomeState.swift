@@ -9,5 +9,5 @@ struct HomeState: Equatable {
     var isLoading: Bool = false             /// 로딩 상태
     var errorMessage: String? = nil         /// 에러 메시지 (nil이면 에러 없음)
     var selectedStock: SearchResult? = nil  /// 선택된 종목 (nil이면 상세 화면 미표시)
-    var isAddingCondition: Bool = false     /// 조건 추가 화면 표시 여부
+    var isShowingStrategyCatalog: Bool = false  /// 전략 카탈로그 화면 표시 여부
 }
