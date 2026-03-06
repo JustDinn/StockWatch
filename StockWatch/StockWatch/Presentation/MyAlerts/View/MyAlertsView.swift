@@ -82,12 +82,6 @@ private struct MyAlertsContentView: View {
             ForEach(store.state.conditions) { condition in
                 conditionRow(condition)
             }
-            .onDelete { indexSet in
-                indexSet.forEach { index in
-                    let condition = store.state.conditions[index]
-                    store.action(.deleteCondition(id: condition.id))
-                }
-            }
         }
     }
 
@@ -119,6 +113,14 @@ private struct MyAlertsContentView: View {
                 set: { _ in store.action(.toggleNotification(condition: condition)) }
             ))
             .labelsHidden()
+
+            Button {
+                store.action(.deleteCondition(id: condition.id))
+            } label: {
+                Image(systemName: "trash")
+                    .foregroundStyle(.red)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.vertical, 4)
     }
