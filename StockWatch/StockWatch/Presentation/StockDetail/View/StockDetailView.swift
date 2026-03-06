@@ -5,6 +5,7 @@
 
 import SwiftUI
 import SwiftData
+import Kingfisher
 
 /// StockDetail 화면 진입점 — modelContext를 Environment에서 받아 Store를 구성한다.
 struct StockDetailView: View {
@@ -106,18 +107,12 @@ private struct StockDetailContentView: View {
     @ViewBuilder
     private func logoView(state: StockDetailState) -> some View {
         if !state.logoURL.isEmpty, let url = URL(string: state.logoURL) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 72, height: 72)
-                        .clipShape(Circle())
-                default:
-                    initialsView(state: state)
-                }
-            }
+            KFImage(url)
+                .placeholder { initialsView(state: state) }
+                .resizable()
+                .scaledToFit()
+                .frame(width: 72, height: 72)
+                .clipShape(Circle())
         } else {
             initialsView(state: state)
         }
