@@ -42,7 +42,7 @@ struct StrategyConfigView: View {
         .navigationBarTitleDisplayMode(.inline)
         .alert("저장 완료", isPresented: Binding(
             get: { store.state.isSaved },
-            set: { _ in }
+            set: { _ in store.action(.deselectStrategy) }
         )) {
             Button("확인") { dismiss() }
         } message: {
