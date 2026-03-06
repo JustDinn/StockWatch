@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		3F5468882F5AC84600DC5AEB /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 3F5468872F5AC84600DC5AEB /* FirebaseFirestore */; };
 		3F54688A2F5AC84600DC5AEB /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 3F5468892F5AC84600DC5AEB /* FirebaseMessaging */; };
+		3F54688D2F5AD01600DC5AEB /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 3F54688C2F5AD01600DC5AEB /* Kingfisher */; };
 		3FC2468C2F4B41F000AD955A /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = 3FC2468B2F4B41F000AD955A /* Alamofire */; };
 /* End PBXBuildFile section */
 
@@ -71,6 +72,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3F54688D2F5AD01600DC5AEB /* Kingfisher in Frameworks */,
 				3F54688A2F5AC84600DC5AEB /* FirebaseMessaging in Frameworks */,
 				3FC2468C2F4B41F000AD955A /* Alamofire in Frameworks */,
 				3F5468882F5AC84600DC5AEB /* FirebaseFirestore in Frameworks */,
@@ -137,6 +139,7 @@
 				3FC2468B2F4B41F000AD955A /* Alamofire */,
 				3F5468872F5AC84600DC5AEB /* FirebaseFirestore */,
 				3F5468892F5AC84600DC5AEB /* FirebaseMessaging */,
+				3F54688C2F5AD01600DC5AEB /* Kingfisher */,
 			);
 			productName = StockWatch;
 			productReference = 3F915FA52F4B3E0D00EC99A0 /* StockWatch.app */;
@@ -223,6 +226,7 @@
 			packageReferences = (
 				3FC2468A2F4B41F000AD955A /* XCRemoteSwiftPackageReference "Alamofire" */,
 				3F5468862F5AC84600DC5AEB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				3F54688B2F5AD01600DC5AEB /* XCRemoteSwiftPackageReference "Kingfisher" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3F915FA62F4B3E0D00EC99A0 /* Products */;
@@ -644,6 +648,14 @@
 				minimumVersion = 12.10.0;
 			};
 		};
+		3F54688B2F5AD01600DC5AEB /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/onevcat/Kingfisher.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.8.0;
+			};
+		};
 		3FC2468A2F4B41F000AD955A /* XCRemoteSwiftPackageReference "Alamofire" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Alamofire/Alamofire.git";
@@ -664,6 +676,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3F5468862F5AC84600DC5AEB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseMessaging;
+		};
+		3F54688C2F5AD01600DC5AEB /* Kingfisher */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3F54688B2F5AD01600DC5AEB /* XCRemoteSwiftPackageReference "Kingfisher" */;
+			productName = Kingfisher;
 		};
 		3FC2468B2F4B41F000AD955A /* Alamofire */ = {
 			isa = XCSwiftPackageProductDependency;
