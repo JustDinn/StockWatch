@@ -23,7 +23,7 @@ final class MyAlertsStore: ObservableObject {
         fetchStockConditionsUseCase: FetchStockConditionsUseCaseProtocol,
         deleteStockConditionUseCase: DeleteStockConditionUseCaseProtocol,
         toggleAlertUseCase: ToggleAlertUseCaseProtocol,
-        fcmTokenProvider: @escaping () -> String = { "" }
+        fcmTokenProvider: @escaping () -> String = { FCMTokenManager.shared.currentToken }
     ) {
         self.state = MyAlertsState()
         self.fetchStockConditionsUseCase = fetchStockConditionsUseCase

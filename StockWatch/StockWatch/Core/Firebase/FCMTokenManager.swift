@@ -2,8 +2,6 @@
 //  FCMTokenManager.swift
 //  StockWatch
 //
-//  NOTE: Firebase Messaging SDK 설치 후 아래 구현을 활성화한다.
-//
 
 import Foundation
 
@@ -24,20 +22,4 @@ final class FCMTokenManager {
     func save(token: String) {
         UserDefaults.standard.set(token, forKey: tokenKey)
     }
-
-    // TODO: Firebase Messaging SDK 설치 후 AppDelegate에 아래 코드 추가
-    //
-    // import FirebaseMessaging
-    //
-    // func application(_ application: UIApplication,
-    //   didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-    //     Messaging.messaging().apnsToken = deviceToken
-    // }
-    //
-    // extension AppDelegate: MessagingDelegate {
-    //     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
-    //         guard let token = fcmToken else { return }
-    //         FCMTokenManager.shared.save(token: token)
-    //     }
-    // }
 }
