@@ -16,6 +16,11 @@ struct MainTabView: View {
                     Label("홈", systemImage: "house")
                 }
 
+            WatchListView()
+                .tabItem {
+                    Label("워치리스트", systemImage: "heart")
+                }
+
             MyAlertsView()
                 .tabItem {
                     Label("내 알림", systemImage: "bell")
