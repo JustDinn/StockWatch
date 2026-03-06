@@ -11,6 +11,8 @@ enum StrategyIntent {
     case selectSegment(StrategySegment)
     /// 전략 셀 탭 → 상세 화면 이동
     case selectStrategy(Strategy)
+    /// info 아이콘 탭 → 전략 설명 모달 표시
+    case showInfo(Strategy)
 }
 
 /// 전략 카탈로그 세그먼트
