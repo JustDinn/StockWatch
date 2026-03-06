@@ -79,6 +79,15 @@ private struct StockDetailContentView: View {
                             .foregroundStyle(state.isPositiveChange ? .green : .red)
                     }
 
+                    // 전략 적용하기 버튼
+                    Button {
+                        store.action(.navigateToApplyStrategy)
+                    } label: {
+                        Label("전략 적용하기", systemImage: "chart.line.uptrend.xyaxis")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+
                     Spacer()
                 }
                 .padding()
@@ -86,6 +95,9 @@ private struct StockDetailContentView: View {
         }
         .navigationTitle(state.ticker)
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: store.isShowingApplyStrategyBinding) {
+            ApplyStrategyView(ticker: store.state.ticker)
+        }
         .task {
             store.action(.loadDetail)
         }

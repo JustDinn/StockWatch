@@ -12,8 +12,8 @@ import SwiftData
 struct StockWatchApp: App {
     var body: some Scene {
         WindowGroup {
-            HomeView()
+            MainTabView()
         }
-        .modelContainer(for: [FavoriteStock.self, SavedStrategy.self])
+        .modelContainer(for: [FavoriteStock.self, SavedStrategy.self, StockConditionModel.self])
     }
 }

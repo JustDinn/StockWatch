@@ -11,4 +11,6 @@ enum StockDetailIntent {
     case dismiss
     /// 관심 종목 토글
     case toggleFavorite
+    /// 전략 적용 화면으로 이동
+    case navigateToApplyStrategy
 }

@@ -21,6 +21,8 @@ struct StockDetailState: Equatable {
     var errorMessage: String?
     /// 관심 종목 여부
     var isFavorite: Bool
+    /// 전략 적용 화면 표시 여부
+    var isShowingApplyStrategy: Bool
 
     init(ticker: String) {
         self.ticker = ticker
@@ -31,6 +33,7 @@ struct StockDetailState: Equatable {
         self.isLoading = false
         self.errorMessage = nil
         self.isFavorite = false
+        self.isShowingApplyStrategy = false
     }
 
     /// 가격 표시 문자열 (예: "$150.25")

@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 /// StockDetail 화면 Store
 @MainActor
@@ -42,7 +43,16 @@ final class StockDetailStore: ObservableObject {
             break
         case .toggleFavorite:
             persistToggleFavorite()
+        case .navigateToApplyStrategy:
+            state.isShowingApplyStrategy = true
         }
+    }
+
+    var isShowingApplyStrategyBinding: Binding<Bool> {
+        Binding(
+            get: { self.state.isShowingApplyStrategy },
+            set: { self.state.isShowingApplyStrategy = $0 }
+        )
     }
 }
 
