@@ -61,19 +61,19 @@ private struct StrategyContentView: View {
                 Spacer()
             } else {
                 List(strategies) { strategy in
-                    StrategyRow(strategy: strategy)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            store.action(.selectStrategy(strategy))
-                        }
+                    StrategyRow(strategy: strategy) {
+                        store.action(.selectStrategy(strategy))
+                    }
                 }
                 .listStyle(.plain)
             }
         }
         .navigationTitle("전략 카탈로그")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(item: store.selectedStrategyBinding) { strategy in
-            StrategyDetailView(strategy: strategy, ticker: ticker)
+        .sheet(item: store.selectedStrategyBinding) { strategy in
+            NavigationStack {
+                StrategyDetailView(strategy: strategy, ticker: ticker)
+            }
         }
         .task {
             store.action(.loadStrategies)
@@ -92,6 +92,7 @@ private struct StrategyContentView: View {
 
 private struct StrategyRow: View {
     let strategy: Strategy
+    var onInfoTap: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -107,6 +108,14 @@ private struct StrategyRow: View {
                     .padding(.vertical, 2)
                     .background(Color.blue.opacity(0.1))
                     .clipShape(Capsule())
+
+                Button {
+                    onInfoTap()
+                } label: {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(.blue)
+                }
+                .buttonStyle(.plain)
             }
 
             Text(strategy.shortName)
