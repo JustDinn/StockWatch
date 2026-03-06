@@ -16,46 +16,31 @@ struct HomeView: View {
     )
     
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            NavigationStack {
-                VStack {
-                    SearchBar(placeholder: "종목을 검색하세요") { keyword in
-                        store.action(.search(keyword))
-                    }
+        NavigationStack {
+            VStack {
+                SearchBar(placeholder: "종목을 검색하세요") { keyword in
+                    store.action(.search(keyword))
+                }
 
-                    if store.state.isLoading {
-                        ProgressView()
-                    } else if let errorMessage = store.state.errorMessage {
-                        Text(errorMessage)
-                            .foregroundStyle(.red)
-                            .padding()
-                    } else {
-                        SuggestionListView(
-                            results: store.state.searchResults,
-                            onSelect: { result in
-                                store.action(.selectStock(result))
-                            }
-                        )
-                    }
+                if store.state.isLoading {
+                    ProgressView()
+                } else if let errorMessage = store.state.errorMessage {
+                    Text(errorMessage)
+                        .foregroundStyle(.red)
+                        .padding()
+                } else {
+                    SuggestionListView(
+                        results: store.state.searchResults,
+                        onSelect: { result in
+                            store.action(.selectStock(result))
+                        }
+                    )
+                }
 
-                    Spacer()
-                }
-                .navigationDestination(item: store.selectedStockBinding) { result in
-                    StockDetailView(ticker: result.displayTicker)
-                }
-                .navigationDestination(isPresented: store.isShowingStrategyCatalogBinding) {
-                    StrategyView()
-                }
+                Spacer()
             }
-
-            if !store.state.isShowingStrategyCatalog {
-                Button {
-                    store.action(.showStrategyCatalog)
-                } label: {
-                    Label("전략 탐색", systemImage: "list.bullet.rectangle")
-                }
-                .buttonStyle(.borderedProminent)
-                .padding()
+            .navigationDestination(item: store.selectedStockBinding) { result in
+                StockDetailView(ticker: result.displayTicker)
             }
         }
     }

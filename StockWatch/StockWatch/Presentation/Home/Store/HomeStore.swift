@@ -35,8 +35,6 @@ final class HomeStore: ObservableObject {
             searchTicker(query: keyword)
         case .selectStock(let result):
             navigateToDetail(result: result)
-        case .showStrategyCatalog:
-            navigateToStrategyCatalog()
         }
     }
 
@@ -49,12 +47,6 @@ final class HomeStore: ObservableObject {
         )
     }
 
-    var isShowingStrategyCatalogBinding: Binding<Bool> {
-        Binding(
-            get: { self.state.isShowingStrategyCatalog },
-            set: { self.state.isShowingStrategyCatalog = $0 }
-        )
-    }
 }
 
 extension HomeStore {
@@ -62,11 +54,6 @@ extension HomeStore {
     /// 종목 선택 → 상세 화면 이동
     private func navigateToDetail(result: SearchResult) {
         state.selectedStock = result
-    }
-
-    /// 전략 카탈로그 화면 이동
-    private func navigateToStrategyCatalog() {
-        state.isShowingStrategyCatalog = true
     }
 
     /// 티커 검색

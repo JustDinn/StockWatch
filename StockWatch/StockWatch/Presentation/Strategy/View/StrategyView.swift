@@ -10,9 +10,10 @@ import SwiftData
 struct StrategyView: View {
 
     @Environment(\.modelContext) private var modelContext
+    var ticker: String? = nil
 
     var body: some View {
-        StrategyContentView(store: makeStore())
+        StrategyContentView(store: makeStore(), ticker: ticker)
     }
 
     private func makeStore() -> StrategyStore {
@@ -33,6 +34,7 @@ struct StrategyView: View {
 private struct StrategyContentView: View {
 
     @StateObject var store: StrategyStore
+    var ticker: String? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -71,7 +73,7 @@ private struct StrategyContentView: View {
         .navigationTitle("전략 카탈로그")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: store.selectedStrategyBinding) { strategy in
-            StrategyDetailView(strategy: strategy)
+            StrategyDetailView(strategy: strategy, ticker: ticker)
         }
         .task {
             store.action(.loadStrategies)

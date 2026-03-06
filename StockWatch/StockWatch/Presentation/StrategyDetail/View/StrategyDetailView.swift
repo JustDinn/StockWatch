@@ -11,9 +11,13 @@ struct StrategyDetailView: View {
 
     @Environment(\.modelContext) private var modelContext
     let strategy: Strategy
+    var ticker: String? = nil
 
     var body: some View {
-        StrategyDetailContentView(store: makeStore())
+        StrategyDetailContentView(
+            store: makeStore(),
+            applyStore: ticker.map { makeApplyStore(ticker: $0, strategy: strategy) }
+        )
     }
 
     private func makeStore() -> StrategyDetailStore {
@@ -24,6 +28,29 @@ struct StrategyDetailView: View {
             checkSavedStrategyUseCase: CheckSavedStrategyUseCase(repository: repository)
         )
     }
+
+    private func makeApplyStore(ticker: String, strategy: Strategy) -> ApplyStrategyStore {
+        let conditionRepository = StockConditionRepository(modelContext: modelContext)
+        let alertRepository = AlertRegistrationRepository()
+        let store = ApplyStrategyStore(
+            ticker: ticker,
+            fetchStrategiesUseCase: FetchStrategiesUseCase(
+                repository: StrategyRepository()
+            ),
+            evaluateStrategyUseCase: EvaluateStrategyUseCase(
+                repository: StrategyEvaluationRepository()
+            ),
+            saveStockConditionUseCase: SaveStockConditionUseCase(
+                repository: conditionRepository
+            ),
+            registerAlertUseCase: RegisterAlertUseCase(
+                repository: alertRepository
+            ),
+            fcmTokenProvider: { FCMTokenManager.shared.currentToken }
+        )
+        store.action(.selectStrategy(strategy))
+        return store
+    }
 }
 
 // MARK: - Content View
@@ -31,6 +58,8 @@ struct StrategyDetailView: View {
 private struct StrategyDetailContentView: View {
 
     @StateObject var store: StrategyDetailStore
+    var applyStore: ApplyStrategyStore? = nil
+    @State private var isShowingConfig = false
 
     var body: some View {
         let state = store.state
@@ -79,6 +108,20 @@ private struct StrategyDetailContentView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(state.isSaved ? .gray : .blue)
+
+                // 전략 적용하기 버튼 (ticker가 있을 때만 표시)
+                if let applyStore {
+                    Button {
+                        isShowingConfig = true
+                    } label: {
+                        Text("이 전략 적용하기")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .navigationDestination(isPresented: $isShowingConfig) {
+                        StrategyConfigView(store: applyStore, strategy: state.strategy)
+                    }
+                }
             }
             .padding()
         }
