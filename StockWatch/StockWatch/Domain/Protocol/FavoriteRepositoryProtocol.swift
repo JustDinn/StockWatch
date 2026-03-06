@@ -12,4 +12,6 @@ protocol FavoriteRepositoryProtocol {
     func addFavorite(ticker: String) async throws
     /// 관심 종목을 삭제한다.
     func removeFavorite(ticker: String) async throws
+    /// 저장된 모든 관심 종목 ticker를 addedAt 내림차순으로 반환한다.
+    func fetchAllFavorites() async -> [String]
 }
