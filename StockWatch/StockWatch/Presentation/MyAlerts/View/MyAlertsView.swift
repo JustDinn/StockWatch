@@ -56,6 +56,19 @@ private struct MyAlertsContentView: View {
             .task {
                 store.action(.loadConditions)
             }
+            .alert("알림 삭제", isPresented: Binding(
+                get: { store.state.conditionToDelete != nil },
+                set: { if !$0 { store.action(.cancelDeleteCondition) } }
+            )) {
+                Button("취소", role: .cancel) {
+                    store.action(.cancelDeleteCondition)
+                }
+                Button("삭제", role: .destructive) {
+                    store.action(.confirmDeleteCondition)
+                }
+            } message: {
+                Text("이 알림을 삭제하시겠습니까?")
+            }
         }
     }
 
@@ -115,7 +128,7 @@ private struct MyAlertsContentView: View {
             .labelsHidden()
 
             Button {
-                store.action(.deleteCondition(id: condition.id))
+                store.action(.requestDeleteCondition(id: condition.id))
             } label: {
                 Image(systemName: "trash")
                     .foregroundStyle(.red)

@@ -11,10 +11,13 @@ struct MyAlertsState {
     var isLoading: Bool
     /// 에러 메시지
     var errorMessage: String?
+    /// 삭제 확인 Alert 표시 여부 및 삭제할 조건 ID
+    var conditionToDelete: String?
 
     init() {
         self.conditions = []
         self.isLoading = false
         self.errorMessage = nil
+        self.conditionToDelete = nil
     }
 }

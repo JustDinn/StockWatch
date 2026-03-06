@@ -38,8 +38,12 @@ final class MyAlertsStore: ObservableObject {
         switch intent {
         case .loadConditions:
             loadConditions()
-        case .deleteCondition(let id):
-            deleteCondition(id: id)
+        case .requestDeleteCondition(let id):
+            requestDeleteCondition(id: id)
+        case .confirmDeleteCondition:
+            confirmDeleteCondition()
+        case .cancelDeleteCondition:
+            cancelDeleteCondition()
         case .toggleNotification(let condition):
             toggleNotification(condition: condition)
         }
@@ -58,7 +62,14 @@ extension MyAlertsStore {
         }
     }
 
-    private func deleteCondition(id: String) {
+    private func requestDeleteCondition(id: String) {
+        state.conditionToDelete = id
+    }
+
+    private func confirmDeleteCondition() {
+        guard let id = state.conditionToDelete else { return }
+        state.conditionToDelete = nil
+
         Task {
             do {
                 try await deleteStockConditionUseCase.execute(id: id)
@@ -67,6 +78,10 @@ extension MyAlertsStore {
                 state.errorMessage = "삭제 중 오류가 발생했습니다: \(error.localizedDescription)"
             }
         }
+    }
+
+    private func cancelDeleteCondition() {
+        state.conditionToDelete = nil
     }
 
     private func toggleNotification(condition: StockCondition) {
