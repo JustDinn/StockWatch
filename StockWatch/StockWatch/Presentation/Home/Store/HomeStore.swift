@@ -46,6 +46,7 @@ final class HomeStore: ObservableObject {
             set: { self.state.selectedStock = $0 }
         )
     }
+
 }
 
 extension HomeStore {

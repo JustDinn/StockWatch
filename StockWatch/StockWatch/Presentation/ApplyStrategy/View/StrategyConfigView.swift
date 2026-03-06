@@ -1,0 +1,280 @@
+//
+//  StrategyConfigView.swift
+//  StockWatch
+//
+
+import SwiftUI
+
+/// 전략 파라미터 설정 + 즉시 확인 + 알림 등록 화면
+struct StrategyConfigView: View {
+
+    @ObservedObject var store: ApplyStrategyStore
+    let strategy: Strategy
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                // 전략 헤더
+                strategyHeader
+
+                Divider()
+
+                // 파라미터 설정
+                parameterSection
+
+                Divider()
+
+                // 즉시 확인
+                evaluationSection
+
+                Divider()
+
+                // 알림 등록
+                notificationSection
+
+                // 적용하기 버튼
+                applyButton
+            }
+            .padding()
+        }
+        .navigationTitle("\(strategy.shortName) 설정")
+        .navigationBarTitleDisplayMode(.inline)
+        .alert("저장 완료", isPresented: Binding(
+            get: { store.state.isSaved },
+            set: { _ in store.action(.deselectStrategy) }
+        )) {
+            Button("확인") { dismiss() }
+        } message: {
+            Text("조건이 저장되었습니다.")
+        }
+    }
+
+    // MARK: - Strategy Header
+
+    private var strategyHeader: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Text(strategy.shortName)
+                    .font(.title2.bold())
+                    .foregroundStyle(.blue)
+
+                Text(strategy.category.rawValue)
+                    .font(.caption)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.blue.opacity(0.1))
+                    .clipShape(Capsule())
+            }
+            Text(strategy.name)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Parameter Section
+
+    @ViewBuilder
+    private var parameterSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("파라미터 설정")
+                .font(.headline)
+
+            switch strategy.id {
+            case "sma_cross", "ema_cross":
+                crossParameterControls
+            case "rsi":
+                rsiParameterControls
+            default:
+                EmptyView()
+            }
+        }
+    }
+
+    private var crossParameterControls: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text("단기 기간")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Stepper("\(store.state.shortPeriod)일", value: Binding(
+                    get: { store.state.shortPeriod },
+                    set: { store.action(.updateShortPeriod($0)) }
+                ), in: 5...50)
+            }
+
+            HStack {
+                Text("장기 기간")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Stepper("\(store.state.longPeriod)일", value: Binding(
+                    get: { store.state.longPeriod },
+                    set: { store.action(.updateLongPeriod($0)) }
+                ), in: 20...200)
+            }
+        }
+    }
+
+    private var rsiParameterControls: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text("기간")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Stepper("\(store.state.rsiPeriod)일", value: Binding(
+                    get: { store.state.rsiPeriod },
+                    set: { store.action(.updateRSIPeriod($0)) }
+                ), in: 7...28)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("과매도 임계값")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(String(format: "%.0f", store.state.oversoldThreshold))
+                        .monospacedDigit()
+                }
+                Slider(value: Binding(
+                    get: { store.state.oversoldThreshold },
+                    set: { store.action(.updateOversoldThreshold($0)) }
+                ), in: 10...40, step: 1)
+                .tint(.green)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("과매수 임계값")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(String(format: "%.0f", store.state.overboughtThreshold))
+                        .monospacedDigit()
+                }
+                Slider(value: Binding(
+                    get: { store.state.overboughtThreshold },
+                    set: { store.action(.updateOverboughtThreshold($0)) }
+                ), in: 60...90, step: 1)
+                .tint(.red)
+            }
+        }
+    }
+
+    // MARK: - Evaluation Section
+
+    private var evaluationSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("현재 상태 확인")
+                .font(.headline)
+
+            if store.state.isEvaluating {
+                HStack {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text("평가 중...")
+                        .foregroundStyle(.secondary)
+                        .font(.subheadline)
+                }
+            } else if let signal = store.state.signal {
+                signalCard(signal: signal)
+            } else {
+                Button {
+                    store.action(.evaluate)
+                } label: {
+                    HStack {
+                        Image(systemName: "chart.line.uptrend.xyaxis")
+                        Text("즉시 확인")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+
+            if let errorMessage = store.state.errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
+    private func signalCard(signal: StrategySignal) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                signalBadge(signal.signalType)
+                Spacer()
+                Button {
+                    store.action(.evaluate)
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+            }
+
+            Text(signal.description)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .padding(12)
+        .background(signalBackgroundColor(signal.signalType).opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func signalBadge(_ type: SignalType) -> some View {
+        Text(type.rawValue)
+            .font(.subheadline.bold())
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+            .background(signalBackgroundColor(type))
+            .clipShape(Capsule())
+    }
+
+    private func signalBackgroundColor(_ type: SignalType) -> Color {
+        switch type {
+        case .buy: return .green
+        case .sell: return .red
+        case .neutral: return .gray
+        }
+    }
+
+    // MARK: - Notification Section
+
+    private var notificationSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("알림 설정")
+                .font(.headline)
+
+            Toggle(isOn: Binding(
+                get: { store.state.isNotificationEnabled },
+                set: { _ in store.action(.toggleNotification) }
+            )) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("조건 충족 시 알림")
+                    Text("조건이 충족되면 푸시 알림을 받습니다")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    // MARK: - Apply Button
+
+    private var applyButton: some View {
+        Button {
+            store.action(.saveCondition)
+        } label: {
+            if store.state.isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+            } else {
+                Text("적용하기")
+                    .frame(maxWidth: .infinity)
+            }
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(store.state.isLoading)
+    }
+}

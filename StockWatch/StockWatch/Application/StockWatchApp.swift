@@ -6,12 +6,14 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct StockWatchApp: App {
     var body: some Scene {
         WindowGroup {
-            HomeView()
+            MainTabView()
         }
+        .modelContainer(for: [FavoriteStock.self, SavedStrategy.self, StockConditionModel.self])
     }
 }

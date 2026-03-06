@@ -4,14 +4,34 @@
 //
 
 import SwiftUI
+import SwiftData
 
+/// StockDetail 화면 진입점 — modelContext를 Environment에서 받아 Store를 구성한다.
 struct StockDetailView: View {
 
-    @StateObject private var store: StockDetailStore
+    @Environment(\.modelContext) private var modelContext
+    let ticker: String
 
-    init(ticker: String) {
-        _store = StateObject(wrappedValue: StockDetailStore(ticker: ticker))
+    var body: some View {
+        StockDetailContentView(store: makeStore())
     }
+
+    private func makeStore() -> StockDetailStore {
+        let repository = FavoriteRepository(modelContext: modelContext)
+        return StockDetailStore(
+            ticker: ticker,
+            toggleFavoriteUseCase: ToggleFavoriteUseCase(repository: repository),
+            checkFavoriteUseCase: CheckFavoriteUseCase(repository: repository)
+        )
+    }
+}
+
+// MARK: - Content View
+
+/// Store를 @StateObject로 보유하는 실제 UI 컴포넌트
+private struct StockDetailContentView: View {
+
+    @StateObject var store: StockDetailStore
 
     var body: some View {
         let state = store.state
@@ -34,10 +54,19 @@ struct StockDetailView: View {
                         Text(state.ticker)
                             .font(.title.bold())
 
-                        Text(state.companyName)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
+                        HStack(spacing: 4) {
+                            Text(state.companyName)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+
+                            Button {
+                                store.action(.toggleFavorite)
+                            } label: {
+                                Image(systemName: state.isFavorite ? "heart.fill" : "heart")
+                                    .foregroundStyle(.red)
+                            }
+                        }
                     }
 
                     // 가격 정보
@@ -50,6 +79,15 @@ struct StockDetailView: View {
                             .foregroundStyle(state.isPositiveChange ? .green : .red)
                     }
 
+                    // 전략 적용하기 버튼
+                    Button {
+                        store.action(.navigateToApplyStrategy)
+                    } label: {
+                        Label("전략 적용하기", systemImage: "chart.line.uptrend.xyaxis")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+
                     Spacer()
                 }
                 .padding()
@@ -57,10 +95,14 @@ struct StockDetailView: View {
         }
         .navigationTitle(state.ticker)
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: store.isShowingApplyStrategyBinding) {
+            StrategyView(ticker: store.state.ticker)
+        }
         .task {
             store.action(.loadDetail)
         }
     }
+    
     @ViewBuilder
     private func logoView(state: StockDetailState) -> some View {
         if !state.logoURL.isEmpty, let url = URL(string: state.logoURL) {
