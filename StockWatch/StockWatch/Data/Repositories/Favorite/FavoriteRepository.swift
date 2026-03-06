@@ -40,4 +40,12 @@ final class FavoriteRepository: FavoriteRepositoryProtocol {
         results.forEach { modelContext.delete($0) }
         try modelContext.save()
     }
+
+    func fetchAllFavorites() async -> [String] {
+        let descriptor = FetchDescriptor<FavoriteStock>(
+            sortBy: [SortDescriptor(\.addedAt, order: .reverse)]
+        )
+        let results = (try? modelContext.fetch(descriptor)) ?? []
+        return results.map { $0.ticker }
+    }
 }
