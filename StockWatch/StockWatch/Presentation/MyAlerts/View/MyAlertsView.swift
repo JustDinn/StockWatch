@@ -23,7 +23,8 @@ struct MyAlertsView: View {
                 repository: conditionRepository
             ),
             deleteStockConditionUseCase: DeleteStockConditionUseCase(
-                repository: conditionRepository
+                repository: conditionRepository,
+                alertRepository: alertRepository
             ),
             toggleAlertUseCase: ToggleAlertUseCase(
                 conditionRepository: conditionRepository,
