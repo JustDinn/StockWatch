@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import FirebaseAuth
 import FirebaseFirestore
 
 /// 알림 조건 원격 등록 Repository
@@ -12,12 +13,14 @@ final class AlertRegistrationRepository: AlertRegistrationRepositoryProtocol {
     private let db = Firestore.firestore()
 
     func register(condition: StockCondition, fcmToken: String) async throws {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
         let data: [String: Any] = [
             "conditionId": condition.id,
             "ticker": condition.ticker,
             "strategyId": condition.strategyId,
             "parameters": StrategyParametersMapper.encode(condition.parameters),
             "fcmToken": fcmToken,
+            "userId": userId,
             "isActive": condition.isActive,
             "createdAt": Timestamp(date: condition.createdAt)
         ]
@@ -32,5 +35,17 @@ final class AlertRegistrationRepository: AlertRegistrationRepositoryProtocol {
         try await db.collection("alertConditions").document(conditionId).updateData([
             "isActive": isActive
         ])
+    }
+
+    func updateFCMToken(userId: String, newToken: String) async throws {
+        let snapshot = try await db.collection("alertConditions")
+            .whereField("userId", isEqualTo: userId)
+            .getDocuments()
+
+        let batch = db.batch()
+        for doc in snapshot.documents {
+            batch.updateData(["fcmToken": newToken], forDocument: doc.reference)
+        }
+        try await batch.commit()
     }
 }
