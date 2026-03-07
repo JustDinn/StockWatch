@@ -1,11 +1,14 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // alertConditions: 본인 conditionId에 해당하는 문서만 읽기/쓰기 허용
-    // Cloud Functions는 Admin SDK를 사용하므로 이 규칙에 영향받지 않음
     match /alertConditions/{conditionId} {
-      // 디바이스에서 직접 쓰기/삭제만 허용 (읽기는 Functions에서만)
-      allow write, delete: if true;
+      // 인증된 사용자만, 본인 문서만 쓰기 허용
+      allow write: if request.auth != null
+                   && request.resource.data.userId == request.auth.uid;
+      // 인증된 사용자만, 본인 문서만 삭제 허용
+      allow delete: if request.auth != null
+                    && resource.data.userId == request.auth.uid;
+      // 클라이언트 읽기 금지 (Cloud Functions은 Admin SDK로 읽음)
       allow read: if false;
     }
   }

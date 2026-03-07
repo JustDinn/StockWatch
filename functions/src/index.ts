@@ -19,6 +19,7 @@ interface AlertCondition {
   fcmToken: string;
   isActive: boolean;
   createdAt: Timestamp;
+  lastTriggeredAt?: Timestamp;
 }
 
 interface StrategyParams {
@@ -96,7 +97,12 @@ async function evaluateAndNotify(
 
   if (signal === "neutral") return;
 
-  await sendFcm(cond.fcmToken, cond.ticker, cond.strategyId, signal);
+  await sendFcm(cond.fcmToken, cond.ticker, cond.strategyId, signal, cond.conditionId);
+
+  await getFirestore()
+    .collection("alertConditions")
+    .doc(cond.conditionId)
+    .update({ lastTriggeredAt: Timestamp.now() });
 }
 
 async function evaluate(
@@ -118,7 +124,8 @@ async function sendFcm(
   fcmToken: string,
   ticker: string,
   strategyId: string,
-  signal: SignalType
+  signal: SignalType,
+  conditionId: string
 ): Promise<void> {
   if (!fcmToken) return;
 
@@ -133,9 +140,18 @@ async function sendFcm(
         body: `${strategyLabel} 조건이 충족되었습니다`,
       },
       data: {
+        conditionId,
         ticker,
         strategyId,
         signal,
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: "default",
+            badge: 1,
+          },
+        },
       },
     });
   } catch (err) {
