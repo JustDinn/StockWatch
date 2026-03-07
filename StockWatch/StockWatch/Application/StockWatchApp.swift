@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import FirebaseAuth
 import FirebaseCore
 import FirebaseMessaging
 import UserNotifications
@@ -20,7 +21,13 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         FirebaseApp.configure()
-        
+
+        Task {
+            if Auth.auth().currentUser == nil {
+                try? await Auth.auth().signInAnonymously()
+            }
+        }
+
         Messaging.messaging().delegate = self
         UNUserNotificationCenter.current().delegate = self
 
@@ -44,6 +51,11 @@ extension AppDelegate: MessagingDelegate {
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         guard let token = fcmToken else { return }
         FCMTokenManager.shared.save(token: token)
+
+        Task {
+            guard let uid = Auth.auth().currentUser?.uid else { return }
+            try? await AlertRegistrationRepository().updateFCMToken(userId: uid, newToken: token)
+        }
     }
 }
 
