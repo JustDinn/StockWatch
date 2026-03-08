@@ -22,12 +22,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     ) -> Bool {
         FirebaseApp.configure()
 
-        Task {
-            if Auth.auth().currentUser == nil {
-                try? await Auth.auth().signInAnonymously()
-            }
-        }
-
         Messaging.messaging().delegate = self
         UNUserNotificationCenter.current().delegate = self
 
@@ -77,10 +71,21 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
 struct StockWatchApp: App {
 
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @State private var isAuthReady = false
 
     var body: some Scene {
         WindowGroup {
-            MainTabView()
+            if isAuthReady {
+                MainTabView()
+            } else {
+                ProgressView()
+                    .task {
+                        if Auth.auth().currentUser == nil {
+                            try? await Auth.auth().signInAnonymously()
+                        }
+                        isAuthReady = true
+                    }
+            }
         }
         .modelContainer(for: [FavoriteStock.self, SavedStrategy.self, StockConditionModel.self])
     }
