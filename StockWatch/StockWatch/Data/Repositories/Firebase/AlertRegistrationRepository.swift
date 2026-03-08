@@ -7,13 +7,19 @@ import Foundation
 import FirebaseAuth
 import FirebaseFirestore
 
+enum AlertRegistrationError: Error {
+    case unauthenticated
+}
+
 /// 알림 조건 원격 등록 Repository
 final class AlertRegistrationRepository: AlertRegistrationRepositoryProtocol {
 
     private let db = Firestore.firestore()
 
     func register(condition: StockCondition, fcmToken: String) async throws {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
+        guard let userId = Auth.auth().currentUser?.uid else {
+            throw AlertRegistrationError.unauthenticated
+        }
         let data: [String: Any] = [
             "conditionId": condition.id,
             "ticker": condition.ticker,
