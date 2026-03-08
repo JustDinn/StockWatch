@@ -153,17 +153,22 @@ extension ApplyStrategyStore {
 
         Task {
             do {
+                print("<< [ApplyStrategyStore] saveCondition: conditionId=\(condition.id), ticker=\(condition.ticker), isNotificationEnabled=\(condition.isNotificationEnabled)")
                 try await saveStockConditionUseCase.execute(condition: condition)
+                print("<< [ApplyStrategyStore] saveStockConditionUseCase 완료")
 
                 if state.isNotificationEnabled {
                     let fcmToken = fcmTokenProvider()
+                    print("<< [ApplyStrategyStore] FCM 토큰: \(fcmToken.isEmpty ? "(비어있음)" : fcmToken.prefix(10) + "...")")
                     if !fcmToken.isEmpty {
                         try await registerAlertUseCase.register(condition: condition, fcmToken: fcmToken)
+                        print("<< [ApplyStrategyStore] registerAlertUseCase 완료")
                     }
                 }
 
                 state.isSaved = true
             } catch {
+                print("<< [ApplyStrategyStore] 저장 오류: \(error)")
                 state.errorMessage = "저장 중 오류가 발생했습니다: \(error.localizedDescription)"
             }
             state.isLoading = false
