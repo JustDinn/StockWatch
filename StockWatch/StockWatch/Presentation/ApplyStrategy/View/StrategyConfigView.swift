@@ -18,11 +18,6 @@ struct StrategyConfigView: View {
                 // 전략 헤더
                 strategyHeader
 
-                
-                
-                // TODO: 실제 푸시 알림 오는지 테스트 실행
-                
-                
                 Divider()
 
                 // 파라미터 설정

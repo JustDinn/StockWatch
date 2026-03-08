@@ -20,6 +20,7 @@ interface AlertCondition {
   isActive: boolean;
   createdAt: Timestamp;
   lastTriggeredAt?: Timestamp;
+  lastNotifiedSignal?: string; // "buy" | "sell" - 중복 발송 방지용
   notificationHour?: number;   // KST 시 (0-23)
   notificationMinute?: number; // KST 분 (0-59)
 }
@@ -114,12 +115,18 @@ async function evaluateAndNotify(
 
   if (signal === "neutral") return;
 
+  // 동일 신호가 24시간 이내 이미 발송된 경우 스킵
+  if (signal === cond.lastNotifiedSignal) {
+    const lastAt = cond.lastTriggeredAt?.toDate();
+    if (lastAt && (Date.now() - lastAt.getTime()) < 24 * 60 * 60 * 1000) return;
+  }
+
   await sendFcm(cond.fcmToken, cond.ticker, cond.strategyId, signal, cond.conditionId);
 
   await getFirestore()
     .collection("alertConditions")
     .doc(cond.conditionId)
-    .update({ lastTriggeredAt: Timestamp.now() });
+    .update({ lastTriggeredAt: Timestamp.now(), lastNotifiedSignal: signal });
 }
 
 async function evaluate(

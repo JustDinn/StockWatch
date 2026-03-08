@@ -34,6 +34,7 @@ final class ApplyStrategyStore: ObservableObject {
         self.saveStockConditionUseCase = saveStockConditionUseCase
         self.registerAlertUseCase = registerAlertUseCase
         self.fcmTokenProvider = fcmTokenProvider
+        observeFCMToken()
     }
 
     // MARK: - Action
@@ -78,6 +79,14 @@ final class ApplyStrategyStore: ObservableObject {
 // MARK: - Private
 
 extension ApplyStrategyStore {
+
+    private func observeFCMToken() {
+        Task {
+            for await token in FCMTokenManager.shared.$currentToken.values {
+                state.isFCMTokenReady = !token.isEmpty
+            }
+        }
+    }
 
     private func loadStrategies() {
         state.isLoading = true
