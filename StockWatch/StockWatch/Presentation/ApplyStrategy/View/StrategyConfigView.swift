@@ -275,6 +275,6 @@ struct StrategyConfigView: View {
             }
         }
         .buttonStyle(.borderedProminent)
-        .disabled(store.state.isLoading)
+        .disabled(store.state.isLoading || !store.state.canApply)
     }
 }
