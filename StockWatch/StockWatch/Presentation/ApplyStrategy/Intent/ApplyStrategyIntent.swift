@@ -3,6 +3,8 @@
 //  StockWatch
 //
 
+import Foundation
+
 /// ApplyStrategy 화면 사용자 액션 정의
 enum ApplyStrategyIntent {
     /// 전략 목록 로드
@@ -23,6 +25,8 @@ enum ApplyStrategyIntent {
     case evaluate
     /// 알림 등록 토글
     case toggleNotification
+    /// 알림 수신 시각 변경
+    case updateNotificationTime(Date)
     /// 조건 저장
     case saveCondition
     /// 전략 선택 해제 (Back 버튼)

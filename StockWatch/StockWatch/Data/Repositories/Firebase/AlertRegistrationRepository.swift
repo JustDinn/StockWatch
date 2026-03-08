@@ -20,6 +20,11 @@ final class AlertRegistrationRepository: AlertRegistrationRepositoryProtocol {
         guard let userId = Auth.auth().currentUser?.uid else {
             throw AlertRegistrationError.unauthenticated
         }
+        var kstCalendar = Calendar(identifier: .gregorian)
+        kstCalendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let notificationHour = kstCalendar.component(.hour, from: condition.notificationTime)
+        let notificationMinute = kstCalendar.component(.minute, from: condition.notificationTime)
+
         let data: [String: Any] = [
             "conditionId": condition.id,
             "ticker": condition.ticker,
@@ -28,7 +33,9 @@ final class AlertRegistrationRepository: AlertRegistrationRepositoryProtocol {
             "fcmToken": fcmToken,
             "userId": userId,
             "isActive": condition.isActive,
-            "createdAt": Timestamp(date: condition.createdAt)
+            "createdAt": Timestamp(date: condition.createdAt),
+            "notificationHour": notificationHour,
+            "notificationMinute": notificationMinute
         ]
         try await db.collection("alertConditions").document(condition.id).setData(data)
     }

@@ -20,6 +20,8 @@ interface AlertCondition {
   isActive: boolean;
   createdAt: Timestamp;
   lastTriggeredAt?: Timestamp;
+  notificationHour?: number;   // KST 시 (0-23)
+  notificationMinute?: number; // KST 분 (0-59)
 }
 
 interface StrategyParams {
@@ -52,15 +54,30 @@ export const evaluateAlerts = onSchedule(
 
     const conditions = snapshot.docs.map((doc) => doc.data() as AlertCondition);
 
-    // 2. ticker별 그룹핑
+    // 2. 현재 KST 시각의 5분 윈도우에 해당하는 조건만 필터링
+    const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000); // UTC → KST
+    const currentHour = nowKst.getUTCHours();
+    const currentWindow = Math.floor(nowKst.getUTCMinutes() / 5);
+
+    const dueConditions = conditions.filter((cond) => {
+      if (cond.notificationHour === undefined) return true; // 하위 호환: 필드 없는 기존 문서는 통과
+      return (
+        cond.notificationHour === currentHour &&
+        Math.floor((cond.notificationMinute ?? 0) / 5) === currentWindow
+      );
+    });
+
+    if (dueConditions.length === 0) return;
+
+    // 4. ticker별 그룹핑
     const tickerGroups = new Map<string, AlertCondition[]>();
-    for (const cond of conditions) {
+    for (const cond of dueConditions) {
       const list = tickerGroups.get(cond.ticker) ?? [];
       list.push(cond);
       tickerGroups.set(cond.ticker, list);
     }
 
-    // 3. 각 ticker별 전략 평가 및 FCM 발송
+    // 5. 각 ticker별 전략 평가 및 FCM 발송
     const tasks: Promise<void>[] = [];
 
     for (const [, condList] of tickerGroups) {

@@ -27,6 +27,7 @@ final class ToggleAlertUseCase: ToggleAlertUseCaseProtocol {
             strategyId: condition.strategyId,
             parameters: condition.parameters,
             isNotificationEnabled: newState,
+            notificationTime: condition.notificationTime,
             isActive: condition.isActive,
             createdAt: condition.createdAt
         )

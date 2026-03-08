@@ -94,6 +94,7 @@ extension MyAlertsStore {
                 strategyId: condition.strategyId,
                 parameters: condition.parameters,
                 isNotificationEnabled: !condition.isNotificationEnabled,
+                notificationTime: condition.notificationTime,
                 isActive: condition.isActive,
                 createdAt: condition.createdAt
             )

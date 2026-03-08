@@ -15,6 +15,7 @@ final class StockConditionModel {
     /// StrategyParameters를 JSON으로 직렬화하여 저장
     var parametersJSON: String
     var isNotificationEnabled: Bool
+    var notificationTime: Date
     var isActive: Bool
     var createdAt: Date
 
@@ -24,6 +25,7 @@ final class StockConditionModel {
         strategyId: String,
         parametersJSON: String,
         isNotificationEnabled: Bool,
+        notificationTime: Date,
         isActive: Bool,
         createdAt: Date
     ) {
@@ -32,6 +34,7 @@ final class StockConditionModel {
         self.strategyId = strategyId
         self.parametersJSON = parametersJSON
         self.isNotificationEnabled = isNotificationEnabled
+        self.notificationTime = notificationTime
         self.isActive = isActive
         self.createdAt = createdAt
     }

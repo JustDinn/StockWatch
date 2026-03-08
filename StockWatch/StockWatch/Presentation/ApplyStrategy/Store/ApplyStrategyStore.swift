@@ -63,6 +63,8 @@ final class ApplyStrategyStore: ObservableObject {
             evaluate()
         case .toggleNotification:
             state.isNotificationEnabled.toggle()
+        case .updateNotificationTime(let date):
+            state.notificationTime = date
         case .saveCondition:
             saveCondition()
         case .deselectStrategy:
@@ -135,6 +137,7 @@ extension ApplyStrategyStore {
             strategyId: parameters.strategyId,
             parameters: parameters,
             isNotificationEnabled: state.isNotificationEnabled,
+            notificationTime: state.notificationTime,
             isActive: true,
             createdAt: Date()
         )

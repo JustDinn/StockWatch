@@ -18,6 +18,11 @@ struct StrategyConfigView: View {
                 // 전략 헤더
                 strategyHeader
 
+                
+                
+                // TODO: 실제 푸시 알림 오는지 테스트 실행
+                
+                
                 Divider()
 
                 // 파라미터 설정
@@ -256,6 +261,23 @@ struct StrategyConfigView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+            }
+
+            if store.state.isNotificationEnabled {
+                DatePicker(
+                    "알림 시간",
+                    selection: Binding(
+                        get: { store.state.notificationTime },
+                        set: { store.action(.updateNotificationTime($0)) }
+                    ),
+                    displayedComponents: .hourAndMinute
+                )
+                .environment(\.locale, Locale(identifier: "ko_KR"))
+                .environment(\.timeZone, TimeZone(identifier: "Asia/Seoul")!)
+
+                Text("매일 설정한 시간에 전략 조건을 확인합니다")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
     }
