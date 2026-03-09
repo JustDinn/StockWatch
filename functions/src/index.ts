@@ -1,4 +1,5 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import { onRequest } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { initializeApp } from "firebase-admin/app";
 import { finnhubApiKey } from "./finnhub";
@@ -60,6 +61,59 @@ export const evaluateAlerts = onSchedule(
     }
 
     await Promise.allSettled(tasks);
+  }
+);
+
+// MARK: - HTTP Trigger (로컬 테스트 전용 — 배포하지 말 것)
+
+export const triggerEvaluateAlerts = onRequest(
+  { secrets: [finnhubApiKey] },
+  async (req, res) => {
+    const db = getFirestore();
+    const apiKey = finnhubApiKey.value();
+    const skipTimeFilter = req.query.skipTimeFilter === "true";
+
+    const snapshot = await db
+      .collection("alertConditions")
+      .where("isActive", "==", true)
+      .get();
+
+    if (snapshot.empty) {
+      res.json({ message: "alertConditions 에 isActive=true 문서가 없습니다." });
+      return;
+    }
+
+    const conditions = snapshot.docs.map((doc) => doc.data() as AlertCondition);
+
+    const targetConditionId = req.query.conditionId as string | undefined;
+
+    const dueConditions = skipTimeFilter
+      ? targetConditionId
+        ? conditions.filter((c) => c.conditionId === targetConditionId)
+        : conditions
+      : conditions.filter((cond) => {
+          if (cond.notificationHour === undefined) return true;
+          const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+          const currentHour = nowKst.getUTCHours();
+          const currentWindow = Math.floor(nowKst.getUTCMinutes() / 5);
+          return (
+            cond.notificationHour === currentHour &&
+            Math.floor((cond.notificationMinute ?? 0) / 5) === currentWindow
+          );
+        });
+
+    if (dueConditions.length === 0) {
+      res.json({ message: "현재 시간대에 해당하는 조건이 없습니다. ?skipTimeFilter=true 를 붙여 재시도하세요." });
+      return;
+    }
+
+    const tasks = dueConditions.map((cond) => evaluateAndNotify(cond, apiKey));
+    await Promise.allSettled(tasks);
+
+    res.json({
+      message: `${dueConditions.length}개 조건 평가 완료`,
+      conditions: dueConditions.map((c) => ({ conditionId: c.conditionId, ticker: c.ticker })),
+    });
   }
 );
 

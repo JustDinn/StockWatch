@@ -18,7 +18,7 @@ final class DeleteStockConditionUseCase: DeleteStockConditionUseCaseProtocol {
     }
 
     func execute(id: String) async throws {
-        try? await alertRepository.unregister(conditionId: id)
+        try await alertRepository.unregister(conditionId: id)
         try await repository.delete(id: id)
     }
 }
