@@ -59,7 +59,7 @@ export async function evaluateAndNotify(
     if (lastAt && (Date.now() - lastAt.getTime()) < 24 * 60 * 60 * 1000) return;
   }
 
-  await sendFcm(cond.fcmToken, cond.ticker, cond.strategyId, signal, cond.conditionId);
+  await sendFcm(cond.fcmToken, cond.ticker, cond.strategyId, signal, cond.conditionId, params);
 
   await getFirestore()
     .collection("alertConditions")
@@ -90,13 +90,20 @@ export async function sendFcm(
   conditionId: string,
   params?: StrategyParams
 ): Promise<void> {
-  if (!fcmToken) return;
+  if (!fcmToken) {
+    console.error(`<< [sendFcm] fcmToken이 비어있어 FCM 발송 스킵: conditionId=${conditionId}`);
+    return;
+  }
 
   const signalLabel = signal === "buy" ? "매수" : "매도";
   const body = buildNotificationBody(strategyId, signal, params);
 
+  console.log(`<< [sendFcm] 발송 시도: ticker=${ticker}, signal=${signal}, conditionId=${conditionId}, tokenPrefix=${fcmToken.slice(0, 10)}...`);
+  console.log(`<< [sendFcm] 알림 제목: ${ticker} ${signalLabel} 신호`);
+  console.log(`<< [sendFcm] 알림 내용: ${body}`);
+
   try {
-    await getMessaging().send({
+    const messageId = await getMessaging().send({
       token: fcmToken,
       notification: {
         title: `${ticker} ${signalLabel} 신호`,
@@ -117,8 +124,9 @@ export async function sendFcm(
         },
       },
     });
+    console.log(`<< [sendFcm] FCM 발송 성공: messageId=${messageId}`);
   } catch (err) {
-    console.error(`FCM send failed for token ${fcmToken}:`, err);
+    console.error(`<< [sendFcm] FCM 발송 실패: token=${fcmToken.slice(0, 10)}..., error=`, err);
   }
 }
 

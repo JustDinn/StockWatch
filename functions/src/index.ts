@@ -62,3 +62,4 @@ export const evaluateAlerts = onSchedule(
     await Promise.allSettled(tasks);
   }
 );
+

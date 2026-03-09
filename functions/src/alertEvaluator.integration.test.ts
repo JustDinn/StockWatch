@@ -228,3 +228,95 @@ describe("잘못된 파라미터 → 조용히 실패", () => {
     expect(mockSend).not.toHaveBeenCalled();
   });
 });
+
+// MARK: - 알림 메시지 상세 조건값 검증
+
+import { buildNotificationBody } from "./alertEvaluator";
+
+describe("buildNotificationBody - RSI", () => {
+  test("RSI buy: 과매도 구간 진입 메시지에 period와 threshold가 포함된다", () => {
+    const body = buildNotificationBody("rsi", "buy", {
+      type: "rsi", period: 14, oversoldThreshold: 30, overboughtThreshold: 70,
+    });
+    expect(body).toBe("RSI(14) 과매도 구간(30 이하) 진입 — 매수 신호");
+  });
+
+  test("RSI sell: 과매수 구간 진입 메시지에 period와 threshold가 포함된다", () => {
+    const body = buildNotificationBody("rsi", "sell", {
+      type: "rsi", period: 14, oversoldThreshold: 30, overboughtThreshold: 70,
+    });
+    expect(body).toBe("RSI(14) 과매수 구간(70 이상) 진입 — 매도 신호");
+  });
+
+  test("사용자 정의 RSI 파라미터(period=21, threshold=25)가 메시지에 반영된다", () => {
+    const body = buildNotificationBody("rsi", "buy", {
+      type: "rsi", period: 21, oversoldThreshold: 25, overboughtThreshold: 75,
+    });
+    expect(body).toBe("RSI(21) 과매도 구간(25 이하) 진입 — 매수 신호");
+  });
+});
+
+describe("buildNotificationBody - SMA", () => {
+  test("SMA buy: 골든 크로스 메시지에 단기/장기 기간이 포함된다", () => {
+    const body = buildNotificationBody("sma_cross", "buy", {
+      type: "sma", shortPeriod: 20, longPeriod: 50,
+    });
+    expect(body).toBe("SMA 20/50 골든 크로스 — 매수 신호");
+  });
+
+  test("SMA sell: 데드 크로스 메시지에 단기/장기 기간이 포함된다", () => {
+    const body = buildNotificationBody("sma_cross", "sell", {
+      type: "sma", shortPeriod: 20, longPeriod: 50,
+    });
+    expect(body).toBe("SMA 20/50 데드 크로스 — 매도 신호");
+  });
+});
+
+describe("buildNotificationBody - EMA", () => {
+  test("EMA buy: 골든 크로스 메시지에 단기/장기 기간이 포함된다", () => {
+    const body = buildNotificationBody("ema_cross", "buy", {
+      type: "ema", shortPeriod: 12, longPeriod: 26,
+    });
+    expect(body).toBe("EMA 12/26 골든 크로스 — 매수 신호");
+  });
+
+  test("EMA sell: 데드 크로스 메시지에 단기/장기 기간이 포함된다", () => {
+    const body = buildNotificationBody("ema_cross", "sell", {
+      type: "ema", shortPeriod: 12, longPeriod: 26,
+    });
+    expect(body).toBe("EMA 12/26 데드 크로스 — 매도 신호");
+  });
+});
+
+describe("buildNotificationBody - params 없는 fallback", () => {
+  test("params가 없으면 기존 포맷 메시지를 반환한다", () => {
+    const body = buildNotificationBody("rsi", "buy", undefined);
+    expect(body).toBe("RSI 조건이 충족되었습니다");
+  });
+});
+
+describe("FCM 발송 시 알림 body에 조건값이 포함된다", () => {
+  test("RSI buy 신호 FCM의 notification.body에 threshold 값이 있다", async () => {
+    mockFetch.mockResolvedValue({ values: [28, 35] });
+
+    await evaluateAndNotify(makeCondition(), "api-key");
+
+    const payload = mockSend.mock.calls[0][0];
+    expect(payload.notification.body).toBe("RSI(14) 과매도 구간(30 이하) 진입 — 매수 신호");
+  });
+
+  test("SMA buy 신호 FCM의 notification.body에 기간 값이 있다", async () => {
+    const cond = makeCondition({
+      strategyId: "sma_cross",
+      parameters: JSON.stringify({ type: "sma", shortPeriod: 20, longPeriod: 50 }),
+    });
+    mockFetch
+      .mockResolvedValueOnce({ values: [105, 90] })
+      .mockResolvedValueOnce({ values: [100, 100] });
+
+    await evaluateAndNotify(cond, "api-key");
+
+    const payload = mockSend.mock.calls[0][0];
+    expect(payload.notification.body).toBe("SMA 20/50 골든 크로스 — 매수 신호");
+  });
+});
