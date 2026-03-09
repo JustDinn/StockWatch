@@ -259,16 +259,30 @@ struct StrategyConfigView: View {
             }
 
             if store.state.isNotificationEnabled {
-                DatePicker(
-                    "알림 시간",
-                    selection: Binding(
-                        get: { store.state.notificationTime },
-                        set: { store.action(.updateNotificationTime($0)) }
-                    ),
-                    displayedComponents: .hourAndMinute
-                )
-                .environment(\.locale, Locale(identifier: "ko_KR"))
-                .environment(\.timeZone, TimeZone(identifier: "Asia/Seoul")!)
+                HStack {
+                    Text("알림 시간")
+                    Spacer()
+                    Picker("알림 시간", selection: Binding(
+                        get: {
+                            let kst = TimeZone(identifier: "Asia/Seoul")!
+                            return Calendar.current.dateComponents(in: kst, from: store.state.notificationTime).hour ?? 9
+                        },
+                        set: { hour in
+                            var components = DateComponents()
+                            components.hour = hour
+                            components.minute = 0
+                            components.timeZone = TimeZone(identifier: "Asia/Seoul")!
+                            if let date = Calendar.current.date(from: components) {
+                                store.action(.updateNotificationTime(date))
+                            }
+                        }
+                    )) {
+                        ForEach(0..<24, id: \.self) { hour in
+                            Text(String(format: "%02d:00", hour)).tag(hour)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                }
 
                 Text("매일 설정한 시간에 전략 조건을 확인합니다")
                     .font(.caption)
