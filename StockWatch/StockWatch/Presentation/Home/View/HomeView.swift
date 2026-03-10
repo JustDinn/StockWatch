@@ -42,7 +42,7 @@ struct HomeView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        // TODO: 알림 액션 연결
+                        store.action(.showNotificationHistory)
                     } label: {
                         Image(systemName: "bell")
                     }
@@ -50,6 +50,9 @@ struct HomeView: View {
             }
             .navigationDestination(item: store.selectedStockBinding) { result in
                 StockDetailView(ticker: result.displayTicker)
+            }
+            .navigationDestination(isPresented: store.isShowingNotificationHistoryBinding) {
+                NotificationHistoryView()
             }
         }
     }

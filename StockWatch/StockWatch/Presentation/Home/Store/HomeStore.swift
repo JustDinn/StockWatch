@@ -35,6 +35,8 @@ final class HomeStore: ObservableObject {
             searchTicker(query: keyword)
         case .selectStock(let result):
             navigateToDetail(result: result)
+        case .showNotificationHistory:
+            state.isShowingNotificationHistory = true
         }
     }
 
@@ -44,6 +46,13 @@ final class HomeStore: ObservableObject {
         Binding(
             get: { self.state.selectedStock },
             set: { self.state.selectedStock = $0 }
+        )
+    }
+
+    var isShowingNotificationHistoryBinding: Binding<Bool> {
+        Binding(
+            get: { self.state.isShowingNotificationHistory },
+            set: { self.state.isShowingNotificationHistory = $0 }
         )
     }
 
