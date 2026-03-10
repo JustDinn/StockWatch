@@ -39,6 +39,15 @@ struct HomeView: View {
 
                 Spacer()
             }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        // TODO: 알림 액션 연결
+                    } label: {
+                        Image(systemName: "bell")
+                    }
+                }
+            }
             .navigationDestination(item: store.selectedStockBinding) { result in
                 StockDetailView(ticker: result.displayTicker)
             }
