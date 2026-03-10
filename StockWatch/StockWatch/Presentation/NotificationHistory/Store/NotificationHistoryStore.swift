@@ -91,6 +91,7 @@ private extension NotificationHistoryStore {
             NotificationItem(
                 id: "1",
                 ticker: "AAPL",
+                logoURL: "https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/AAPL.png",
                 strategyName: "SMA 골든크로스 발생",
                 body: "매수 신호 감지",
                 receivedAt: date(hoursAgo: 1)
@@ -98,6 +99,7 @@ private extension NotificationHistoryStore {
             NotificationItem(
                 id: "2",
                 ticker: "MSFT",
+                logoURL: "https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/MSFT.png",
                 strategyName: "RSI 과매도 구간 진입",
                 body: "매수 신호 감지",
                 receivedAt: date(hoursAgo: 3)
@@ -105,6 +107,7 @@ private extension NotificationHistoryStore {
             NotificationItem(
                 id: "3",
                 ticker: "NVDA",
+                logoURL: "https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/NVDA.png",
                 strategyName: "EMA 골든크로스 발생",
                 body: "매수 신호 감지",
                 receivedAt: date(hoursAgo: 5)
@@ -113,6 +116,7 @@ private extension NotificationHistoryStore {
             NotificationItem(
                 id: "4",
                 ticker: "TSLA",
+                logoURL: "https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/TSLA.png",
                 strategyName: "EMA 데드크로스 발생",
                 body: "매도 신호 감지",
                 receivedAt: date(daysAgo: 2)
@@ -120,6 +124,7 @@ private extension NotificationHistoryStore {
             NotificationItem(
                 id: "5",
                 ticker: "GOOGL",
+                logoURL: "https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/GOOGL.png",
                 strategyName: "RSI 과매수 구간 진입",
                 body: "매도 신호 감지",
                 receivedAt: date(daysAgo: 3)
@@ -127,6 +132,7 @@ private extension NotificationHistoryStore {
             NotificationItem(
                 id: "6",
                 ticker: "AMZN",
+                logoURL: "https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/AMZN.png",
                 strategyName: "SMA 골든크로스 발생",
                 body: "매수 신호 감지",
                 receivedAt: date(daysAgo: 5)
@@ -134,6 +140,7 @@ private extension NotificationHistoryStore {
             NotificationItem(
                 id: "7",
                 ticker: "META",
+                logoURL: "https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/META.png",
                 strategyName: "RSI 과매도 구간 진입",
                 body: "매수 신호 감지",
                 receivedAt: date(daysAgo: 6)
@@ -142,6 +149,7 @@ private extension NotificationHistoryStore {
             NotificationItem(
                 id: "8",
                 ticker: "NFLX",
+                logoURL: "https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/NFLX.png",
                 strategyName: "EMA 데드크로스 발생",
                 body: "매도 신호 감지",
                 receivedAt: date(daysAgo: 10)
@@ -149,6 +157,7 @@ private extension NotificationHistoryStore {
             NotificationItem(
                 id: "9",
                 ticker: "AMD",
+                logoURL: "https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/AMD.png",
                 strategyName: "SMA 골든크로스 발생",
                 body: "매수 신호 감지",
                 receivedAt: date(daysAgo: 14)
@@ -156,6 +165,7 @@ private extension NotificationHistoryStore {
             NotificationItem(
                 id: "10",
                 ticker: "INTC",
+                logoURL: "https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/INTC.png",
                 strategyName: "RSI 과매수 구간 진입",
                 body: "매도 신호 감지",
                 receivedAt: date(daysAgo: 20)

@@ -13,6 +13,8 @@ struct NotificationItem: Identifiable, Equatable, Hashable {
     let id: String
     /// 종목 티커 (예: "AAPL")
     let ticker: String
+    /// 기업 로고 이미지 URL (빈 문자열이면 이니셜 표시)
+    let logoURL: String
     /// 전략 신호명 (예: "SMA 골든크로스 발생")
     let strategyName: String
     /// 알림 본문 (예: "매수 신호 감지")

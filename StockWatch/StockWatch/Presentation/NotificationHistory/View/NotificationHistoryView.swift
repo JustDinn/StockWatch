@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import Kingfisher
 
 /// 푸시 알림 수신 내역 화면
 /// HomeView의 NavigationStack 내에서 push되므로 자체 NavigationStack 없음
@@ -91,8 +92,8 @@ struct NotificationHistoryView: View {
             store.action(.selectNotification(item))
         } label: {
             HStack(spacing: 12) {
-                // 종목 이니셜 아이콘
-                initialsIcon(ticker: item.ticker)
+                // 종목 로고 아이콘
+                logoIcon(ticker: item.ticker, logoURL: item.logoURL)
 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
@@ -119,8 +120,22 @@ struct NotificationHistoryView: View {
 
     // MARK: - Helpers
 
+    @ViewBuilder
+    private func logoIcon(ticker: String, logoURL: String) -> some View {
+        if !logoURL.isEmpty, let url = URL(string: logoURL) {
+            KFImage(url)
+                .placeholder { initialsIcon(ticker: ticker) }
+                .resizable()
+                .scaledToFit()
+                .frame(width: 44, height: 44)
+                .clipShape(Circle())
+        } else {
+            initialsIcon(ticker: ticker)
+        }
+    }
+
     private func initialsIcon(ticker: String) -> some View {
-        let initials = String(ticker.prefix(2))
+        let initials = String(ticker.prefix(2)).uppercased()
         return Circle()
             .fill(Color.blue.opacity(0.15))
             .frame(width: 44, height: 44)
