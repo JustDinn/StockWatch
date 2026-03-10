@@ -9,6 +9,7 @@ struct StrategyState: Equatable {
     var savedStrategyIds: Set<String> = []
     var selectedSegment: StrategySegment = .all
     var selectedStrategy: Strategy? = nil
+    var infoStrategy: Strategy? = nil
     var isLoading: Bool = false
 
     /// 현재 세그먼트에 따라 표시할 전략 목록

@@ -12,4 +12,6 @@ protocol AlertRegistrationRepositoryProtocol {
     func unregister(conditionId: String) async throws
     /// 알림 조건의 활성 상태를 업데이트한다.
     func updateActive(conditionId: String, isActive: Bool) async throws
+    /// 해당 사용자의 모든 알림 조건 문서의 FCM 토큰을 일괄 업데이트한다.
+    func updateFCMToken(userId: String, newToken: String) async throws
 }

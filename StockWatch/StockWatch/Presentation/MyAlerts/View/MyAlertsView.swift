@@ -12,25 +12,7 @@ struct MyAlertsView: View {
     @Environment(\.modelContext) private var modelContext
 
     var body: some View {
-        MyAlertsContentView(store: makeStore())
-    }
-
-    private func makeStore() -> MyAlertsStore {
-        let conditionRepository = StockConditionRepository(modelContext: modelContext)
-        let alertRepository = AlertRegistrationRepository()
-        return MyAlertsStore(
-            fetchStockConditionsUseCase: FetchStockConditionsUseCase(
-                repository: conditionRepository
-            ),
-            deleteStockConditionUseCase: DeleteStockConditionUseCase(
-                repository: conditionRepository
-            ),
-            toggleAlertUseCase: ToggleAlertUseCase(
-                conditionRepository: conditionRepository,
-                alertRepository: alertRepository
-            ),
-            fcmTokenProvider: { FCMTokenManager.shared.currentToken }
-        )
+        MyAlertsContentView(modelContext: modelContext)
     }
 }
 
@@ -38,7 +20,27 @@ struct MyAlertsView: View {
 
 private struct MyAlertsContentView: View {
 
-    @StateObject var store: MyAlertsStore
+    @StateObject private var store: MyAlertsStore
+
+    init(modelContext: ModelContext) {
+        print("<< [MyAlertsContentView] init - modelContext: \(ObjectIdentifier(modelContext))")
+        let conditionRepository = StockConditionRepository(modelContext: modelContext)
+        let alertRepository = AlertRegistrationRepository()
+        _store = StateObject(wrappedValue: MyAlertsStore(
+            fetchStockConditionsUseCase: FetchStockConditionsUseCase(
+                repository: conditionRepository
+            ),
+            deleteStockConditionUseCase: DeleteStockConditionUseCase(
+                repository: conditionRepository,
+                alertRepository: alertRepository
+            ),
+            toggleAlertUseCase: ToggleAlertUseCase(
+                conditionRepository: conditionRepository,
+                alertRepository: alertRepository
+            ),
+            fcmTokenProvider: { FCMTokenManager.shared.currentToken }
+        ))
+    }
 
     var body: some View {
         NavigationStack {
@@ -116,6 +118,12 @@ private struct MyAlertsContentView: View {
                 Text(parametersDescription(condition.parameters))
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                if condition.isNotificationEnabled {
+                    Text(formattedTime(condition.notificationTime))
+                        .font(.caption2)
+                        .foregroundStyle(.blue)
+                }
             }
 
             Spacer()
@@ -158,5 +166,13 @@ private struct MyAlertsContentView: View {
         case let .rsi(period, oversoldThreshold, overboughtThreshold):
             return "기간 \(period)일 / 과매도 \(Int(oversoldThreshold)) / 과매수 \(Int(overboughtThreshold))"
         }
+    }
+
+    private func formattedTime(_ date: Date) -> String {
+        var kstCalendar = Calendar(identifier: .gregorian)
+        kstCalendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let hour = kstCalendar.component(.hour, from: date)
+        let minute = kstCalendar.component(.minute, from: date)
+        return String(format: "알림 시각: %02d:%02d (KST)", hour, minute)
     }
 }

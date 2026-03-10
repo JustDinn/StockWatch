@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3F5468882F5AC84600DC5AEB /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 3F5468872F5AC84600DC5AEB /* FirebaseFirestore */; };
+		3F54688A2F5AC84600DC5AEB /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 3F5468892F5AC84600DC5AEB /* FirebaseMessaging */; };
+		3F54688D2F5AD01600DC5AEB /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 3F54688C2F5AD01600DC5AEB /* Kingfisher */; };
+		3F5B8A852F5D8F7D00B73065 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 3F5B8A842F5D8F7D00B73065 /* FirebaseFunctions */; };
+		3F88A7DC2F5C740000A6A4A9 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 3F88A7DB2F5C740000A6A4A9 /* FirebaseAuth */; };
 		3FC2468C2F4B41F000AD955A /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = 3FC2468B2F4B41F000AD955A /* Alamofire */; };
 /* End PBXBuildFile section */
 
@@ -69,7 +74,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3F54688D2F5AD01600DC5AEB /* Kingfisher in Frameworks */,
+				3F88A7DC2F5C740000A6A4A9 /* FirebaseAuth in Frameworks */,
+				3F54688A2F5AC84600DC5AEB /* FirebaseMessaging in Frameworks */,
+				3F5B8A852F5D8F7D00B73065 /* FirebaseFunctions in Frameworks */,
 				3FC2468C2F4B41F000AD955A /* Alamofire in Frameworks */,
+				3F5468882F5AC84600DC5AEB /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -131,6 +141,11 @@
 			name = StockWatch;
 			packageProductDependencies = (
 				3FC2468B2F4B41F000AD955A /* Alamofire */,
+				3F5468872F5AC84600DC5AEB /* FirebaseFirestore */,
+				3F5468892F5AC84600DC5AEB /* FirebaseMessaging */,
+				3F54688C2F5AD01600DC5AEB /* Kingfisher */,
+				3F88A7DB2F5C740000A6A4A9 /* FirebaseAuth */,
+				3F5B8A842F5D8F7D00B73065 /* FirebaseFunctions */,
 			);
 			productName = StockWatch;
 			productReference = 3F915FA52F4B3E0D00EC99A0 /* StockWatch.app */;
@@ -216,6 +231,8 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				3FC2468A2F4B41F000AD955A /* XCRemoteSwiftPackageReference "Alamofire" */,
+				3F5468862F5AC84600DC5AEB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				3F54688B2F5AD01600DC5AEB /* XCRemoteSwiftPackageReference "Kingfisher" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3F915FA62F4B3E0D00EC99A0 /* Products */;
@@ -629,6 +646,22 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		3F5468862F5AC84600DC5AEB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.10.0;
+			};
+		};
+		3F54688B2F5AD01600DC5AEB /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/onevcat/Kingfisher.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.8.0;
+			};
+		};
 		3FC2468A2F4B41F000AD955A /* XCRemoteSwiftPackageReference "Alamofire" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Alamofire/Alamofire.git";
@@ -640,6 +673,31 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		3F5468872F5AC84600DC5AEB /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3F5468862F5AC84600DC5AEB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		3F5468892F5AC84600DC5AEB /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3F5468862F5AC84600DC5AEB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+		3F54688C2F5AD01600DC5AEB /* Kingfisher */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3F54688B2F5AD01600DC5AEB /* XCRemoteSwiftPackageReference "Kingfisher" */;
+			productName = Kingfisher;
+		};
+		3F5B8A842F5D8F7D00B73065 /* FirebaseFunctions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3F5468862F5AC84600DC5AEB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFunctions;
+		};
+		3F88A7DB2F5C740000A6A4A9 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3F5468862F5AC84600DC5AEB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
 		3FC2468B2F4B41F000AD955A /* Alamofire */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 3FC2468A2F4B41F000AD955A /* XCRemoteSwiftPackageReference "Alamofire" */;

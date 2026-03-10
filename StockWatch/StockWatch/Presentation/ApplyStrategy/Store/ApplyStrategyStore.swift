@@ -34,6 +34,7 @@ final class ApplyStrategyStore: ObservableObject {
         self.saveStockConditionUseCase = saveStockConditionUseCase
         self.registerAlertUseCase = registerAlertUseCase
         self.fcmTokenProvider = fcmTokenProvider
+        observeFCMToken()
     }
 
     // MARK: - Action
@@ -63,6 +64,8 @@ final class ApplyStrategyStore: ObservableObject {
             evaluate()
         case .toggleNotification:
             state.isNotificationEnabled.toggle()
+        case .updateNotificationTime(let date):
+            state.notificationTime = date
         case .saveCondition:
             saveCondition()
         case .deselectStrategy:
@@ -76,6 +79,14 @@ final class ApplyStrategyStore: ObservableObject {
 // MARK: - Private
 
 extension ApplyStrategyStore {
+
+    private func observeFCMToken() {
+        Task {
+            for await token in FCMTokenManager.shared.$currentToken.values {
+                state.isFCMTokenReady = !token.isEmpty
+            }
+        }
+    }
 
     private func loadStrategies() {
         state.isLoading = true
@@ -135,23 +146,29 @@ extension ApplyStrategyStore {
             strategyId: parameters.strategyId,
             parameters: parameters,
             isNotificationEnabled: state.isNotificationEnabled,
+            notificationTime: state.notificationTime,
             isActive: true,
             createdAt: Date()
         )
 
         Task {
             do {
+                print("<< [ApplyStrategyStore] saveCondition: conditionId=\(condition.id), ticker=\(condition.ticker), isNotificationEnabled=\(condition.isNotificationEnabled)")
                 try await saveStockConditionUseCase.execute(condition: condition)
+                print("<< [ApplyStrategyStore] saveStockConditionUseCase 완료")
 
                 if state.isNotificationEnabled {
                     let fcmToken = fcmTokenProvider()
+                    print("<< [ApplyStrategyStore] FCM 토큰: \(fcmToken.isEmpty ? "(비어있음)" : fcmToken.prefix(10) + "...")")
                     if !fcmToken.isEmpty {
                         try await registerAlertUseCase.register(condition: condition, fcmToken: fcmToken)
+                        print("<< [ApplyStrategyStore] registerAlertUseCase 완료")
                     }
                 }
 
                 state.isSaved = true
             } catch {
+                print("<< [ApplyStrategyStore] 저장 오류: \(error)")
                 state.errorMessage = "저장 중 오류가 발생했습니다: \(error.localizedDescription)"
             }
             state.isLoading = false

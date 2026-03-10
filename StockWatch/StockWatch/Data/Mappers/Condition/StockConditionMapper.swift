@@ -17,6 +17,7 @@ enum StockConditionMapper {
             strategyId: model.strategyId,
             parameters: parameters,
             isNotificationEnabled: model.isNotificationEnabled,
+            notificationTime: model.notificationTime,
             isActive: model.isActive,
             createdAt: model.createdAt
         )
@@ -30,6 +31,7 @@ enum StockConditionMapper {
             strategyId: entity.strategyId,
             parametersJSON: StrategyParametersMapper.encode(entity.parameters),
             isNotificationEnabled: entity.isNotificationEnabled,
+            notificationTime: entity.notificationTime,
             isActive: entity.isActive,
             createdAt: entity.createdAt
         )

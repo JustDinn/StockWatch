@@ -23,7 +23,7 @@ final class MyAlertsStore: ObservableObject {
         fetchStockConditionsUseCase: FetchStockConditionsUseCaseProtocol,
         deleteStockConditionUseCase: DeleteStockConditionUseCaseProtocol,
         toggleAlertUseCase: ToggleAlertUseCaseProtocol,
-        fcmTokenProvider: @escaping () -> String = { "" }
+        fcmTokenProvider: @escaping () -> String = { FCMTokenManager.shared.currentToken }
     ) {
         self.state = MyAlertsState()
         self.fetchStockConditionsUseCase = fetchStockConditionsUseCase
@@ -55,9 +55,15 @@ final class MyAlertsStore: ObservableObject {
 extension MyAlertsStore {
 
     private func loadConditions() {
+        print("<< [MyAlertsStore] loadConditions 호출됨")
         state.isLoading = true
         Task {
-            state.conditions = await fetchStockConditionsUseCase.executeAll()
+            let conditions = await fetchStockConditionsUseCase.executeAll()
+            print("<< [MyAlertsStore] 로드된 조건 수: \(conditions.count)")
+            for c in conditions {
+                print("<< [MyAlertsStore] 조건: id=\(c.id), ticker=\(c.ticker), isNotificationEnabled=\(c.isNotificationEnabled)")
+            }
+            state.conditions = conditions
             state.isLoading = false
         }
     }
@@ -94,6 +100,7 @@ extension MyAlertsStore {
                 strategyId: condition.strategyId,
                 parameters: condition.parameters,
                 isNotificationEnabled: !condition.isNotificationEnabled,
+                notificationTime: condition.notificationTime,
                 isActive: condition.isActive,
                 createdAt: condition.createdAt
             )

@@ -18,8 +18,19 @@ struct StockCondition: Equatable, Identifiable {
     let parameters: StrategyParameters
     /// 푸시 알림 활성 여부
     var isNotificationEnabled: Bool
+    /// 푸시 알림 수신 시각 (KST 기준 시/분만 사용)
+    var notificationTime: Date
     /// 조건 활성 여부 (비활성화해도 삭제하지 않음)
     var isActive: Bool
     /// 생성 일시
     let createdAt: Date
+
+    /// 기본 알림 시각: 매일 오전 09:00 KST
+    static func defaultNotificationTime() -> Date {
+        var components = DateComponents()
+        components.hour = 9
+        components.minute = 0
+        components.timeZone = TimeZone(identifier: "Asia/Seoul")
+        return Calendar.current.date(from: components) ?? Date()
+    }
 }

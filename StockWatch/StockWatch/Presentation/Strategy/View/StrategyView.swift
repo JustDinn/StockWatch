@@ -13,7 +13,10 @@ struct StrategyView: View {
     var ticker: String? = nil
 
     var body: some View {
-        StrategyContentView(store: makeStore(), ticker: ticker)
+        StrategyContentView(
+            store: makeStore(),
+            makeApplyStore: ticker.map { t in { strategy in makeApplyStore(ticker: t, strategy: strategy) } }
+        )
     }
 
     private func makeStore() -> StrategyStore {
@@ -27,6 +30,29 @@ struct StrategyView: View {
             )
         )
     }
+
+    private func makeApplyStore(ticker: String, strategy: Strategy) -> ApplyStrategyStore {
+        let conditionRepository = StockConditionRepository(modelContext: modelContext)
+        let alertRepository = AlertRegistrationRepository()
+        let store = ApplyStrategyStore(
+            ticker: ticker,
+            fetchStrategiesUseCase: FetchStrategiesUseCase(
+                repository: StrategyRepository()
+            ),
+            evaluateStrategyUseCase: EvaluateStrategyUseCase(
+                repository: StrategyEvaluationRepository()
+            ),
+            saveStockConditionUseCase: SaveStockConditionUseCase(
+                repository: conditionRepository
+            ),
+            registerAlertUseCase: RegisterAlertUseCase(
+                repository: alertRepository
+            ),
+            fcmTokenProvider: { FCMTokenManager.shared.currentToken }
+        )
+        store.action(.selectStrategy(strategy))
+        return store
+    }
 }
 
 // MARK: - Content View
@@ -34,7 +60,7 @@ struct StrategyView: View {
 private struct StrategyContentView: View {
 
     @StateObject var store: StrategyStore
-    var ticker: String? = nil
+    var makeApplyStore: ((Strategy) -> ApplyStrategyStore)? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -61,11 +87,13 @@ private struct StrategyContentView: View {
                 Spacer()
             } else {
                 List(strategies) { strategy in
-                    StrategyRow(strategy: strategy)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            store.action(.selectStrategy(strategy))
-                        }
+                    StrategyRow(strategy: strategy) {
+                        store.action(.showInfo(strategy))
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        store.action(.selectStrategy(strategy))
+                    }
                 }
                 .listStyle(.plain)
             }
@@ -73,7 +101,14 @@ private struct StrategyContentView: View {
         .navigationTitle("전략 카탈로그")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: store.selectedStrategyBinding) { strategy in
-            StrategyDetailView(strategy: strategy, ticker: ticker)
+            if let applyStore = makeApplyStore?(strategy) {
+                StrategyConfigView(store: applyStore, strategy: strategy)
+            }
+        }
+        .sheet(item: store.infoStrategyBinding) { strategy in
+            NavigationStack {
+                StrategyDetailView(strategy: strategy, ticker: nil)
+            }
         }
         .task {
             store.action(.loadStrategies)
@@ -92,6 +127,7 @@ private struct StrategyContentView: View {
 
 private struct StrategyRow: View {
     let strategy: Strategy
+    var onInfoTap: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -107,6 +143,14 @@ private struct StrategyRow: View {
                     .padding(.vertical, 2)
                     .background(Color.blue.opacity(0.1))
                     .clipShape(Capsule())
+
+                Button {
+                    onInfoTap()
+                } label: {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(.blue)
+                }
+                .buttonStyle(.plain)
             }
 
             Text(strategy.shortName)

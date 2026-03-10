@@ -3,6 +3,8 @@
 //  StockWatch
 //
 
+import Foundation
+
 /// ApplyStrategy 화면 UI 상태
 struct ApplyStrategyState {
     /// 화면 진입 시 결정된 티커 (변경 없음)
@@ -25,12 +27,16 @@ struct ApplyStrategyState {
     var signal: StrategySignal?
     /// 알림 등록 여부
     var isNotificationEnabled: Bool
+    /// 알림 수신 시각 (KST 기준)
+    var notificationTime: Date
     /// 로딩 중 여부
     var isLoading: Bool
     /// 평가 중 여부
     var isEvaluating: Bool
     /// 저장 성공 여부
     var isSaved: Bool
+    /// FCM 토큰 수신 여부 (알림 ON 시 적용하기 버튼 활성화 조건)
+    var isFCMTokenReady: Bool
     /// 에러 메시지
     var errorMessage: String?
 
@@ -45,10 +51,17 @@ struct ApplyStrategyState {
         self.overboughtThreshold = 70
         self.signal = nil
         self.isNotificationEnabled = false
+        self.notificationTime = StockCondition.defaultNotificationTime()
         self.isLoading = false
         self.isEvaluating = false
         self.isSaved = false
+        self.isFCMTokenReady = !FCMTokenManager.shared.currentToken.isEmpty
         self.errorMessage = nil
+    }
+
+    /// 알림이 켜져 있으면 FCM 토큰이 있어야 적용 가능
+    var canApply: Bool {
+        isNotificationEnabled ? isFCMTokenReady : true
     }
 
     /// 현재 선택된 전략에 맞는 StrategyParameters 반환
