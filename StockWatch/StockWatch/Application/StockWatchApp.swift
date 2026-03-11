@@ -121,6 +121,10 @@ private extension AppDelegate {
                 let userInfo = notification.request.content.userInfo
                 self?.saveNotification(from: userInfo)
             }
+            // 저장 완료 후 delivered 목록 초기화 → 다음 스캔 시 중복 방지
+            if !notifications.isEmpty {
+                UNUserNotificationCenter.current().removeAllDeliveredNotifications()
+            }
         }
     }
 
@@ -128,17 +132,20 @@ private extension AppDelegate {
         print("<< saveNotification called")
         guard let container = modelContainer else {
             print("<< modelContainer is nil, pending")
-            pendingUserInfo = userInfo
+            pendingUserInfos.append(userInfo)
             return
         }
 
         persistNotification(userInfo, container: container)
     }
 
-    func flushPendingNotification() {
-        guard let userInfo = pendingUserInfo, let container = modelContainer else { return }
-        pendingUserInfo = nil
-        persistNotification(userInfo, container: container)
+    func flushPendingNotifications() {
+        guard !pendingUserInfos.isEmpty, let container = modelContainer else { return }
+        let pending = pendingUserInfos
+        pendingUserInfos = []
+        for userInfo in pending {
+            persistNotification(userInfo, container: container)
+        }
     }
 
     private func persistNotification(_ userInfo: [AnyHashable: Any], container: ModelContainer) {
@@ -146,8 +153,6 @@ private extension AppDelegate {
             print("<< persistNotification - ticker not found in userInfo")
             return
         }
-
-        print("<< persistNotification - ticker: \(ticker)")
 
         let aps = userInfo["aps"] as? [String: Any]
         let alert = aps?["alert"] as? [String: Any]
@@ -160,16 +165,17 @@ private extension AppDelegate {
             ?? ""
         let logoURL = userInfo["logoURL"] as? String ?? ""
 
-        // 같은 ticker + strategyName 조합이 같은 분(minute) 내 중복 저장 방지
-        let deduplicationKey = "\(ticker)_\(strategyName)_\(Int(Date().timeIntervalSince1970 / 60))"
-        guard !recentlySavedIds.contains(deduplicationKey) else {
-            print("<< deduplication skip: \(deduplicationKey)")
-            return
-        }
-        recentlySavedIds.insert(deduplicationKey)
+        // deterministic ID: 같은 conditionId+ticker+분 조합은 동일 ID → SwiftData unique constraint가 중복 방지
+        let conditionId = userInfo["conditionId"] as? String ?? ""
+        let minuteKey = Int(Date().timeIntervalSince1970 / 60)
+        let itemId = conditionId.isEmpty
+            ? UUID().uuidString
+            : "\(conditionId)_\(ticker)_\(minuteKey)"
+
+        print("<< persistNotification - ticker: \(ticker), id: \(itemId)")
 
         let item = NotificationItem(
-            id: UUID().uuidString,
+            id: itemId,
             ticker: ticker,
             logoURL: logoURL,
             strategyName: strategyName,
@@ -182,7 +188,7 @@ private extension AppDelegate {
             let repo = NotificationHistoryRepository(modelContext: context)
             do {
                 try SaveNotificationUseCase(repository: repo).execute(item)
-                print("<< notification saved successfully")
+                print("<< notification saved successfully - id: \(itemId)")
             } catch {
                 print("<< notification save error: \(error)")
             }
