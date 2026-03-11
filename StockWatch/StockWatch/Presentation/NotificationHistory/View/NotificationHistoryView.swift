@@ -4,13 +4,32 @@
 //
 
 import SwiftUI
+import SwiftData
 import Kingfisher
 
 /// 푸시 알림 수신 내역 화면
 /// HomeView의 NavigationStack 내에서 push되므로 자체 NavigationStack 없음
 struct NotificationHistoryView: View {
 
-    @StateObject private var store = NotificationHistoryStore()
+    @Environment(\.modelContext) private var modelContext
+
+    var body: some View {
+        NotificationHistoryContentView(modelContext: modelContext)
+    }
+}
+
+// MARK: - Content View
+
+private struct NotificationHistoryContentView: View {
+
+    @StateObject private var store: NotificationHistoryStore
+
+    init(modelContext: ModelContext) {
+        let repository = NotificationHistoryRepository(modelContext: modelContext)
+        _store = StateObject(wrappedValue: NotificationHistoryStore(
+            fetchUseCase: FetchNotificationHistoryUseCase(repository: repository)
+        ))
+    }
 
     var body: some View {
         Group {
@@ -167,4 +186,5 @@ struct NotificationHistoryView: View {
     NavigationStack {
         NotificationHistoryView()
     }
+    .modelContainer(for: NotificationHistoryModel.self, inMemory: true)
 }
