@@ -11,7 +11,8 @@ initializeApp();
 
 export const evaluateAlerts = onSchedule(
   {
-    schedule: "every 5 minutes",
+    schedule: "every 1 hours",
+    timeZone: "Asia/Seoul",
     secrets: [finnhubApiKey],
   },
   async () => {
@@ -28,17 +29,13 @@ export const evaluateAlerts = onSchedule(
 
     const conditions = snapshot.docs.map((doc) => doc.data() as AlertCondition);
 
-    // 2. 현재 KST 시각의 5분 윈도우에 해당하는 조건만 필터링
+    // 2. 현재 KST 시각(시)에 해당하는 조건만 필터링
     const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000); // UTC → KST
     const currentHour = nowKst.getUTCHours();
-    const currentWindow = Math.floor(nowKst.getUTCMinutes() / 5);
 
     const dueConditions = conditions.filter((cond) => {
       if (cond.notificationHour === undefined) return true; // 하위 호환: 필드 없는 기존 문서는 통과
-      return (
-        cond.notificationHour === currentHour &&
-        Math.floor((cond.notificationMinute ?? 0) / 5) === currentWindow
-      );
+      return cond.notificationHour === currentHour;
     });
 
     if (dueConditions.length === 0) return;
@@ -95,11 +92,7 @@ export const triggerEvaluateAlerts = onRequest(
           if (cond.notificationHour === undefined) return true;
           const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
           const currentHour = nowKst.getUTCHours();
-          const currentWindow = Math.floor(nowKst.getUTCMinutes() / 5);
-          return (
-            cond.notificationHour === currentHour &&
-            Math.floor((cond.notificationMinute ?? 0) / 5) === currentWindow
-          );
+          return cond.notificationHour === currentHour;
         });
 
     if (dueConditions.length === 0) {
