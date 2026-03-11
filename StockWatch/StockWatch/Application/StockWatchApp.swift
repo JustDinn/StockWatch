@@ -143,12 +143,7 @@ private extension AppDelegate {
     }
 
     private func persistNotification(_ userInfo: [AnyHashable: Any], receivedAt: Date, container: ModelContainer) {
-        guard let ticker = userInfo["ticker"] as? String else {
-            
-            // TODO: 에러 처리
-            
-            return
-        }
+        guard let ticker = userInfo["ticker"] as? String else { return }
 
         let aps = userInfo["aps"] as? [String: Any]
         let alert = aps?["alert"] as? [String: Any]
@@ -180,11 +175,7 @@ private extension AppDelegate {
         Task { @MainActor in
             let context = container.mainContext
             let repo = NotificationHistoryRepository(modelContext: context)
-            do {
-                try SaveNotificationUseCase(repository: repo).execute(item)
-            } catch {
-                // TODO: 에러 처리
-            }
+            try? SaveNotificationUseCase(repository: repo).execute(item)
         }
     }
 }
