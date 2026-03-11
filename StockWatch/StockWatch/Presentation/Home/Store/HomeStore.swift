@@ -37,6 +37,8 @@ final class HomeStore: ObservableObject {
             navigateToDetail(result: result)
         case .showNotificationHistory:
             state.isShowingNotificationHistory = true
+        case .navigateToStock(let ticker):
+            state.deepLinkTicker = ticker
         }
     }
 
@@ -53,6 +55,13 @@ final class HomeStore: ObservableObject {
         Binding(
             get: { self.state.isShowingNotificationHistory },
             set: { self.state.isShowingNotificationHistory = $0 }
+        )
+    }
+
+    var isShowingDeepLinkBinding: Binding<Bool> {
+        Binding(
+            get: { self.state.deepLinkTicker != nil },
+            set: { if !$0 { self.state.deepLinkTicker = nil } }
         )
     }
 

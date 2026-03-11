@@ -8,13 +8,14 @@
 import SwiftUI
 
 struct HomeView: View {
-    
+
     @StateObject private var store = HomeStore(
         tickerUseCase: TickerUseCase(
             repository: TickerRepository()
         )
     )
-    
+    @ObservedObject private var deepLinkManager = DeepLinkManager.shared
+
     var body: some View {
         NavigationStack {
             VStack {
@@ -53,6 +54,16 @@ struct HomeView: View {
             }
             .navigationDestination(isPresented: store.isShowingNotificationHistoryBinding) {
                 NotificationHistoryView()
+            }
+            .navigationDestination(isPresented: store.isShowingDeepLinkBinding) {
+                if let ticker = store.state.deepLinkTicker {
+                    StockDetailView(ticker: ticker)
+                }
+            }
+            .onChange(of: deepLinkManager.pendingTicker) { _, ticker in
+                guard let ticker else { return }
+                store.action(.navigateToStock(ticker))
+                deepLinkManager.pendingTicker = nil
             }
         }
     }

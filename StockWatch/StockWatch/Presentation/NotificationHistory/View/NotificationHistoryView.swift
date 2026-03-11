@@ -44,7 +44,7 @@ private struct NotificationHistoryContentView: View {
         .navigationDestination(item: store.selectedNotificationBinding) { item in
             StockDetailView(ticker: item.ticker)
         }
-        .task {
+        .onAppear {
             store.action(.loadNotifications)
         }
     }

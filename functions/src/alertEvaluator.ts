@@ -88,7 +88,8 @@ export async function sendFcm(
   strategyId: string,
   signal: SignalType,
   conditionId: string,
-  params?: StrategyParams
+  params?: StrategyParams,
+  logoURL?: string
 ): Promise<void> {
   if (!fcmToken) {
     console.error(`<< [sendFcm] fcmToken이 비어있어 FCM 발송 스킵: conditionId=${conditionId}`);
@@ -114,8 +115,15 @@ export async function sendFcm(
         ticker,
         strategyId,
         signal,
+        strategyName: `${strategyDisplayName(strategyId)} ${signalLabel} 신호`,
+        body,
+        logoURL: logoURL ?? "",
       },
       apns: {
+        headers: {
+          "apns-priority": "10",
+          "apns-push-type": "alert",
+        },
         payload: {
           aps: {
             sound: "default",
