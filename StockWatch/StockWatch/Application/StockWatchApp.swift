@@ -22,7 +22,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         }
     }
 
-    var pendingUserInfos: [[AnyHashable: Any]] = []
+    var pendingItems: [(userInfo: [AnyHashable: Any], receivedAt: Date)] = []
 
     func application(
         _ application: UIApplication,
@@ -55,7 +55,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     }
 
     @objc private func appWillEnterForeground() {
-        print("<< appWillEnterForeground - scanning delivered notifications")
         saveDeliveredNotifications()
     }
 }
@@ -84,8 +83,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        print("<< willPresent (foreground)")
-        saveNotification(from: notification.request.content.userInfo)
+        saveNotification(from: notification.request.content.userInfo, receivedAt: notification.date)
         completionHandler([.banner, .badge, .sound])
     }
 
@@ -95,9 +93,8 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        print("<< didReceive (tapped)")
         let userInfo = response.notification.request.content.userInfo
-        saveNotification(from: userInfo)
+        saveNotification(from: userInfo, receivedAt: response.notification.date)
 
         if let ticker = userInfo["ticker"] as? String {
             Task { @MainActor in
@@ -116,10 +113,9 @@ private extension AppDelegate {
     /// 알림센터에 남아있는 delivered notifications를 모두 스캔하여 저장
     func saveDeliveredNotifications() {
         UNUserNotificationCenter.current().getDeliveredNotifications { [weak self] notifications in
-            print("<< delivered notifications count: \(notifications.count)")
             for notification in notifications {
                 let userInfo = notification.request.content.userInfo
-                self?.saveNotification(from: userInfo)
+                self?.saveNotification(from: userInfo, receivedAt: notification.date)
             }
             // 저장 완료 후 delivered 목록 초기화 → 다음 스캔 시 중복 방지
             if !notifications.isEmpty {
@@ -128,29 +124,29 @@ private extension AppDelegate {
         }
     }
 
-    func saveNotification(from userInfo: [AnyHashable: Any]) {
-        print("<< saveNotification called")
+    func saveNotification(from userInfo: [AnyHashable: Any], receivedAt: Date = Date()) {
         guard let container = modelContainer else {
-            print("<< modelContainer is nil, pending")
-            pendingUserInfos.append(userInfo)
+            pendingItems.append((userInfo: userInfo, receivedAt: receivedAt))
             return
         }
 
-        persistNotification(userInfo, container: container)
+        persistNotification(userInfo, receivedAt: receivedAt, container: container)
     }
 
     func flushPendingNotifications() {
-        guard !pendingUserInfos.isEmpty, let container = modelContainer else { return }
-        let pending = pendingUserInfos
-        pendingUserInfos = []
-        for userInfo in pending {
-            persistNotification(userInfo, container: container)
+        guard !pendingItems.isEmpty, let container = modelContainer else { return }
+        let pending = pendingItems
+        pendingItems = []
+        for item in pending {
+            persistNotification(item.userInfo, receivedAt: item.receivedAt, container: container)
         }
     }
 
-    private func persistNotification(_ userInfo: [AnyHashable: Any], container: ModelContainer) {
+    private func persistNotification(_ userInfo: [AnyHashable: Any], receivedAt: Date, container: ModelContainer) {
         guard let ticker = userInfo["ticker"] as? String else {
-            print("<< persistNotification - ticker not found in userInfo")
+            
+            // TODO: 에러 처리
+            
             return
         }
 
@@ -172,15 +168,13 @@ private extension AppDelegate {
             ? UUID().uuidString
             : "\(conditionId)_\(ticker)_\(minuteKey)"
 
-        print("<< persistNotification - ticker: \(ticker), id: \(itemId)")
-
         let item = NotificationItem(
             id: itemId,
             ticker: ticker,
             logoURL: logoURL,
             strategyName: strategyName,
             body: body,
-            receivedAt: Date()
+            receivedAt: receivedAt
         )
 
         Task { @MainActor in
@@ -188,9 +182,8 @@ private extension AppDelegate {
             let repo = NotificationHistoryRepository(modelContext: context)
             do {
                 try SaveNotificationUseCase(repository: repo).execute(item)
-                print("<< notification saved successfully - id: \(itemId)")
             } catch {
-                print("<< notification save error: \(error)")
+                // TODO: 에러 처리
             }
         }
     }

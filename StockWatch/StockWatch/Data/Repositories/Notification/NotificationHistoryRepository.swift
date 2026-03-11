@@ -23,6 +23,12 @@ final class NotificationHistoryRepository: NotificationHistoryRepositoryProtocol
     }
 
     func save(_ item: NotificationItem) throws {
+        let id = item.id
+        let predicate = #Predicate<NotificationHistoryModel> { $0.id == id }
+        let descriptor = FetchDescriptor<NotificationHistoryModel>(predicate: predicate)
+        let existing = try modelContext.fetch(descriptor)
+        guard existing.isEmpty else { return }
+
         let model = NotificationHistoryMapper.toModel(item)
         modelContext.insert(model)
         try modelContext.save()

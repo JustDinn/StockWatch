@@ -78,9 +78,7 @@ private extension NotificationHistoryStore {
     func loadNotifications() {
         do {
             state.notifications = try fetchUseCase.execute()
-            print("<< loadNotifications - count: \(state.notifications.count)")
         } catch {
-            print("<< loadNotifications error: \(error)")
             state.notifications = []
         }
     }
