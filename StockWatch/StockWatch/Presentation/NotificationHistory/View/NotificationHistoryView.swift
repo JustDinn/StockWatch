@@ -27,7 +27,8 @@ private struct NotificationHistoryContentView: View {
     init(modelContext: ModelContext) {
         let repository = NotificationHistoryRepository(modelContext: modelContext)
         _store = StateObject(wrappedValue: NotificationHistoryStore(
-            fetchUseCase: FetchNotificationHistoryUseCase(repository: repository)
+            fetchUseCase: FetchNotificationHistoryUseCase(repository: repository),
+            markAsReadUseCase: MarkNotificationAsReadUseCase(repository: repository)
         ))
     }
 
@@ -46,7 +47,6 @@ private struct NotificationHistoryContentView: View {
         }
         .onAppear {
             store.action(.loadNotifications)
-            Task { await BadgeResetService.reset() }
         }
     }
 
@@ -112,6 +112,12 @@ private struct NotificationHistoryContentView: View {
             store.action(.selectNotification(item))
         } label: {
             HStack(spacing: 12) {
+                // 미읽음 indicator
+                Circle()
+                    .fill(Color.blue)
+                    .frame(width: 8, height: 8)
+                    .opacity(item.isRead ? 0 : 1)
+
                 // 종목 로고 아이콘
                 logoIcon(ticker: item.ticker, logoURL: item.logoURL)
 

@@ -11,6 +11,8 @@ import Foundation
 struct NotificationItem: Identifiable, Equatable, Hashable {
     /// 고유 식별자
     let id: String
+    /// 알림 조건 ID (중복 방지 및 읽음 처리에 사용)
+    let conditionId: String
     /// 종목 티커 (예: "AAPL")
     let ticker: String
     /// 기업 로고 이미지 URL (빈 문자열이면 이니셜 표시)
@@ -21,6 +23,8 @@ struct NotificationItem: Identifiable, Equatable, Hashable {
     let body: String
     /// 수신 시각
     let receivedAt: Date
+    /// 읽음 여부
+    var isRead: Bool
 }
 
 // MARK: - NotificationHistoryState

@@ -24,6 +24,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
     var pendingItems: [(userInfo: [AnyHashable: Any], receivedAt: Date)] = []
 
+    /// 알림센터 탭 시 SwiftData에 미저장 상태인 알림의 읽음 예약 집합
+    var pendingReadIds: Set<String> = []
+
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -64,10 +67,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 extension AppDelegate: MessagingDelegate {
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         guard let token = fcmToken else { return }
-        
-        
-        print("<< fcmToken: \(token)")
-        
         FCMTokenManager.shared.save(token: token)
 
         Task {
@@ -88,7 +87,8 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         saveNotification(from: notification.request.content.userInfo, receivedAt: notification.date)
-        completionHandler([.banner, .sound])
+        // .badge 포함 → FCM payload의 badge 절대값으로 앱 아이콘 뱃지 업데이트 (포그라운드 수신 시 뱃지 증가)
+        completionHandler([.banner, .sound, .badge])
     }
 
     /// 백그라운드/종료 상태에서 알림 탭 시
@@ -98,10 +98,29 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
-        saveNotification(from: userInfo, receivedAt: response.notification.date)
+        let notifId = computeNotificationId(from: userInfo, receivedAt: response.notification.date)
 
-        // 알림 탭으로 앱 진입 시 뱃지 초기화 (TC-5)
-        Task { await BadgeResetService.reset() }
+        // 탭된 알림만 알림센터에서 제거
+        let identifier = response.notification.request.identifier
+        center.removeDeliveredNotifications(withIdentifiers: [identifier])
+
+        // 개별 알림 읽음 처리 + 뱃지 -1
+        if let container = modelContainer {
+            Task { @MainActor in
+                let repo = NotificationHistoryRepository(modelContext: container.mainContext)
+                let didChange = (try? MarkNotificationAsReadUseCase(repository: repo).execute(id: notifId)) ?? false
+                if didChange {
+                    await BadgeResetService.decrement()
+                } else {
+                    // 아직 SwiftData에 미저장 → 저장 완료 후 읽음 처리 예약
+                    pendingReadIds.insert(notifId)
+                }
+            }
+        } else {
+            pendingReadIds.insert(notifId)
+        }
+
+        saveNotification(from: userInfo, receivedAt: response.notification.date)
 
         if let ticker = userInfo["ticker"] as? String {
             Task { @MainActor in
@@ -124,10 +143,6 @@ private extension AppDelegate {
                 let userInfo = notification.request.content.userInfo
                 self?.saveNotification(from: userInfo, receivedAt: notification.date)
             }
-            // 저장 완료 후 delivered 목록 초기화 → 다음 스캔 시 중복 방지
-            if !notifications.isEmpty {
-                UNUserNotificationCenter.current().removeAllDeliveredNotifications()
-            }
         }
     }
 
@@ -149,6 +164,17 @@ private extension AppDelegate {
         }
     }
 
+    /// 알림 userInfo로부터 결정적 ID를 계산한다.
+    /// receivedAt 기준 minuteKey를 사용하여 탭 시점과 무관하게 일치를 보장한다.
+    func computeNotificationId(from userInfo: [AnyHashable: Any], receivedAt: Date) -> String {
+        guard let ticker = userInfo["ticker"] as? String else { return UUID().uuidString }
+        let conditionId = userInfo["conditionId"] as? String ?? ""
+        let minuteKey = Int(receivedAt.timeIntervalSince1970 / 60)
+        return conditionId.isEmpty
+            ? UUID().uuidString
+            : "\(conditionId)_\(ticker)_\(minuteKey)"
+    }
+
     private func persistNotification(_ userInfo: [AnyHashable: Any], receivedAt: Date, container: ModelContainer) {
         guard let ticker = userInfo["ticker"] as? String else { return }
 
@@ -163,26 +189,33 @@ private extension AppDelegate {
             ?? ""
         let logoURL = userInfo["logoURL"] as? String ?? ""
 
-        // deterministic ID: 같은 conditionId+ticker+분 조합은 동일 ID → SwiftData unique constraint가 중복 방지
         let conditionId = userInfo["conditionId"] as? String ?? ""
-        let minuteKey = Int(Date().timeIntervalSince1970 / 60)
-        let itemId = conditionId.isEmpty
-            ? UUID().uuidString
-            : "\(conditionId)_\(ticker)_\(minuteKey)"
+        let itemId = computeNotificationId(from: userInfo, receivedAt: receivedAt)
 
         let item = NotificationItem(
             id: itemId,
+            conditionId: conditionId,
             ticker: ticker,
             logoURL: logoURL,
             strategyName: strategyName,
             body: body,
-            receivedAt: receivedAt
+            receivedAt: receivedAt,
+            isRead: false
         )
 
         Task { @MainActor in
             let context = container.mainContext
             let repo = NotificationHistoryRepository(modelContext: context)
             try? SaveNotificationUseCase(repository: repo).execute(item)
+
+            // pendingReadIds 확인: 저장 완료 직후 읽음 처리 (알림센터 탭 후 미저장 시나리오)
+            if pendingReadIds.contains(itemId) {
+                pendingReadIds.remove(itemId)
+                let didChange = (try? MarkNotificationAsReadUseCase(repository: repo).execute(id: itemId)) ?? false
+                if didChange {
+                    await BadgeResetService.decrement()
+                }
+            }
         }
     }
 }

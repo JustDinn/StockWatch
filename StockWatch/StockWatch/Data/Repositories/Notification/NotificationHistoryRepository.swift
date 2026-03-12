@@ -44,4 +44,13 @@ final class NotificationHistoryRepository: NotificationHistoryRepositoryProtocol
             try modelContext.save()
         }
     }
+
+    func markAsRead(id: String) throws {
+        let predicate = #Predicate<NotificationHistoryModel> { $0.id == id }
+        let descriptor = FetchDescriptor<NotificationHistoryModel>(predicate: predicate)
+        guard let model = try modelContext.fetch(descriptor).first else { return }
+        guard !model.isRead else { return }
+        model.isRead = true
+        try modelContext.save()
+    }
 }

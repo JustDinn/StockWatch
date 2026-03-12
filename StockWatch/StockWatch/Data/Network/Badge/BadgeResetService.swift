@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import UIKit
 import UserNotifications
 import FirebaseFunctions
 
@@ -16,9 +17,20 @@ enum BadgeResetService {
         do {
             _ = try await functions.httpsCallable("resetBadgeCount").call()
         } catch {
-            print("[BadgeResetService] 뱃지 리셋 실패: \(error)")
+            print("<< [BadgeResetService] 뱃지 리셋 실패: \(error)")
         }
 
         try? await UNUserNotificationCenter.current().setBadgeCount(0)
+    }
+
+    static func decrement() async {
+        do {
+            _ = try await functions.httpsCallable("decrementBadgeCount").call()
+        } catch {
+            print("<< [BadgeResetService] 뱃지 감소 실패: \(error)")
+        }
+
+        let current = await MainActor.run { UIApplication.shared.applicationIconBadgeNumber }
+        try? await UNUserNotificationCenter.current().setBadgeCount(max(0, current - 1))
     }
 }

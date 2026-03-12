@@ -15,14 +15,17 @@ final class NotificationHistoryStore: ObservableObject {
     @Published private(set) var state: NotificationHistoryState
 
     private let fetchUseCase: FetchNotificationHistoryUseCaseProtocol
+    private let markAsReadUseCase: MarkNotificationAsReadUseCaseProtocol
 
     // MARK: - Init
 
     init(
         fetchUseCase: FetchNotificationHistoryUseCaseProtocol,
+        markAsReadUseCase: MarkNotificationAsReadUseCaseProtocol,
         state: NotificationHistoryState = NotificationHistoryState()
     ) {
         self.fetchUseCase = fetchUseCase
+        self.markAsReadUseCase = markAsReadUseCase
         self.state = state
     }
 
@@ -33,7 +36,9 @@ final class NotificationHistoryStore: ObservableObject {
         case .loadNotifications:
             loadNotifications()
         case .selectNotification(let item):
-            state.selectedNotification = item
+            handleSelectNotification(item)
+        case .markAsRead(let id):
+            handleMarkAsRead(id: id)
         }
     }
 
@@ -80,6 +85,33 @@ private extension NotificationHistoryStore {
             state.notifications = try fetchUseCase.execute()
         } catch {
             state.notifications = []
+        }
+    }
+
+    func handleSelectNotification(_ item: NotificationItem) {
+        state.selectedNotification = item
+        handleMarkAsRead(id: item.id)
+    }
+
+    func handleMarkAsRead(id: String) {
+        Task {
+            let didChange = (try? markAsReadUseCase.execute(id: id)) ?? false
+            if didChange {
+                await BadgeResetService.decrement()
+                state.notifications = state.notifications.map { item in
+                    guard item.id == id else { return item }
+                    return NotificationItem(
+                        id: item.id,
+                        conditionId: item.conditionId,
+                        ticker: item.ticker,
+                        logoURL: item.logoURL,
+                        strategyName: item.strategyName,
+                        body: item.body,
+                        receivedAt: item.receivedAt,
+                        isRead: true
+                    )
+                }
+            }
         }
     }
 }
