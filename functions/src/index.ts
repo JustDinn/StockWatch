@@ -123,3 +123,21 @@ export const resetBadgeCount = onCall(async (request) => {
   await getFirestore().collection("users").doc(uid).set({ badgeCount: 0 }, { merge: true });
   return { success: true };
 });
+
+// MARK: - Badge Decrement
+
+export const decrementBadgeCount = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "인증이 필요합니다.");
+  }
+
+  const db = getFirestore();
+  const userRef = db.collection("users").doc(uid);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(userRef);
+    const current = (snap.data()?.badgeCount as number) ?? 0;
+    tx.set(userRef, { badgeCount: Math.max(0, current - 1) }, { merge: true });
+  });
+  return { success: true };
+});
