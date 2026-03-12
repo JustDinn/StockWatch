@@ -46,6 +46,7 @@ private struct NotificationHistoryContentView: View {
         }
         .onAppear {
             store.action(.loadNotifications)
+            Task { await BadgeResetService.reset() }
         }
     }
 

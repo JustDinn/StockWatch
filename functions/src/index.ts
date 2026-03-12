@@ -1,9 +1,9 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { initializeApp } from "firebase-admin/app";
 import { finnhubApiKey } from "./finnhub";
-import { AlertCondition, evaluateAndNotify } from "./alertEvaluator";
+import { AlertCondition, evaluateAndNotify, clearCandleCache } from "./alertEvaluator";
 
 initializeApp();
 
@@ -16,6 +16,7 @@ export const evaluateAlerts = onSchedule(
     secrets: [finnhubApiKey],
   },
   async () => {
+    clearCandleCache();
     const db = getFirestore();
     const apiKey = finnhubApiKey.value();
 
@@ -66,6 +67,7 @@ export const evaluateAlerts = onSchedule(
 export const triggerEvaluateAlerts = onRequest(
   { secrets: [finnhubApiKey] },
   async (req, res) => {
+    clearCandleCache();
     const db = getFirestore();
     const apiKey = finnhubApiKey.value();
     const skipTimeFilter = req.query.skipTimeFilter === "true";
@@ -89,11 +91,11 @@ export const triggerEvaluateAlerts = onRequest(
         ? conditions.filter((c) => c.conditionId === targetConditionId)
         : conditions
       : conditions.filter((cond) => {
-          if (cond.notificationHour === undefined) return true;
-          const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
-          const currentHour = nowKst.getUTCHours();
-          return cond.notificationHour === currentHour;
-        });
+        if (cond.notificationHour === undefined) return true;
+        const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+        const currentHour = nowKst.getUTCHours();
+        return cond.notificationHour === currentHour;
+      });
 
     if (dueConditions.length === 0) {
       res.json({ message: "현재 시간대에 해당하는 조건이 없습니다. ?skipTimeFilter=true 를 붙여 재시도하세요." });
@@ -110,3 +112,14 @@ export const triggerEvaluateAlerts = onRequest(
   }
 );
 
+// MARK: - Badge Reset
+
+export const resetBadgeCount = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "인증이 필요합니다.");
+  }
+
+  await getFirestore().collection("users").doc(uid).set({ badgeCount: 0 }, { merge: true });
+  return { success: true };
+});

@@ -64,6 +64,10 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 extension AppDelegate: MessagingDelegate {
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         guard let token = fcmToken else { return }
+        
+        
+        print("<< fcmToken: \(token)")
+        
         FCMTokenManager.shared.save(token: token)
 
         Task {
@@ -84,7 +88,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         saveNotification(from: notification.request.content.userInfo, receivedAt: notification.date)
-        completionHandler([.banner, .badge, .sound])
+        completionHandler([.banner, .sound])
     }
 
     /// 백그라운드/종료 상태에서 알림 탭 시
@@ -95,6 +99,9 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     ) {
         let userInfo = response.notification.request.content.userInfo
         saveNotification(from: userInfo, receivedAt: response.notification.date)
+
+        // 알림 탭으로 앱 진입 시 뱃지 초기화 (TC-5)
+        Task { await BadgeResetService.reset() }
 
         if let ticker = userInfo["ticker"] as? String {
             Task { @MainActor in

@@ -3,6 +3,7 @@ import { getMessaging } from "firebase-admin/messaging";
 import { evaluateSma, SmaParams, SignalType } from "./evaluators/smaEvaluator";
 import { evaluateEma, EmaParams } from "./evaluators/emaEvaluator";
 import { evaluateRsi, RsiParams } from "./evaluators/rsiEvaluator";
+import { fetchCandles, CandleData } from "./finnhub";
 
 // MARK: - Types
 
@@ -12,6 +13,7 @@ export interface AlertCondition {
   strategyId: string;
   parameters: string; // JSON string
   fcmToken: string;
+  userId: string;
   isActive: boolean;
   createdAt: Timestamp;
   lastTriggeredAt?: Timestamp;
@@ -59,7 +61,7 @@ export async function evaluateAndNotify(
     if (lastAt && (Date.now() - lastAt.getTime()) < 24 * 60 * 60 * 1000) return;
   }
 
-  await sendFcm(cond.fcmToken, cond.ticker, cond.strategyId, signal, cond.conditionId, params);
+  await sendFcm(cond.fcmToken, cond.userId, cond.ticker, cond.strategyId, signal, cond.conditionId, params);
 
   await getFirestore()
     .collection("alertConditions")
@@ -67,23 +69,38 @@ export async function evaluateAndNotify(
     .update({ lastTriggeredAt: Timestamp.now(), lastNotifiedSignal: signal });
 }
 
+// MARK: - Candle Cache (종목별 캔들 데이터 캐시)
+
+const candleCache = new Map<string, CandleData>();
+
+export function clearCandleCache(): void {
+  candleCache.clear();
+}
+
 export async function evaluate(
   ticker: string,
   params: StrategyParams,
   apiKey: string
 ): Promise<SignalType> {
+  let candles = candleCache.get(ticker);
+  if (!candles) {
+    candles = await fetchCandles(ticker, apiKey);
+    candleCache.set(ticker, candles);
+  }
+
   switch (params.type) {
     case "sma":
-      return evaluateSma(ticker, params as SmaParams, apiKey);
+      return evaluateSma(candles, params as SmaParams);
     case "ema":
-      return evaluateEma(ticker, params as EmaParams, apiKey);
+      return evaluateEma(candles, params as EmaParams);
     case "rsi":
-      return evaluateRsi(ticker, params as RsiParams, apiKey);
+      return evaluateRsi(candles, params as RsiParams);
   }
 }
 
 export async function sendFcm(
   fcmToken: string,
+  userId: string,
   ticker: string,
   strategyId: string,
   signal: SignalType,
@@ -99,7 +116,23 @@ export async function sendFcm(
   const signalLabel = signal === "buy" ? "매수" : "매도";
   const body = buildNotificationBody(strategyId, signal, params);
 
-  console.log(`<< [sendFcm] 발송 시도: ticker=${ticker}, signal=${signal}, conditionId=${conditionId}, tokenPrefix=${fcmToken.slice(0, 10)}...`);
+  // 뱃지 카운트 증가 (Transaction으로 race condition 방지)
+  const db = getFirestore();
+  const userRef = db.collection("users").doc(userId);
+  let badgeCount = 1;
+  try {
+    badgeCount = await db.runTransaction(async (transaction) => {
+      const doc = await transaction.get(userRef);
+      const current = doc.exists ? (doc.data()?.badgeCount ?? 0) : 0;
+      const next = current + 1;
+      transaction.set(userRef, { badgeCount: next }, { merge: true });
+      return next;
+    });
+  } catch (err) {
+    console.error(`<< [sendFcm] 뱃지 카운트 업데이트 실패: userId=${userId}`, err);
+  }
+
+  console.log(`<< [sendFcm] 발송 시도: ticker=${ticker}, signal=${signal}, conditionId=${conditionId}, badge=${badgeCount}, tokenPrefix=${fcmToken.slice(0, 10)}...`);
   console.log(`<< [sendFcm] 알림 제목: ${ticker} ${signalLabel} 신호`);
   console.log(`<< [sendFcm] 알림 내용: ${body}`);
 
@@ -127,7 +160,7 @@ export async function sendFcm(
         payload: {
           aps: {
             sound: "default",
-            badge: 1,
+            badge: badgeCount,
           },
         },
       },

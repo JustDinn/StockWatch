@@ -14,7 +14,8 @@ struct NetworkConfiguration {
     /// - Returns: 해당 API의 Base URL
     static func baseURL(_ apiService: APIService) -> String {
         guard let url = Bundle.main.object(forInfoDictionaryKey: apiService.baseURLKey) as? String else {
-            fatalError("Info.plist에서 \(apiService.baseURLKey)를 찾을 수 없습니다. xcconfig 파일을 확인해주세요.")
+            print("[Network] Warning: \(apiService.baseURLKey) not found in Info.plist. Using empty string.")
+            return ""
         }
         return url
     }

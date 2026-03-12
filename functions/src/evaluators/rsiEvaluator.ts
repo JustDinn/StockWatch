@@ -1,4 +1,5 @@
-import { fetchIndicator } from "../finnhub";
+import { CandleData } from "../finnhub";
+import { calculateRSI } from "../indicators";
 import { SignalType } from "./smaEvaluator";
 
 export interface RsiParams {
@@ -16,18 +17,17 @@ export interface RsiParams {
  * RSI: threshold 미만 → 이상 → 매도 신호 (과매수 구간 진입)
  * 그 외                       → neutral
  */
-export async function evaluateRsi(
-  ticker: string,
-  params: RsiParams,
-  apiKey: string
-): Promise<SignalType> {
-  const result = await fetchIndicator(ticker, "rsi", params.period, apiKey);
+export function evaluateRsi(
+  candles: CandleData,
+  params: RsiParams
+): SignalType {
+  const rsiValues = calculateRSI(candles.closes, params.period);
 
   // 이전값이 없으면 진입 여부 판단 불가
-  if (result.values.length < 2) return "neutral";
+  if (rsiValues.length < 2) return "neutral";
 
-  const rsiNow = result.values[0];  // 현재 RSI
-  const rsiPrev = result.values[1]; // 이전 RSI
+  const rsiNow = rsiValues[rsiValues.length - 1];  // 현재 RSI
+  const rsiPrev = rsiValues[rsiValues.length - 2]; // 이전 RSI
 
   // 과매도 구간 진입: 이전이 threshold 초과 → 현재 이하
   if (rsiPrev > params.oversoldThreshold && rsiNow <= params.oversoldThreshold) {
