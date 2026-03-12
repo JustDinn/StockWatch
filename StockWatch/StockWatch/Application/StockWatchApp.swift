@@ -167,12 +167,8 @@ private extension AppDelegate {
     /// 알림 userInfo로부터 결정적 ID를 계산한다.
     /// receivedAt 기준 minuteKey를 사용하여 탭 시점과 무관하게 일치를 보장한다.
     func computeNotificationId(from userInfo: [AnyHashable: Any], receivedAt: Date) -> String {
-        guard let ticker = userInfo["ticker"] as? String else { return UUID().uuidString }
-        let conditionId = userInfo["conditionId"] as? String ?? ""
-        let minuteKey = Int(receivedAt.timeIntervalSince1970 / 60)
-        return conditionId.isEmpty
-            ? UUID().uuidString
-            : "\(conditionId)_\(ticker)_\(minuteKey)"
+        let computed = NotificationCenterService.computeId(userInfo: userInfo, receivedAt: receivedAt)
+        return computed.isEmpty ? UUID().uuidString : computed
     }
 
     private func persistNotification(_ userInfo: [AnyHashable: Any], receivedAt: Date, container: ModelContainer) {

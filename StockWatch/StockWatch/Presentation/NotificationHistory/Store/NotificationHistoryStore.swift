@@ -16,16 +16,19 @@ final class NotificationHistoryStore: ObservableObject {
 
     private let fetchUseCase: FetchNotificationHistoryUseCaseProtocol
     private let markAsReadUseCase: MarkNotificationAsReadUseCaseProtocol
+    private let notificationCenterService: NotificationCenterServiceProtocol
 
     // MARK: - Init
 
     init(
         fetchUseCase: FetchNotificationHistoryUseCaseProtocol,
         markAsReadUseCase: MarkNotificationAsReadUseCaseProtocol,
+        notificationCenterService: NotificationCenterServiceProtocol = NotificationCenterService(),
         state: NotificationHistoryState = NotificationHistoryState()
     ) {
         self.fetchUseCase = fetchUseCase
         self.markAsReadUseCase = markAsReadUseCase
+        self.notificationCenterService = notificationCenterService
         self.state = state
     }
 
@@ -98,6 +101,7 @@ private extension NotificationHistoryStore {
             let didChange = (try? markAsReadUseCase.execute(id: id)) ?? false
             if didChange {
                 await BadgeResetService.decrement()
+                await notificationCenterService.removeDeliveredNotification(matchingId: id)
                 state.notifications = state.notifications.map { item in
                     guard item.id == id else { return item }
                     return NotificationItem(
