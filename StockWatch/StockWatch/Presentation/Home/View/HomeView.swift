@@ -36,17 +36,20 @@ private struct HomeContentView: View {
 
     var body: some View {
         NavigationStack {
-            VStack {
+            VStack(spacing: 0) {
                 SearchBar(placeholder: "종목을 검색하세요") { keyword in
                     store.action(.search(keyword))
                 }
+                .padding(.bottom, 8)
 
                 if store.state.isLoading {
                     ProgressView()
+                    Spacer()
                 } else if let errorMessage = store.state.errorMessage {
                     Text(errorMessage)
                         .foregroundStyle(.red)
                         .padding()
+                    Spacer()
                 } else {
                     SuggestionListView(
                         results: store.state.searchResults,
@@ -55,8 +58,6 @@ private struct HomeContentView: View {
                         }
                     )
                 }
-
-                Spacer()
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
