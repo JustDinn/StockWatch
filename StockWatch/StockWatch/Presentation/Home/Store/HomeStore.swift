@@ -93,6 +93,7 @@ extension HomeStore {
 
     /// 티커 검색
     private func searchTicker(query: String) {
+        state.searchQuery = query
         guard !query.isEmpty else {
             state.searchResults = []
             return

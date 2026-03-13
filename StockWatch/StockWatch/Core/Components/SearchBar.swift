@@ -18,18 +18,22 @@ struct SearchBar: View {
     // MARK: - Body
     
     var body: some View {
-        TextField(placeholder, text: $keyword)
-            .autocorrectionDisabled(true)
-            .textInputAutocapitalization(.characters)
-            .padding(10)
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(.gray, lineWidth: 1)
-            )
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.gray)
+            TextField(placeholder, text: $keyword)
+                .autocorrectionDisabled(true)
+                .textInputAutocapitalization(.characters)
+                .onSubmit {
+                    onSearch(keyword)
+                }
+        }
+        .padding(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(.gray, lineWidth: 1)
+        )
             .padding(15)
-            .onSubmit {
-                onSearch(keyword)
-            }
     }
 }
 

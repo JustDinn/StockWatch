@@ -36,27 +36,29 @@ private struct HomeContentView: View {
 
     var body: some View {
         NavigationStack {
-            VStack {
-                SearchBar(placeholder: "종목을 검색하세요") { keyword in
+            VStack(spacing: 0) {
+                SearchBar(placeholder: "영문 종목명 또는 티커를 검색하세요") { keyword in
                     store.action(.search(keyword))
                 }
+                .padding(.bottom, 8)
 
                 if store.state.isLoading {
                     ProgressView()
+                    Spacer()
                 } else if let errorMessage = store.state.errorMessage {
                     Text(errorMessage)
                         .foregroundStyle(.red)
                         .padding()
+                    Spacer()
                 } else {
                     SuggestionListView(
                         results: store.state.searchResults,
+                        searchQuery: store.state.searchQuery,
                         onSelect: { result in
                             store.action(.selectStock(result))
                         }
                     )
                 }
-
-                Spacer()
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
