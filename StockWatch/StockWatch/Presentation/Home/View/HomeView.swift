@@ -6,15 +6,33 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct HomeView: View {
 
-    @StateObject private var store = HomeStore(
-        tickerUseCase: TickerUseCase(
-            repository: TickerRepository()
-        )
-    )
+    @Environment(\.modelContext) private var modelContext
+
+    var body: some View {
+        HomeContentView(modelContext: modelContext)
+    }
+}
+
+// MARK: - Content View
+
+private struct HomeContentView: View {
+
+    @StateObject private var store: HomeStore
     @ObservedObject private var deepLinkManager = DeepLinkManager.shared
+
+    init(modelContext: ModelContext) {
+        let checkUnreadUseCase = CheckUnreadNotificationUseCase(
+            repository: NotificationHistoryRepository(modelContext: modelContext)
+        )
+        _store = StateObject(wrappedValue: HomeStore(
+            tickerUseCase: TickerUseCase(repository: TickerRepository()),
+            checkUnreadUseCase: checkUnreadUseCase
+        ))
+    }
 
     var body: some View {
         NavigationStack {
@@ -46,8 +64,17 @@ struct HomeView: View {
                         store.action(.showNotificationHistory)
                     } label: {
                         Image(systemName: "bell")
+                            .overlay(alignment: .topTrailing) {
+                                Circle()
+                                    .fill(Color.blue)
+                                    .frame(width: 8, height: 8)
+                                    .opacity(store.state.hasUnreadNotification ? 1 : 0)
+                            }
                     }
                 }
+            }
+            .onAppear {
+                store.action(.onAppear)
             }
             .navigationDestination(item: store.selectedStockBinding) { result in
                 StockDetailView(ticker: result.displayTicker)

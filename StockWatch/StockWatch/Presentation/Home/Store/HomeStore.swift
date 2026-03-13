@@ -14,16 +14,19 @@ final class HomeStore: ObservableObject {
     
     @Published private(set) var state: HomeState
     private let tickerUseCase: TickerUseCaseProtocol
+    private let checkUnreadUseCase: CheckUnreadNotificationUseCaseProtocol
 
     // MARK: - Init
-    
+
     init(
         tickerUseCase: TickerUseCaseProtocol = TickerUseCase(
             repository: TickerRepository()
         ),
+        checkUnreadUseCase: CheckUnreadNotificationUseCaseProtocol,
         state: HomeState = HomeState()
     ) {
         self.tickerUseCase = tickerUseCase
+        self.checkUnreadUseCase = checkUnreadUseCase
         self.state = state
     }
 
@@ -31,6 +34,8 @@ final class HomeStore: ObservableObject {
     
     func action(_ intent: HomeIntent) {
         switch intent {
+        case .onAppear:
+            loadUnreadStatus()
         case .search(let keyword):
             searchTicker(query: keyword)
         case .selectStock(let result):
@@ -54,7 +59,10 @@ final class HomeStore: ObservableObject {
     var isShowingNotificationHistoryBinding: Binding<Bool> {
         Binding(
             get: { self.state.isShowingNotificationHistory },
-            set: { self.state.isShowingNotificationHistory = $0 }
+            set: {
+                self.state.isShowingNotificationHistory = $0
+                if !$0 { self.loadUnreadStatus() }
+            }
         )
     }
 
@@ -68,7 +76,16 @@ final class HomeStore: ObservableObject {
 }
 
 extension HomeStore {
-    
+
+    /// 미읽음 알림 상태 갱신
+    private func loadUnreadStatus() {
+        do {
+            state.hasUnreadNotification = try checkUnreadUseCase.execute()
+        } catch {
+            state.hasUnreadNotification = false
+        }
+    }
+
     /// 종목 선택 → 상세 화면 이동
     private func navigateToDetail(result: SearchResult) {
         state.selectedStock = result
