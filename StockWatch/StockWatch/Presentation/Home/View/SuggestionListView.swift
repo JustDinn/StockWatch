@@ -41,7 +41,7 @@ struct SuggestionListView: View {
 
     private var emptyView: some View {
         VStack(spacing: 16) {
-            Image(systemName: "magnifyingglass")
+            Image(systemName: "exclamationmark.magnifyingglass")
                 .font(.system(size: 48))
                 .foregroundStyle(.secondary)
 
