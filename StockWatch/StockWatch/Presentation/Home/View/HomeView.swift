@@ -37,7 +37,7 @@ private struct HomeContentView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                SearchBar(placeholder: "종목을 검색하세요") { keyword in
+                SearchBar(placeholder: "영문 종목명 또는 티커를 검색하세요") { keyword in
                     store.action(.search(keyword))
                 }
                 .padding(.bottom, 8)
