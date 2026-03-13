@@ -34,6 +34,12 @@ final class MockFavoriteRepository: FavoriteRepositoryProtocol {
         removeFavoriteCallCount += 1
         lastReceivedTicker = ticker
     }
+
+    var stubbedFavorites: [String] = []
+
+    func fetchAllFavorites() async -> [String] {
+        return stubbedFavorites
+    }
 }
 
 // MARK: - Tests

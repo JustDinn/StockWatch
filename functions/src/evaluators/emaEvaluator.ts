@@ -1,4 +1,5 @@
-import { fetchIndicator } from "../finnhub";
+import { CandleData } from "../finnhub";
+import { calculateEMA } from "../indicators";
 import { SignalType } from "./smaEvaluator";
 
 export interface EmaParams {
@@ -12,24 +13,21 @@ export interface EmaParams {
  * shortPeriod EMA가 longPeriod EMA를 하향 돌파 → 매도
  * 돌파 없음 → neutral
  */
-export async function evaluateEma(
-  ticker: string,
-  params: EmaParams,
-  apiKey: string
-): Promise<SignalType> {
-  const [shortResult, longResult] = await Promise.all([
-    fetchIndicator(ticker, "ema", params.shortPeriod, apiKey),
-    fetchIndicator(ticker, "ema", params.longPeriod, apiKey),
-  ]);
+export function evaluateEma(
+  candles: CandleData,
+  params: EmaParams
+): SignalType {
+  const shortEma = calculateEMA(candles.closes, params.shortPeriod);
+  const longEma = calculateEMA(candles.closes, params.longPeriod);
 
-  if (shortResult.values.length < 2 || longResult.values.length < 2) {
+  if (shortEma.length < 2 || longEma.length < 2) {
     return "neutral";
   }
 
-  const shortNow = shortResult.values[0];
-  const shortPrev = shortResult.values[1];
-  const longNow = longResult.values[0];
-  const longPrev = longResult.values[1];
+  const shortNow = shortEma[shortEma.length - 1];
+  const shortPrev = shortEma[shortEma.length - 2];
+  const longNow = longEma[longEma.length - 1];
+  const longPrev = longEma[longEma.length - 2];
 
   if (shortPrev <= longPrev && shortNow > longNow) return "buy";
   if (shortPrev >= longPrev && shortNow < longNow) return "sell";

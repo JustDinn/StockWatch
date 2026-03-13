@@ -1,9 +1,9 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { initializeApp } from "firebase-admin/app";
 import { finnhubApiKey } from "./finnhub";
-import { AlertCondition, evaluateAndNotify } from "./alertEvaluator";
+import { AlertCondition, evaluateAndNotify, clearCandleCache } from "./alertEvaluator";
 
 initializeApp();
 
@@ -11,10 +11,12 @@ initializeApp();
 
 export const evaluateAlerts = onSchedule(
   {
-    schedule: "every 5 minutes",
+    schedule: "every 1 hours",
+    timeZone: "Asia/Seoul",
     secrets: [finnhubApiKey],
   },
   async () => {
+    clearCandleCache();
     const db = getFirestore();
     const apiKey = finnhubApiKey.value();
 
@@ -28,17 +30,13 @@ export const evaluateAlerts = onSchedule(
 
     const conditions = snapshot.docs.map((doc) => doc.data() as AlertCondition);
 
-    // 2. 현재 KST 시각의 5분 윈도우에 해당하는 조건만 필터링
+    // 2. 현재 KST 시각(시)에 해당하는 조건만 필터링
     const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000); // UTC → KST
     const currentHour = nowKst.getUTCHours();
-    const currentWindow = Math.floor(nowKst.getUTCMinutes() / 5);
 
     const dueConditions = conditions.filter((cond) => {
       if (cond.notificationHour === undefined) return true; // 하위 호환: 필드 없는 기존 문서는 통과
-      return (
-        cond.notificationHour === currentHour &&
-        Math.floor((cond.notificationMinute ?? 0) / 5) === currentWindow
-      );
+      return cond.notificationHour === currentHour;
     });
 
     if (dueConditions.length === 0) return;
@@ -69,6 +67,7 @@ export const evaluateAlerts = onSchedule(
 export const triggerEvaluateAlerts = onRequest(
   { secrets: [finnhubApiKey] },
   async (req, res) => {
+    clearCandleCache();
     const db = getFirestore();
     const apiKey = finnhubApiKey.value();
     const skipTimeFilter = req.query.skipTimeFilter === "true";
@@ -92,15 +91,11 @@ export const triggerEvaluateAlerts = onRequest(
         ? conditions.filter((c) => c.conditionId === targetConditionId)
         : conditions
       : conditions.filter((cond) => {
-          if (cond.notificationHour === undefined) return true;
-          const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
-          const currentHour = nowKst.getUTCHours();
-          const currentWindow = Math.floor(nowKst.getUTCMinutes() / 5);
-          return (
-            cond.notificationHour === currentHour &&
-            Math.floor((cond.notificationMinute ?? 0) / 5) === currentWindow
-          );
-        });
+        if (cond.notificationHour === undefined) return true;
+        const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+        const currentHour = nowKst.getUTCHours();
+        return cond.notificationHour === currentHour;
+      });
 
     if (dueConditions.length === 0) {
       res.json({ message: "현재 시간대에 해당하는 조건이 없습니다. ?skipTimeFilter=true 를 붙여 재시도하세요." });
@@ -117,3 +112,32 @@ export const triggerEvaluateAlerts = onRequest(
   }
 );
 
+// MARK: - Badge Reset
+
+export const resetBadgeCount = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "인증이 필요합니다.");
+  }
+
+  await getFirestore().collection("users").doc(uid).set({ badgeCount: 0 }, { merge: true });
+  return { success: true };
+});
+
+// MARK: - Badge Decrement
+
+export const decrementBadgeCount = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "인증이 필요합니다.");
+  }
+
+  const db = getFirestore();
+  const userRef = db.collection("users").doc(uid);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(userRef);
+    const current = (snap.data()?.badgeCount as number) ?? 0;
+    tx.set(userRef, { badgeCount: Math.max(0, current - 1) }, { merge: true });
+  });
+  return { success: true };
+});

@@ -49,7 +49,8 @@ final class NetworkServiceIntegrationTests: XCTestCase {
 
     private var apiKey: String {
         guard let key = Bundle.main.object(forInfoDictionaryKey: "FINNHUB_API_KEY") as? String else {
-            fatalError("[통합 Test] Info.plist에서 FINNHUB_API_KEY를 찾을 수 없습니다. Secrets.xcconfig를 확인해주세요.")
+            XCTFail("[통합 Test] Info.plist에서 FINNHUB_API_KEY를 찾을 수 없습니다. Secrets.xcconfig를 확인해주세요.")
+            return ""
         }
         return key
     }

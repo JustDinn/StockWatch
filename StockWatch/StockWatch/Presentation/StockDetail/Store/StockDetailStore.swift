@@ -78,7 +78,6 @@ extension StockDetailStore {
                 state.priceChangePercent = stockDetail.priceChangePercent
                 state.logoURL = stockDetail.logoURL
             case .failure(let error):
-                print("<< [StockDetailStore] error: \(error)")
                 state.errorMessage = error.localizedDescription
             }
             state.isLoading = false
@@ -107,7 +106,6 @@ extension StockDetailStore {
                 state.isFavorite = newState
             } catch {
                 // 실패 시 롤백
-                print("<< [StockDetailStore] toggleFavorite error: \(error)")
                 state.isFavorite = previousState
             }
         }

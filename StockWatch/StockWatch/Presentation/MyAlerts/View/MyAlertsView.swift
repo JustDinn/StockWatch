@@ -23,7 +23,6 @@ private struct MyAlertsContentView: View {
     @StateObject private var store: MyAlertsStore
 
     init(modelContext: ModelContext) {
-        print("<< [MyAlertsContentView] init - modelContext: \(ObjectIdentifier(modelContext))")
         let conditionRepository = StockConditionRepository(modelContext: modelContext)
         let alertRepository = AlertRegistrationRepository()
         _store = StateObject(wrappedValue: MyAlertsStore(

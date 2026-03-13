@@ -6,7 +6,19 @@
 import XCTest
 @testable import StockWatch
 
-// MARK: - Mock UseCase
+// MARK: - Mock UseCases
+
+final class MockCheckUnreadNotificationUseCase: CheckUnreadNotificationUseCaseProtocol {
+    var stubbedResult: Bool = false
+    var stubbedError: Error?
+    var executeCallCount = 0
+
+    func execute() throws -> Bool {
+        executeCallCount += 1
+        if let error = stubbedError { throw error }
+        return stubbedResult
+    }
+}
 
 final class MockTickerUseCase: TickerUseCaseProtocol {
     var stubbedResult: [SearchResult] = []
@@ -29,16 +41,19 @@ final class HomeStoreTests: XCTestCase {
 
     private var sut: HomeStore!
     private var mockUseCase: MockTickerUseCase!
+    private var mockCheckUnreadUseCase: MockCheckUnreadNotificationUseCase!
 
     override func setUp() {
         super.setUp()
         mockUseCase = MockTickerUseCase()
-        sut = HomeStore(tickerUseCase: mockUseCase)
+        mockCheckUnreadUseCase = MockCheckUnreadNotificationUseCase()
+        sut = HomeStore(tickerUseCase: mockUseCase, checkUnreadUseCase: mockCheckUnreadUseCase)
     }
 
     override func tearDown() {
         sut = nil
         mockUseCase = nil
+        mockCheckUnreadUseCase = nil
         super.tearDown()
     }
 
@@ -100,5 +115,56 @@ final class HomeStoreTests: XCTestCase {
         XCTAssertTrue(sut.state.searchResults.isEmpty)
         XCTAssertFalse(sut.state.isLoading)
         XCTAssertNotNil(sut.state.errorMessage)
+    }
+
+    // onAppear: 미읽음 알림이 있을 때 hasUnreadNotification = true
+    func test_action_onAppear_whenHasUnread_setsHasUnreadNotificationTrue() {
+        // Given
+        mockCheckUnreadUseCase.stubbedResult = true
+
+        // When
+        sut.action(.onAppear)
+
+        // Then
+        XCTAssertTrue(sut.state.hasUnreadNotification)
+    }
+
+    // onAppear: 모든 알림이 읽음 상태일 때 hasUnreadNotification = false
+    func test_action_onAppear_whenAllRead_setsHasUnreadNotificationFalse() {
+        // Given
+        mockCheckUnreadUseCase.stubbedResult = false
+
+        // When
+        sut.action(.onAppear)
+
+        // Then
+        XCTAssertFalse(sut.state.hasUnreadNotification)
+    }
+
+    // onAppear: UseCase 에러 시 hasUnreadNotification = false (기본값 유지)
+    func test_action_onAppear_whenUseCaseFails_hasUnreadNotificationIsFalse() {
+        // Given
+        mockCheckUnreadUseCase.stubbedError = NetworkError.serverError
+
+        // When
+        sut.action(.onAppear)
+
+        // Then
+        XCTAssertFalse(sut.state.hasUnreadNotification)
+    }
+
+    // isShowingNotificationHistoryBinding: dismiss 시 loadUnreadStatus 호출
+    func test_isShowingNotificationHistoryBinding_whenDismissed_callsLoadUnreadStatus() {
+        // Given
+        mockCheckUnreadUseCase.stubbedResult = true
+        sut.isShowingNotificationHistoryBinding.wrappedValue = true
+        mockCheckUnreadUseCase.executeCallCount = 0
+
+        // When: dismiss (false로 set)
+        sut.isShowingNotificationHistoryBinding.wrappedValue = false
+
+        // Then
+        XCTAssertEqual(mockCheckUnreadUseCase.executeCallCount, 1)
+        XCTAssertTrue(sut.state.hasUnreadNotification)
     }
 }
