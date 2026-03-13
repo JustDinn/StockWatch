@@ -88,7 +88,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     ) {
         saveNotification(from: notification.request.content.userInfo, receivedAt: notification.date)
         // .badge 포함 → FCM payload의 badge 절대값으로 앱 아이콘 뱃지 업데이트 (포그라운드 수신 시 뱃지 증가)
-        completionHandler([.banner, .sound, .badge])
+        completionHandler([.banner, .list, .sound, .badge])
     }
 
     /// 백그라운드/종료 상태에서 알림 탭 시
@@ -151,7 +151,6 @@ private extension AppDelegate {
             pendingItems.append((userInfo: userInfo, receivedAt: receivedAt))
             return
         }
-
         persistNotification(userInfo, receivedAt: receivedAt, container: container)
     }
 
