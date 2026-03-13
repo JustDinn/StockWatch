@@ -46,6 +46,11 @@ final class MyAlertsStore: ObservableObject {
             cancelDeleteCondition()
         case .toggleNotification(let condition):
             toggleNotification(condition: condition)
+        case .selectConditionForEdit(let condition):
+            state.selectedConditionForEdit = condition
+        case .clearConditionForEdit:
+            state.selectedConditionForEdit = nil
+            loadConditions()
         }
     }
 }

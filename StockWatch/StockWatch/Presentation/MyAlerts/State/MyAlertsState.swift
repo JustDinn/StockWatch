@@ -13,11 +13,14 @@ struct MyAlertsState {
     var errorMessage: String?
     /// 삭제 확인 Alert 표시 여부 및 삭제할 조건 ID
     var conditionToDelete: String?
+    /// 편집을 위해 선택된 조건 (navigationDestination 트리거)
+    var selectedConditionForEdit: StockCondition?
 
     init() {
         self.conditions = []
         self.isLoading = false
         self.errorMessage = nil
         self.conditionToDelete = nil
+        self.selectedConditionForEdit = nil
     }
 }

@@ -5,7 +5,7 @@
 
 /// 전략별 커스텀 파라미터
 /// 각 전략 타입에 따라 사용자가 설정할 수 있는 파라미터를 정의한다.
-enum StrategyParameters: Equatable {
+enum StrategyParameters: Equatable, Hashable {
     /// 단순 이동평균선 크로스 전략 파라미터
     case sma(shortPeriod: Int, longPeriod: Int)
     /// 지수 이동평균선 크로스 전략 파라미터

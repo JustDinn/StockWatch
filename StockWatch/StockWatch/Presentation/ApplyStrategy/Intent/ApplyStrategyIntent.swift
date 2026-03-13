@@ -31,4 +31,6 @@ enum ApplyStrategyIntent {
     case saveCondition
     /// 전략 선택 해제 (Back 버튼)
     case deselectStrategy
+    /// 기존 조건으로 편집 모드 초기화 (defaults 리셋 없이 기존 파라미터 유지)
+    case preloadCondition(StockCondition, Strategy)
 }
