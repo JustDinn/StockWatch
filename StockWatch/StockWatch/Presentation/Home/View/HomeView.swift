@@ -68,6 +68,7 @@ private struct HomeContentView: View {
                                 Circle()
                                     .fill(Color.blue)
                                     .frame(width: 8, height: 8)
+                                    .offset(x: 4, y: -4)
                                     .opacity(store.state.hasUnreadNotification ? 1 : 0)
                             }
                     }
