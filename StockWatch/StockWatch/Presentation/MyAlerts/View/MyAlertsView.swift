@@ -1,7 +1,6 @@
 //
 //  MyAlertsView.swift
 //  StockWatch
-//
 
 import SwiftUI
 import SwiftData
@@ -21,8 +20,10 @@ struct MyAlertsView: View {
 private struct MyAlertsContentView: View {
 
     @StateObject private var store: MyAlertsStore
+    private let modelContext: ModelContext
 
     init(modelContext: ModelContext) {
+        self.modelContext = modelContext
         let conditionRepository = StockConditionRepository(modelContext: modelContext)
         let alertRepository = AlertRegistrationRepository()
         _store = StateObject(wrappedValue: MyAlertsStore(
@@ -70,7 +71,38 @@ private struct MyAlertsContentView: View {
             } message: {
                 Text("이 알림을 삭제하시겠습니까?")
             }
+            .navigationDestination(item: Binding(
+                get: { store.state.selectedConditionForEdit },
+                set: { if $0 == nil { store.action(.clearConditionForEdit) } }
+            )) { condition in
+                editView(for: condition)
+            }
         }
+    }
+
+    @ViewBuilder
+    private func editView(for condition: StockCondition) -> some View {
+        if let applyStore = makeApplyStore(for: condition),
+           let strategy = Strategy.from(strategyId: condition.strategyId) {
+            StrategyConfigView(store: applyStore, strategy: strategy)
+        }
+    }
+
+    private func makeApplyStore(for condition: StockCondition) -> ApplyStrategyStore? {
+        guard let strategy = Strategy.from(strategyId: condition.strategyId) else { return nil }
+        let conditionRepository = StockConditionRepository(modelContext: modelContext)
+        let alertRepository = AlertRegistrationRepository()
+        let applyStore = ApplyStrategyStore(
+            ticker: condition.ticker,
+            fetchStrategiesUseCase: FetchStrategiesUseCase(repository: StrategyRepository()),
+            evaluateStrategyUseCase: EvaluateStrategyUseCase(repository: StrategyEvaluationRepository()),
+            saveStockConditionUseCase: SaveStockConditionUseCase(repository: conditionRepository),
+            updateStockConditionUseCase: UpdateStockConditionUseCase(repository: conditionRepository),
+            registerAlertUseCase: RegisterAlertUseCase(repository: alertRepository),
+            fcmTokenProvider: { FCMTokenManager.shared.currentToken }
+        )
+        applyStore.action(.preloadCondition(condition, strategy))
+        return applyStore
     }
 
     private var emptyView: some View {
@@ -101,29 +133,37 @@ private struct MyAlertsContentView: View {
 
     private func conditionRow(_ condition: StockCondition) -> some View {
         HStack(spacing: 12) {
-            // 전략 뱃지
-            Text(strategyShortName(condition.strategyId))
-                .font(.caption.bold())
-                .foregroundStyle(.white)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.blue)
-                .clipShape(Capsule())
+            // 전략 뱃지 + 텍스트 영역 — 탭 시 편집 화면으로 이동
+            Button {
+                store.action(.selectConditionForEdit(condition))
+            } label: {
+                HStack(spacing: 12) {
+                    Text(strategyShortName(condition.strategyId))
+                        .font(.caption.bold())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.blue)
+                        .clipShape(Capsule())
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(condition.ticker)
-                    .font(.headline)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(condition.ticker)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
 
-                Text(parametersDescription(condition.parameters))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                        Text(parametersDescription(condition.parameters))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
 
-                if condition.isNotificationEnabled {
-                    Text(formattedTime(condition.notificationTime))
-                        .font(.caption2)
-                        .foregroundStyle(.blue)
+                        if condition.isNotificationEnabled {
+                            Text(formattedTime(condition.notificationTime))
+                                .font(.caption2)
+                                .foregroundStyle(.blue)
+                        }
+                    }
                 }
             }
+            .buttonStyle(.plain)
 
             Spacer()
 

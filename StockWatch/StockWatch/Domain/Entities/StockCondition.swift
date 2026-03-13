@@ -7,7 +7,7 @@ import Foundation
 
 /// 종목에 적용된 전략 조건
 /// 특정 종목에 특정 전략을 커스텀 파라미터와 함께 연결하며, 알림 설정을 포함한다.
-struct StockCondition: Equatable, Identifiable {
+struct StockCondition: Equatable, Hashable, Identifiable {
     /// 고유 식별자 (UUID 문자열)
     let id: String
     /// 티커 심볼 (예: "AAPL")

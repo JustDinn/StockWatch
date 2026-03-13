@@ -15,4 +15,8 @@ enum MyAlertsIntent {
     case cancelDeleteCondition
     /// 조건 알림 토글
     case toggleNotification(condition: StockCondition)
+    /// 조건 편집 화면으로 이동
+    case selectConditionForEdit(StockCondition)
+    /// 조건 편집 화면 닫기
+    case clearConditionForEdit
 }

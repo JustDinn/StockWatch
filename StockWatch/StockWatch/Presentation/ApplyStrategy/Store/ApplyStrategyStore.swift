@@ -15,6 +15,7 @@ final class ApplyStrategyStore: ObservableObject {
     private let fetchStrategiesUseCase: FetchStrategiesUseCaseProtocol
     private let evaluateStrategyUseCase: EvaluateStrategyUseCaseProtocol
     private let saveStockConditionUseCase: SaveStockConditionUseCaseProtocol
+    private let updateStockConditionUseCase: UpdateStockConditionUseCaseProtocol?
     private let registerAlertUseCase: RegisterAlertUseCaseProtocol
     private let fcmTokenProvider: () -> String
 
@@ -25,6 +26,7 @@ final class ApplyStrategyStore: ObservableObject {
         fetchStrategiesUseCase: FetchStrategiesUseCaseProtocol,
         evaluateStrategyUseCase: EvaluateStrategyUseCaseProtocol,
         saveStockConditionUseCase: SaveStockConditionUseCaseProtocol,
+        updateStockConditionUseCase: UpdateStockConditionUseCaseProtocol? = nil,
         registerAlertUseCase: RegisterAlertUseCaseProtocol,
         fcmTokenProvider: @escaping () -> String = { "" }
     ) {
@@ -32,6 +34,7 @@ final class ApplyStrategyStore: ObservableObject {
         self.fetchStrategiesUseCase = fetchStrategiesUseCase
         self.evaluateStrategyUseCase = evaluateStrategyUseCase
         self.saveStockConditionUseCase = saveStockConditionUseCase
+        self.updateStockConditionUseCase = updateStockConditionUseCase
         self.registerAlertUseCase = registerAlertUseCase
         self.fcmTokenProvider = fcmTokenProvider
         observeFCMToken()
@@ -72,6 +75,8 @@ final class ApplyStrategyStore: ObservableObject {
             state.selectedStrategy = nil
             state.signal = nil
             state.isSaved = false
+        case .preloadCondition(let condition, let strategy):
+            state = ApplyStrategyState(condition: condition, strategy: strategy)
         }
     }
 }
@@ -140,8 +145,9 @@ extension ApplyStrategyStore {
         state.isLoading = true
         state.errorMessage = nil
 
+        let conditionId = state.existingConditionId ?? UUID().uuidString
         let condition = StockCondition(
-            id: UUID().uuidString,
+            id: conditionId,
             ticker: state.ticker,
             strategyId: parameters.strategyId,
             parameters: parameters,
@@ -153,11 +159,15 @@ extension ApplyStrategyStore {
 
         Task {
             do {
-                try await saveStockConditionUseCase.execute(condition: condition)
+                if state.existingConditionId != nil, let updateUseCase = updateStockConditionUseCase {
+                    try await updateUseCase.execute(condition: condition)
+                } else {
+                    try await saveStockConditionUseCase.execute(condition: condition)
+                }
 
                 if state.isNotificationEnabled {
                     let fcmToken = fcmTokenProvider()
-                    
+
                     if !fcmToken.isEmpty {
                         try await registerAlertUseCase.register(condition: condition, fcmToken: fcmToken)
                     }

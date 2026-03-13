@@ -39,6 +39,8 @@ struct ApplyStrategyState {
     var isFCMTokenReady: Bool
     /// 에러 메시지
     var errorMessage: String?
+    /// 편집 모드일 때 기존 조건 ID (nil이면 신규 생성, non-nil이면 업데이트)
+    var existingConditionId: String?
 
     init(ticker: String) {
         self.ticker = ticker
@@ -57,6 +59,44 @@ struct ApplyStrategyState {
         self.isSaved = false
         self.isFCMTokenReady = !FCMTokenManager.shared.currentToken.isEmpty
         self.errorMessage = nil
+        self.existingConditionId = nil
+    }
+
+    /// 기존 조건으로 편집 모드 초기화
+    init(condition: StockCondition, strategy: Strategy) {
+        self.ticker = condition.ticker
+        self.strategies = []
+        self.selectedStrategy = strategy
+        self.signal = nil
+        self.isNotificationEnabled = condition.isNotificationEnabled
+        self.notificationTime = condition.notificationTime
+        self.isLoading = false
+        self.isEvaluating = false
+        self.isSaved = false
+        self.isFCMTokenReady = !FCMTokenManager.shared.currentToken.isEmpty
+        self.errorMessage = nil
+        self.existingConditionId = condition.id
+
+        switch condition.parameters {
+        case let .sma(shortPeriod, longPeriod):
+            self.shortPeriod = shortPeriod
+            self.longPeriod = longPeriod
+            self.rsiPeriod = 14
+            self.oversoldThreshold = 30
+            self.overboughtThreshold = 70
+        case let .ema(shortPeriod, longPeriod):
+            self.shortPeriod = shortPeriod
+            self.longPeriod = longPeriod
+            self.rsiPeriod = 14
+            self.oversoldThreshold = 30
+            self.overboughtThreshold = 70
+        case let .rsi(period, oversoldThreshold, overboughtThreshold):
+            self.shortPeriod = 20
+            self.longPeriod = 50
+            self.rsiPeriod = period
+            self.oversoldThreshold = oversoldThreshold
+            self.overboughtThreshold = overboughtThreshold
+        }
     }
 
     /// 알림이 켜져 있으면 FCM 토큰이 있어야 적용 가능
