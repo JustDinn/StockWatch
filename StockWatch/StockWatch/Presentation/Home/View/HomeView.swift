@@ -53,6 +53,7 @@ private struct HomeContentView: View {
                 } else {
                     SuggestionListView(
                         results: store.state.searchResults,
+                        searchQuery: store.state.searchQuery,
                         onSelect: { result in
                             store.action(.selectStock(result))
                         }
