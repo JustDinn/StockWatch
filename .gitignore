@@ -145,7 +145,14 @@ iOSInjectionProject/
 Secret.swift
 Secret/
 
-# Claude 
+# Claude
 CLAUDE.md
+.claude/
+docs/
+
+# Firebase
+**/GoogleService-Info.plist
+functions/node_modules/
+functions/lib/
 
 # End of https://www.toptal.com/developers/gitignore/api/xcode,swift,cocoapods,macos
