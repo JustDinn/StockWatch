@@ -4,7 +4,7 @@
 //
 
 /// 전략 즉시 평가 UseCase 구현체
-/// Finnhub API를 통해 기술 지표를 조회하고 매수/매도/중립 신호를 반환한다.
+/// Yahoo Finance API로 과거 종가 데이터를 조회하고 로컬에서 기술 지표를 계산하여 매수/매도/중립 신호를 반환한다.
 final class EvaluateStrategyUseCase: EvaluateStrategyUseCaseProtocol {
 
     private let repository: StrategyEvaluationRepositoryProtocol

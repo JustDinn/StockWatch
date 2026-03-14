@@ -23,10 +23,10 @@ struct StrategyConfigView: View {
                 // 파라미터 설정
                 parameterSection
 
-//                Divider()
-//
-//                // 즉시 확인
-//                evaluationSection
+                Divider()
+
+                // 즉시 확인
+                evaluationSection
 
                 Divider()
 
@@ -161,83 +161,83 @@ struct StrategyConfigView: View {
 
     // MARK: - Evaluation Section
 
-//    private var evaluationSection: some View {
-//        VStack(alignment: .leading, spacing: 12) {
-//            Text("현재 상태 확인")
-//                .font(.headline)
-//
-//            if store.state.isEvaluating {
-//                HStack {
-//                    ProgressView()
-//                        .scaleEffect(0.8)
-//                    Text("평가 중...")
-//                        .foregroundStyle(.secondary)
-//                        .font(.subheadline)
-//                }
-//            } else if let signal = store.state.signal {
-//                signalCard(signal: signal)
-//            } else {
-//                Button {
-//                    store.action(.evaluate)
-//                } label: {
-//                    HStack {
-//                        Image(systemName: "chart.line.uptrend.xyaxis")
-//                        Text("즉시 확인")
-//                    }
-//                    .frame(maxWidth: .infinity)
-//                }
-//                .buttonStyle(.bordered)
-//            }
-//
-//            if let errorMessage = store.state.errorMessage {
-//                Text(errorMessage)
-//                    .font(.caption)
-//                    .foregroundStyle(.red)
-//            }
-//        }
-//    }
-//
-//    private func signalCard(signal: StrategySignal) -> some View {
-//        VStack(alignment: .leading, spacing: 8) {
-//            HStack {
-//                signalBadge(signal.signalType)
-//                Spacer()
-//                Button {
-//                    store.action(.evaluate)
-//                } label: {
-//                    Image(systemName: "arrow.clockwise")
-//                        .font(.caption)
-//                }
-//                .buttonStyle(.plain)
-//                .foregroundStyle(.secondary)
-//            }
-//
-//            Text(signal.description)
-//                .font(.subheadline)
-//                .foregroundStyle(.secondary)
-//        }
-//        .padding(12)
-//        .background(signalBackgroundColor(signal.signalType).opacity(0.08))
-//        .clipShape(RoundedRectangle(cornerRadius: 10))
-//    }
-//
-//    private func signalBadge(_ type: SignalType) -> some View {
-//        Text(type.rawValue)
-//            .font(.subheadline.bold())
-//            .foregroundStyle(.white)
-//            .padding(.horizontal, 12)
-//            .padding(.vertical, 4)
-//            .background(signalBackgroundColor(type))
-//            .clipShape(Capsule())
-//    }
-//
-//    private func signalBackgroundColor(_ type: SignalType) -> Color {
-//        switch type {
-//        case .buy: return .green
-//        case .sell: return .red
-//        case .neutral: return .gray
-//        }
-//    }
+    private var evaluationSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("현재 상태 확인")
+                .font(.headline)
+
+            if store.state.isEvaluating {
+                HStack {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text("평가 중...")
+                        .foregroundStyle(.secondary)
+                        .font(.subheadline)
+                }
+            } else if let signal = store.state.signal {
+                signalCard(signal: signal)
+            } else {
+                Button {
+                    store.action(.evaluate)
+                } label: {
+                    HStack {
+                        Image(systemName: "chart.line.uptrend.xyaxis")
+                        Text("즉시 확인")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+
+            if let errorMessage = store.state.errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
+    private func signalCard(signal: StrategySignal) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                signalBadge(signal.signalType)
+                Spacer()
+                Button {
+                    store.action(.evaluate)
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+            }
+
+            Text(signal.description)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .padding(12)
+        .background(signalBackgroundColor(signal.signalType).opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func signalBadge(_ type: SignalType) -> some View {
+        Text(type.rawValue)
+            .font(.subheadline.bold())
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+            .background(signalBackgroundColor(type))
+            .clipShape(Capsule())
+    }
+
+    private func signalBackgroundColor(_ type: SignalType) -> Color {
+        switch type {
+        case .buy: return .green
+        case .sell: return .red
+        case .neutral: return .gray
+        }
+    }
 
     // MARK: - Notification Section
 
