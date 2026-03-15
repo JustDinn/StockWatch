@@ -19,6 +19,8 @@ struct YahooFinanceQuoteDTO: Decodable {
         let symbol: String
         let regularMarketPrice: Double?
         let previousClose: Double?
+        let regularMarketChangePercent: Double?
+        let chartPreviousClose: Double?
         let shortName: String?
         let longName: String?
     }

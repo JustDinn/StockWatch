@@ -12,6 +12,8 @@ final class StockDetailMapperTests: XCTestCase {
         symbol: String = "AAPL",
         regularMarketPrice: Double? = 150.0,
         previousClose: Double? = 148.0,
+        regularMarketChangePercent: Double? = nil,
+        chartPreviousClose: Double? = nil,
         shortName: String? = nil,
         longName: String? = nil
     ) -> YahooFinanceQuoteDTO {
@@ -22,6 +24,8 @@ final class StockDetailMapperTests: XCTestCase {
                         symbol: symbol,
                         regularMarketPrice: regularMarketPrice,
                         previousClose: previousClose,
+                        regularMarketChangePercent: regularMarketChangePercent,
+                        chartPreviousClose: chartPreviousClose,
                         shortName: shortName,
                         longName: longName
                     ))

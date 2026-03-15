@@ -15,7 +15,7 @@ final class MockNetworkService: NetworkServiceProtocol {
     func request<T: Decodable>(router: some NetworkRouter, model: T.Type) async throws -> T {
         if let error = stubbedError { throw error }
         guard let result = stubbedResult as? T else {
-            fatalError("MockNetworkService: stubbedResult 타입이 일치하지 않습니다.")
+            throw NetworkError.decodingFailed
         }
         return result
     }

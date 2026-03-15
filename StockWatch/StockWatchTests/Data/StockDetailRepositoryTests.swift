@@ -33,6 +33,8 @@ final class StockDetailRepositoryTests: XCTestCase {
                         symbol: "AAPL",
                         regularMarketPrice: 150.0,
                         previousClose: 148.0,
+                        regularMarketChangePercent: nil,
+                        chartPreviousClose: nil,
                         shortName: "Apple Inc.",
                         longName: "Apple Inc"
                     ))
@@ -73,6 +75,8 @@ final class StockDetailRepositoryTests: XCTestCase {
                         symbol: "AAPL",
                         regularMarketPrice: 150.0,
                         previousClose: 148.0,
+                        regularMarketChangePercent: nil,
+                        chartPreviousClose: nil,
                         shortName: "Apple Inc.",
                         longName: "Apple Inc"
                     ))
