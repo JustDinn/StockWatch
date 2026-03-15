@@ -6,7 +6,7 @@
  * - evaluateAndNotify 호출 → FCM 발송 여부 및 payload 검증
  */
 
-import { fetchCandles } from "./finnhub";
+import { fetchCandles } from "./yahooFinance";
 import { calculateSMA, calculateEMA, calculateRSI } from "./indicators";
 
 // firebase-admin/firestore mock
@@ -49,8 +49,8 @@ jest.mock("firebase-admin/messaging", () => ({
   getMessaging: mockGetMessaging,
 }));
 
-// finnhub mock
-jest.mock("./finnhub");
+// yahooFinance mock
+jest.mock("./yahooFinance");
 const mockFetchCandles = fetchCandles as jest.MockedFunction<typeof fetchCandles>;
 
 import { evaluateAndNotify, AlertCondition, clearCandleCache } from "./alertEvaluator";
@@ -160,7 +160,7 @@ describe("RSI - buy 신호 → FCM 발송", () => {
     const prevRsi = rsi2[rsi2.length - 2];
     const lastRsi = rsi2[rsi2.length - 1];
 
-    await evaluateAndNotify(makeCondition(), "api-key");
+    await evaluateAndNotify(makeCondition());
 
     if (prevRsi > 30 && lastRsi <= 30) {
       expect(mockSend).toHaveBeenCalledTimes(1);
@@ -196,7 +196,7 @@ describe("RSI - sell 신호 → FCM 발송", () => {
     const rsiPrev2 = rsiValues[rsiValues.length - 2];
     const rsiNow2 = rsiValues[rsiValues.length - 1];
 
-    await evaluateAndNotify(makeCondition(), "api-key");
+    await evaluateAndNotify(makeCondition());
 
     if (rsiPrev2 < 70 && rsiNow2 >= 70) {
       expect(mockSend).toHaveBeenCalledTimes(1);
@@ -222,7 +222,7 @@ describe("RSI - neutral → FCM 미발송", () => {
       timestamps: closes.map((_, i) => 1700000000 + i * 86400),
     });
 
-    await evaluateAndNotify(makeCondition(), "api-key");
+    await evaluateAndNotify(makeCondition());
 
     expect(mockSend).not.toHaveBeenCalled();
   });
@@ -252,7 +252,7 @@ describe("SMA - buy 신호 → FCM 발송", () => {
     expect(sNow).toBeGreaterThan(lNow);
 
     mockFetchCandles.mockResolvedValue(candles);
-    await evaluateAndNotify(cond, "api-key");
+    await evaluateAndNotify(cond);
 
     expect(mockSend).toHaveBeenCalledTimes(1);
     const payload = mockSend.mock.calls[0][0];
@@ -281,7 +281,7 @@ describe("SMA - sell 신호 → FCM 발송", () => {
     expect(sNow).toBeLessThan(lNow);
 
     mockFetchCandles.mockResolvedValue(candles);
-    await evaluateAndNotify(cond, "api-key");
+    await evaluateAndNotify(cond);
 
     expect(mockSend).toHaveBeenCalledTimes(1);
     expect(mockSend.mock.calls[0][0].data.signal).toBe("sell");
@@ -311,7 +311,7 @@ describe("EMA - buy 신호 → FCM 발송", () => {
     expect(sNow).toBeGreaterThan(lNow);
 
     mockFetchCandles.mockResolvedValue(candles);
-    await evaluateAndNotify(cond, "api-key");
+    await evaluateAndNotify(cond);
 
     expect(mockSend).toHaveBeenCalledTimes(1);
     expect(mockSend.mock.calls[0][0].data.signal).toBe("buy");
@@ -334,7 +334,7 @@ describe("24시간 이내 동일 신호 → FCM 미발송", () => {
       } as unknown as Timestamp,
     });
 
-    await evaluateAndNotify(cond, "api-key");
+    await evaluateAndNotify(cond);
 
     expect(mockSend).not.toHaveBeenCalled();
   });
@@ -352,7 +352,7 @@ describe("24시간 이내 동일 신호 → FCM 미발송", () => {
       } as unknown as Timestamp,
     });
 
-    await evaluateAndNotify(cond, "api-key");
+    await evaluateAndNotify(cond);
 
     expect(mockSend).toHaveBeenCalledTimes(1);
   });
@@ -370,7 +370,7 @@ describe("FCM 발송 후 Firestore 업데이트", () => {
       parameters: JSON.stringify({ type: "sma", shortPeriod: 5, longPeriod: 20 }),
     });
 
-    await evaluateAndNotify(cond, "api-key");
+    await evaluateAndNotify(cond);
 
     expect(mockUpdate).toHaveBeenCalledTimes(1);
     const updateArgs = mockUpdate.mock.calls[0][0];
@@ -388,7 +388,7 @@ describe("FCM 발송 후 Firestore 업데이트", () => {
       timestamps: closes.map((_, i) => 1700000000 + i * 86400),
     });
 
-    await evaluateAndNotify(makeCondition(), "api-key");
+    await evaluateAndNotify(makeCondition());
 
     expect(mockUpdate).not.toHaveBeenCalled();
   });
@@ -400,7 +400,7 @@ describe("잘못된 파라미터 → 조용히 실패", () => {
   test("parameters가 유효하지 않은 JSON이면 FCM이 발송되지 않는다", async () => {
     const cond = makeCondition({ parameters: "invalid-json" });
 
-    await expect(evaluateAndNotify(cond, "api-key")).resolves.not.toThrow();
+    await expect(evaluateAndNotify(cond)).resolves.not.toThrow();
     expect(mockSend).not.toHaveBeenCalled();
   });
 });
@@ -480,7 +480,7 @@ describe("FCM 발송 시 알림 body에 조건값이 포함된다", () => {
     const candles = makeCandlesForGoldenCross(5, 20);
     mockFetchCandles.mockResolvedValue(candles);
 
-    await evaluateAndNotify(cond, "api-key");
+    await evaluateAndNotify(cond);
 
     const payload = mockSend.mock.calls[0][0];
     expect(payload.notification.body).toBe("SMA 5/20 골든 크로스 — 매수 신호");
@@ -500,7 +500,7 @@ describe("뱃지 카운팅 - 첫 알림", () => {
       parameters: JSON.stringify({ type: "sma", shortPeriod: 5, longPeriod: 20 }),
     });
 
-    await evaluateAndNotify(cond, "api-key");
+    await evaluateAndNotify(cond);
 
     const payload = mockSend.mock.calls[0][0];
     expect(payload.apns.payload.aps.badge).toBe(1);
@@ -518,7 +518,7 @@ describe("뱃지 카운팅 - 누적 증가", () => {
       parameters: JSON.stringify({ type: "sma", shortPeriod: 5, longPeriod: 20 }),
     });
 
-    await evaluateAndNotify(cond, "api-key");
+    await evaluateAndNotify(cond);
 
     const payload = mockSend.mock.calls[0][0];
     expect(payload.apns.payload.aps.badge).toBe(3);
@@ -536,7 +536,7 @@ describe("뱃지 카운팅 - 사용자 문서 없음", () => {
       parameters: JSON.stringify({ type: "sma", shortPeriod: 5, longPeriod: 20 }),
     });
 
-    await evaluateAndNotify(cond, "api-key");
+    await evaluateAndNotify(cond);
 
     const payload = mockSend.mock.calls[0][0];
     expect(payload.apns.payload.aps.badge).toBe(1);
@@ -554,7 +554,7 @@ describe("뱃지 카운팅 - transaction 실패 시 fallback", () => {
       parameters: JSON.stringify({ type: "sma", shortPeriod: 5, longPeriod: 20 }),
     });
 
-    await evaluateAndNotify(cond, "api-key");
+    await evaluateAndNotify(cond);
 
     expect(mockSend).toHaveBeenCalledTimes(1);
     const payload = mockSend.mock.calls[0][0];
@@ -572,7 +572,7 @@ describe("뱃지 카운팅 - runTransaction 호출 검증", () => {
       parameters: JSON.stringify({ type: "sma", shortPeriod: 5, longPeriod: 20 }),
     });
 
-    await evaluateAndNotify(cond, "api-key");
+    await evaluateAndNotify(cond);
 
     expect(mockRunTransaction).toHaveBeenCalledTimes(1);
   });
@@ -596,8 +596,8 @@ describe("캔들 캐시", () => {
       parameters: JSON.stringify({ type: "sma", shortPeriod: 5, longPeriod: 20 }),
     });
 
-    await evaluateAndNotify(cond1, "api-key");
-    await evaluateAndNotify(cond2, "api-key");
+    await evaluateAndNotify(cond1);
+    await evaluateAndNotify(cond2);
 
     expect(mockFetchCandles).toHaveBeenCalledTimes(1);
   });
@@ -611,9 +611,9 @@ describe("캔들 캐시", () => {
       parameters: JSON.stringify({ type: "sma", shortPeriod: 5, longPeriod: 20 }),
     });
 
-    await evaluateAndNotify(cond, "api-key");
+    await evaluateAndNotify(cond);
     clearCandleCache();
-    await evaluateAndNotify(cond, "api-key");
+    await evaluateAndNotify(cond);
 
     expect(mockFetchCandles).toHaveBeenCalledTimes(2);
   });
@@ -631,9 +631,9 @@ describe("뱃지 카운팅 - 순차 발송 누적", () => {
       parameters: JSON.stringify({ type: "sma", shortPeriod: 5, longPeriod: 20 }),
     };
 
-    await evaluateAndNotify(makeCondition({ ...baseCond, conditionId: "cond-A" }), "api-key");
-    await evaluateAndNotify(makeCondition({ ...baseCond, conditionId: "cond-B" }), "api-key");
-    await evaluateAndNotify(makeCondition({ ...baseCond, conditionId: "cond-C" }), "api-key");
+    await evaluateAndNotify(makeCondition({ ...baseCond, conditionId: "cond-A" }));
+    await evaluateAndNotify(makeCondition({ ...baseCond, conditionId: "cond-B" }));
+    await evaluateAndNotify(makeCondition({ ...baseCond, conditionId: "cond-C" }));
 
     expect(mockSend).toHaveBeenCalledTimes(3);
     expect(mockSend.mock.calls[0][0].apns.payload.aps.badge).toBe(1);
@@ -652,7 +652,7 @@ describe("뱃지 카운팅 - 순차 발송 누적", () => {
       timestamps: closes.map((_, i) => 1700000000 + i * 86400),
     });
 
-    await evaluateAndNotify(makeCondition(), "api-key");
+    await evaluateAndNotify(makeCondition());
 
     expect(mockSend).not.toHaveBeenCalled();
     expect(mockBadgeCount).toBe(0);

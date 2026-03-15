@@ -3,7 +3,7 @@ import { getMessaging } from "firebase-admin/messaging";
 import { evaluateSma, SmaParams, SignalType } from "./evaluators/smaEvaluator";
 import { evaluateEma, EmaParams } from "./evaluators/emaEvaluator";
 import { evaluateRsi, RsiParams } from "./evaluators/rsiEvaluator";
-import { fetchCandles, CandleData } from "./finnhub";
+import { fetchCandles, CandleData } from "./yahooFinance";
 
 // MARK: - Types
 
@@ -34,8 +34,7 @@ export interface StrategyParams {
 // MARK: - Core Logic
 
 export async function evaluateAndNotify(
-  cond: AlertCondition,
-  apiKey: string
+  cond: AlertCondition
 ): Promise<void> {
   let params: StrategyParams;
   try {
@@ -47,7 +46,7 @@ export async function evaluateAndNotify(
 
   let signal: SignalType;
   try {
-    signal = await evaluate(cond.ticker, params, apiKey);
+    signal = await evaluate(cond.ticker, params);
   } catch (err) {
     console.error(`Evaluation failed for ${cond.ticker}:`, err);
     return;
@@ -79,12 +78,11 @@ export function clearCandleCache(): void {
 
 export async function evaluate(
   ticker: string,
-  params: StrategyParams,
-  apiKey: string
+  params: StrategyParams
 ): Promise<SignalType> {
   let candles = candleCache.get(ticker);
   if (!candles) {
-    candles = await fetchCandles(ticker, apiKey);
+    candles = await fetchCandles(ticker);
     candleCache.set(ticker, candles);
   }
 
