@@ -3,6 +3,7 @@
   "scripts": {
     "lint": "eslint --ext .js,.ts .",
     "test": "jest",
+    "test:manual": "jest --config jest.manual.config.js --verbose --no-coverage --testTimeout=30000",
     "build": "tsc",
     "build:watch": "tsc --watch",
     "serve": "npm run build && firebase emulators:start --only functions",

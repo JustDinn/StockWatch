@@ -5,6 +5,11 @@ export interface CandleData {
   timestamps: number[];
 }
 
+const BASE_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+};
+
 /**
  * Yahoo Finance v8 /chart endpoint 호출 (API 키 불필요)
  * @param ticker  종목 심볼 (예: "AAPL")
@@ -24,10 +29,7 @@ export async function fetchCandles(
     `&interval=1d`;
 
   const response = await fetch(url, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    },
+    headers: BASE_HEADERS,
   });
 
   if (!response.ok) {
