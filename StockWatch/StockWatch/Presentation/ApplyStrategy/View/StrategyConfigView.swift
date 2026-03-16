@@ -106,12 +106,19 @@ struct StrategyConfigView: View {
     private var crossOrderError: Bool {
         let short = Int(shortPeriodText) ?? 0
         let long = Int(longPeriodText) ?? 0
-        return !shortPeriodError && !longPeriodError && short >= 1 && long >= 1 && short >= long
+        return !shortPeriodError && !longPeriodError
+            && short >= 1 && short <= 1000
+            && long >= 1 && long <= 1000
+            && short >= long
     }
 
     private var isCrossInputValid: Bool {
         guard strategy.id == "sma_cross" || strategy.id == "ema_cross" else { return true }
+        let short = Int(shortPeriodText) ?? 0
+        let long = Int(longPeriodText) ?? 0
         return !shortPeriodText.isEmpty && !longPeriodText.isEmpty
+            && short >= 1 && short <= 1000
+            && long >= 1 && long <= 1000
     }
 
     private var isRSIInputValid: Bool {
@@ -138,18 +145,18 @@ struct StrategyConfigView: View {
                         .onChange(of: shortPeriodText) { _, newValue in
                             let filtered = newValue.filter { $0.isNumber }
                             if filtered != newValue { shortPeriodText = filtered }
-                            if let value = Int(filtered), value >= 1 {
+                            if let value = Int(filtered), value >= 1, value <= 1000 {
                                 shortPeriodError = false
                                 store.action(.updateShortPeriod(value))
                             } else {
-                                shortPeriodError = !filtered.isEmpty
+                                shortPeriodError = true
                             }
                         }
                     Text("일")
                         .foregroundStyle(.secondary)
                 }
                 if shortPeriodError {
-                    Text("1 이상 양의 정수를 입력해주세요")
+                    Text("1~1,000까지 입력해주세요.")
                         .font(.caption)
                         .foregroundStyle(.red)
                         .frame(maxWidth: .infinity, alignment: .trailing)
@@ -173,18 +180,18 @@ struct StrategyConfigView: View {
                         .onChange(of: longPeriodText) { _, newValue in
                             let filtered = newValue.filter { $0.isNumber }
                             if filtered != newValue { longPeriodText = filtered }
-                            if let value = Int(filtered), value >= 1 {
+                            if let value = Int(filtered), value >= 1, value <= 1000 {
                                 longPeriodError = false
                                 store.action(.updateLongPeriod(value))
                             } else {
-                                longPeriodError = !filtered.isEmpty
+                                longPeriodError = true
                             }
                         }
                     Text("일")
                         .foregroundStyle(.secondary)
                 }
                 if longPeriodError {
-                    Text("1 이상 양의 정수를 입력해주세요")
+                    Text("1~1,000까지 입력해주세요.")
                         .font(.caption)
                         .foregroundStyle(.red)
                         .frame(maxWidth: .infinity, alignment: .trailing)
