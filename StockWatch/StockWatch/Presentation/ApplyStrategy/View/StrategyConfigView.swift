@@ -109,6 +109,11 @@ struct StrategyConfigView: View {
         return !shortPeriodError && !longPeriodError && short >= 1 && long >= 1 && short >= long
     }
 
+    private var isCrossInputValid: Bool {
+        guard strategy.id == "sma_cross" || strategy.id == "ema_cross" else { return true }
+        return !shortPeriodText.isEmpty && !longPeriodText.isEmpty
+    }
+
     private var isRSIInputValid: Bool {
         guard strategy.id == "rsi" else { return true }
         return !rsiPeriodText.isEmpty && !oversoldText.isEmpty && !overboughtText.isEmpty
@@ -455,6 +460,6 @@ struct StrategyConfigView: View {
             }
         }
         .buttonStyle(.borderedProminent)
-        .disabled(store.state.isLoading || !store.state.canApply || !isRSIInputValid)
+        .disabled(store.state.isLoading || !store.state.canApply || !isRSIInputValid || !isCrossInputValid)
     }
 }
