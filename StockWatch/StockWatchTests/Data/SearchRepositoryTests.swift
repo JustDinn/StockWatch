@@ -15,7 +15,7 @@ final class MockNetworkService: NetworkServiceProtocol {
     func request<T: Decodable>(router: some NetworkRouter, model: T.Type) async throws -> T {
         if let error = stubbedError { throw error }
         guard let result = stubbedResult as? T else {
-            fatalError("MockNetworkService: stubbedResult 타입이 일치하지 않습니다.")
+            throw NetworkError.decodingFailed
         }
         return result
     }
@@ -31,7 +31,7 @@ final class SearchRepositoryTests: XCTestCase {
     override func setUp() {
         super.setUp()
         mockNetworkService = MockNetworkService()
-        sut = TickerRepository(networkService: mockNetworkService, apiKey: "test-api-key")
+        sut = TickerRepository(networkService: mockNetworkService)
     }
 
     override func tearDown() {
@@ -43,17 +43,15 @@ final class SearchRepositoryTests: XCTestCase {
     // 정상 케이스: NetworkService 응답을 Entity로 변환하여 반환하는지 검증
     func test_search_withValidResponse_returnsMappedResults() async throws {
         // Given
-        let dto = TickerSearchResponseDTO(
-            count: 1,
-            result: [
-                TickerSearchItemDTO(
-                    description: "APPLE INC",
-                    displayTicker: "AAPL",
-                    ticker: "AAPL",
-                    type: "Common Stock"
-                )
-            ]
-        )
+        let dto = YahooFinanceSearchDTO(quotes: [
+            YahooFinanceSearchItemDTO(
+                symbol: "AAPL",
+                shortname: "Apple Inc.",
+                longname: "Apple Inc",
+                quoteType: "EQUITY",
+                exchange: "NMS"
+            )
+        ])
         mockNetworkService.stubbedResult = dto
 
         // When
@@ -62,13 +60,13 @@ final class SearchRepositoryTests: XCTestCase {
         // Then
         XCTAssertEqual(results.count, 1)
         XCTAssertEqual(results[0].ticker, "AAPL")
-        XCTAssertEqual(results[0].description, "APPLE INC")
+        XCTAssertEqual(results[0].description, "Apple Inc")
     }
 
-    // 빈 결과 케이스: API가 빈 결과를 반환하면 빈 배열을 반환하는지 검증
+    // 빈 결과 케이스: API가 빈 quotes를 반환하면 빈 배열을 반환하는지 검증
     func test_search_withEmptyResponse_returnsEmptyArray() async throws {
         // Given
-        let dto = TickerSearchResponseDTO(count: 0, result: [])
+        let dto = YahooFinanceSearchDTO(quotes: [])
         mockNetworkService.stubbedResult = dto
 
         // When

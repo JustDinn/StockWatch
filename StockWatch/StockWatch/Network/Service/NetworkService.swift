@@ -13,7 +13,7 @@ protocol NetworkServiceProtocol {
 }
 
 final class NetworkService: NetworkServiceProtocol {
-    
+
     /// API 요청 함수
     func request<T: Decodable>(
         router: some NetworkRouter,
@@ -34,16 +34,16 @@ final class NetworkService: NetworkServiceProtocol {
             throw mapError(error)
         }
     }
-    
+
     /// Alamofire 에러를 NetworkError로 매핑
     /// 분기 순서: 취소 → 연결 실패 → HTTP 상태 코드 → 디코딩 → 알 수 없는 오류
     private func mapError(_ error: AFError) -> NetworkError {
-        
+
         // 요청 취소 (화면 이탈 등으로 Combine cancel 호출 시)
         if error.isExplicitlyCancelledError {
             return .requestCancelled
         }
-        
+
         // 네트워크 연결 에러 (요청이 서버에 도달하지 못함)
         if case .sessionTaskFailed(let underlyingError) = error,
            let urlError = underlyingError as? URLError {
@@ -64,7 +64,7 @@ final class NetworkService: NetworkServiceProtocol {
                 return .unknownError
             }
         }
-        
+
         // HTTP 상태 코드 에러 (서버 응답은 받았으나 실패)
         if case .responseValidationFailed(let reason) = error {
             if case .unacceptableStatusCode(let statusCode) = reason {
@@ -77,6 +77,8 @@ final class NetworkService: NetworkServiceProtocol {
                     return .forbidden
                 case 404:
                     return .notFound
+                case 429:
+                    return .rateLimitExceeded
                 case 500...599:
                     return .serverError
                 default:
@@ -84,12 +86,12 @@ final class NetworkService: NetworkServiceProtocol {
                 }
             }
         }
-        
+
         // 디코딩 에러 (서버 응답은 성공했으나 디코딩 실패)
         if error.isResponseSerializationError {
             return .decodingFailed
         }
-        
+
         return .unknownError
     }
 }

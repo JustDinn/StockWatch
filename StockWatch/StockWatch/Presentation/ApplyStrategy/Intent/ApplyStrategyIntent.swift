@@ -21,8 +21,8 @@ enum ApplyStrategyIntent {
     case updateOversoldThreshold(Double)
     /// RSI 과매수 임계값 변경
     case updateOverboughtThreshold(Double)
-//    /// 즉시 전략 평가 실행
-//    case evaluate
+    /// 즉시 전략 평가 실행
+    case evaluate
     /// 알림 등록 토글
     case toggleNotification
     /// 알림 수신 시각 변경

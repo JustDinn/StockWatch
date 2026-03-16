@@ -23,16 +23,16 @@ struct ApplyStrategyState {
     var oversoldThreshold: Double
     /// RSI 과매수 임계값
     var overboughtThreshold: Double
-//    /// 즉시 확인 결과
-//    var signal: StrategySignal?
+    /// 즉시 확인 결과
+    var signal: StrategySignal?
     /// 알림 등록 여부
     var isNotificationEnabled: Bool
     /// 알림 수신 시각 (KST 기준)
     var notificationTime: Date
     /// 로딩 중 여부
     var isLoading: Bool
-//    /// 평가 중 여부
-//    var isEvaluating: Bool
+    /// 평가 중 여부
+    var isEvaluating: Bool
     /// 저장 성공 여부
     var isSaved: Bool
     /// FCM 토큰 수신 여부 (알림 ON 시 적용하기 버튼 활성화 조건)
@@ -51,11 +51,11 @@ struct ApplyStrategyState {
         self.rsiPeriod = 14
         self.oversoldThreshold = 30
         self.overboughtThreshold = 70
-//        self.signal = nil
+        self.signal = nil
         self.isNotificationEnabled = false
         self.notificationTime = StockCondition.defaultNotificationTime()
         self.isLoading = false
-//        self.isEvaluating = false
+        self.isEvaluating = false
         self.isSaved = false
         self.isFCMTokenReady = !FCMTokenManager.shared.currentToken.isEmpty
         self.errorMessage = nil
@@ -67,11 +67,11 @@ struct ApplyStrategyState {
         self.ticker = condition.ticker
         self.strategies = []
         self.selectedStrategy = strategy
-//        self.signal = nil
+        self.signal = nil
         self.isNotificationEnabled = condition.isNotificationEnabled
         self.notificationTime = condition.notificationTime
         self.isLoading = false
-//        self.isEvaluating = false
+        self.isEvaluating = false
         self.isSaved = false
         self.isFCMTokenReady = !FCMTokenManager.shared.currentToken.isEmpty
         self.errorMessage = nil

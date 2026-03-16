@@ -42,6 +42,14 @@ final class MockNotificationCenterService: NotificationCenterServiceProtocol {
     }
 }
 
+final class MockBadgeService: BadgeServiceProtocol {
+    var decrementCallCount = 0
+
+    func decrement() async {
+        decrementCallCount += 1
+    }
+}
+
 // MARK: - Tests
 
 @MainActor
@@ -51,16 +59,19 @@ final class NotificationHistoryStoreTests: XCTestCase {
     private var mockFetchUseCase: MockFetchNotificationHistoryUseCase!
     private var mockMarkAsReadUseCase: MockMarkNotificationAsReadUseCase!
     private var mockNotificationCenterService: MockNotificationCenterService!
+    private var mockBadgeService: MockBadgeService!
 
     override func setUp() {
         super.setUp()
         mockFetchUseCase = MockFetchNotificationHistoryUseCase()
         mockMarkAsReadUseCase = MockMarkNotificationAsReadUseCase()
         mockNotificationCenterService = MockNotificationCenterService()
+        mockBadgeService = MockBadgeService()
         sut = NotificationHistoryStore(
             fetchUseCase: mockFetchUseCase,
             markAsReadUseCase: mockMarkAsReadUseCase,
-            notificationCenterService: mockNotificationCenterService
+            notificationCenterService: mockNotificationCenterService,
+            badgeService: mockBadgeService
         )
     }
 
@@ -69,6 +80,7 @@ final class NotificationHistoryStoreTests: XCTestCase {
         mockFetchUseCase = nil
         mockMarkAsReadUseCase = nil
         mockNotificationCenterService = nil
+        mockBadgeService = nil
         super.tearDown()
     }
 
@@ -116,8 +128,7 @@ final class NotificationHistoryStoreTests: XCTestCase {
 
         // Act
         sut.action(.markAsRead(id: "cond1_AAPL_28000000"))
-        await Task.yield()
-        await Task.yield()
+        await sut.lastMarkAsReadTask?.value
 
         // Assert
         XCTAssertEqual(mockNotificationCenterService.removeCallCount, 1)
@@ -142,8 +153,7 @@ final class NotificationHistoryStoreTests: XCTestCase {
 
         // Act
         sut.action(.markAsRead(id: "cond1_AAPL_28000000"))
-        await Task.yield()
-        await Task.yield()
+        await sut.lastMarkAsReadTask?.value
 
         // Assert
         XCTAssertEqual(mockNotificationCenterService.removeCallCount, 0)

@@ -2,7 +2,6 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onRequest, onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { initializeApp } from "firebase-admin/app";
-import { finnhubApiKey } from "./finnhub";
 import { AlertCondition, evaluateAndNotify, clearCandleCache } from "./alertEvaluator";
 
 initializeApp();
@@ -13,12 +12,10 @@ export const evaluateAlerts = onSchedule(
   {
     schedule: "every 1 hours",
     timeZone: "Asia/Seoul",
-    secrets: [finnhubApiKey],
   },
   async () => {
     clearCandleCache();
     const db = getFirestore();
-    const apiKey = finnhubApiKey.value();
 
     // 1. isActive=true 조건 전체 조회
     const snapshot = await db
@@ -54,7 +51,7 @@ export const evaluateAlerts = onSchedule(
 
     for (const [, condList] of tickerGroups) {
       for (const cond of condList) {
-        tasks.push(evaluateAndNotify(cond, apiKey));
+        tasks.push(evaluateAndNotify(cond));
       }
     }
 
@@ -65,11 +62,10 @@ export const evaluateAlerts = onSchedule(
 // MARK: - HTTP Trigger (로컬 테스트 전용 — 배포하지 말 것)
 
 export const triggerEvaluateAlerts = onRequest(
-  { secrets: [finnhubApiKey] },
+  {},
   async (req, res) => {
     clearCandleCache();
     const db = getFirestore();
-    const apiKey = finnhubApiKey.value();
     const skipTimeFilter = req.query.skipTimeFilter === "true";
 
     const snapshot = await db
@@ -102,7 +98,7 @@ export const triggerEvaluateAlerts = onRequest(
       return;
     }
 
-    const tasks = dueConditions.map((cond) => evaluateAndNotify(cond, apiKey));
+    const tasks = dueConditions.map((cond) => evaluateAndNotify(cond));
     await Promise.allSettled(tasks);
 
     res.json({
