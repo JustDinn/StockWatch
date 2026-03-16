@@ -1,4 +1,4 @@
-import { CandleData } from "../finnhub";
+import { CandleData } from "../yahooFinance";
 import { calculateSMA } from "../indicators";
 
 export interface SmaParams {

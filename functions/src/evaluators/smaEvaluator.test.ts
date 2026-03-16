@@ -1,6 +1,6 @@
 import { evaluateSma, SmaParams } from "./smaEvaluator";
 import { calculateSMA } from "../indicators";
-import { CandleData } from "../finnhub";
+import { CandleData } from "../yahooFinance";
 
 jest.mock("../indicators");
 
