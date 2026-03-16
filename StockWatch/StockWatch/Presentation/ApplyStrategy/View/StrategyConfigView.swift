@@ -91,27 +91,86 @@ struct StrategyConfigView: View {
         }
     }
 
+    @State private var shortPeriodText: String = ""
+    @State private var longPeriodText: String = ""
+    @State private var shortPeriodError: Bool = false
+    @State private var longPeriodError: Bool = false
+
     private var crossParameterControls: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Text("단기 기간")
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Stepper("\(store.state.shortPeriod)일", value: Binding(
-                    get: { store.state.shortPeriod },
-                    set: { store.action(.updateShortPeriod($0)) }
-                ), in: 5...50)
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("단기 기간")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    TextField("", text: $shortPeriodText)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                        .textFieldStyle(.roundedBorder)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(shortPeriodError ? Color.red : Color.clear, lineWidth: 1)
+                        )
+                        .onChange(of: shortPeriodText) { _, newValue in
+                            let filtered = newValue.filter { $0.isNumber }
+                            if filtered != newValue { shortPeriodText = filtered }
+                            if let value = Int(filtered), value >= 1 {
+                                shortPeriodError = false
+                                store.action(.updateShortPeriod(value))
+                            } else {
+                                shortPeriodError = !filtered.isEmpty
+                            }
+                        }
+                    Text("일")
+                        .foregroundStyle(.secondary)
+                }
+                if shortPeriodError {
+                    Text("1 이상 양의 정수를 입력해주세요")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
             }
 
-            HStack {
-                Text("장기 기간")
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Stepper("\(store.state.longPeriod)일", value: Binding(
-                    get: { store.state.longPeriod },
-                    set: { store.action(.updateLongPeriod($0)) }
-                ), in: 20...200)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("장기 기간")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    TextField("", text: $longPeriodText)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                        .textFieldStyle(.roundedBorder)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(longPeriodError ? Color.red : Color.clear, lineWidth: 1)
+                        )
+                        .onChange(of: longPeriodText) { _, newValue in
+                            let filtered = newValue.filter { $0.isNumber }
+                            if filtered != newValue { longPeriodText = filtered }
+                            if let value = Int(filtered), value >= 1 {
+                                longPeriodError = false
+                                store.action(.updateLongPeriod(value))
+                            } else {
+                                longPeriodError = !filtered.isEmpty
+                            }
+                        }
+                    Text("일")
+                        .foregroundStyle(.secondary)
+                }
+                if longPeriodError {
+                    Text("1 이상 양의 정수를 입력해주세요")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
             }
+        }
+        .onAppear {
+            shortPeriodText = "\(store.state.shortPeriod)"
+            longPeriodText = "\(store.state.longPeriod)"
         }
     }
 
