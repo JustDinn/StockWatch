@@ -100,8 +100,15 @@ struct ApplyStrategyState {
     }
 
     /// 알림이 켜져 있으면 FCM 토큰이 있어야 적용 가능
+    /// SMA/EMA의 경우 단기 기간이 장기 기간보다 작아야 적용 가능
     var canApply: Bool {
-        isNotificationEnabled ? isFCMTokenReady : true
+        let crossValid: Bool = {
+            guard let strategy = selectedStrategy,
+                  strategy.id == "sma_cross" || strategy.id == "ema_cross" else { return true }
+            return shortPeriod < longPeriod
+        }()
+        let notificationValid = isNotificationEnabled ? isFCMTokenReady : true
+        return crossValid && notificationValid
     }
 
     /// 현재 선택된 전략에 맞는 StrategyParameters 반환

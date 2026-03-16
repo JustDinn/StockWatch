@@ -96,6 +96,12 @@ struct StrategyConfigView: View {
     @State private var shortPeriodError: Bool = false
     @State private var longPeriodError: Bool = false
 
+    private var crossOrderError: Bool {
+        let short = Int(shortPeriodText) ?? 0
+        let long = Int(longPeriodText) ?? 0
+        return !shortPeriodError && !longPeriodError && short >= 1 && long >= 1 && short >= long
+    }
+
     private var crossParameterControls: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
@@ -166,6 +172,12 @@ struct StrategyConfigView: View {
                         .foregroundStyle(.red)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
+            }
+
+            if crossOrderError {
+                Text("단기 기간은 장기 기간보다 작아야 합니다")
+                    .font(.caption)
+                    .foregroundStyle(.red)
             }
         }
         .onAppear {
