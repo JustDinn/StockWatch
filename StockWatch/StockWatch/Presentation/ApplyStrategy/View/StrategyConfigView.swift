@@ -233,14 +233,14 @@ struct StrategyConfigView: View {
                                 rsiPeriodError = false
                                 store.action(.updateRSIPeriod(value))
                             } else {
-                                rsiPeriodError = !filtered.isEmpty
+                                rsiPeriodError = true
                             }
                         }
                     Text("일")
                         .foregroundStyle(.secondary)
                 }
                 if rsiPeriodError {
-                    Text("1~250 사이의 정수를 입력해주세요")
+                    Text("1~250까지 입력해주세요.")
                         .font(.caption)
                         .foregroundStyle(.red)
                         .frame(maxWidth: .infinity, alignment: .trailing)
@@ -268,12 +268,12 @@ struct StrategyConfigView: View {
                                 oversoldError = false
                                 store.action(.updateOversoldThreshold(Double(value)))
                             } else {
-                                oversoldError = !filtered.isEmpty
+                                oversoldError = true
                             }
                         }
                 }
                 if oversoldError {
-                    Text("1~99 사이의 정수를 입력해주세요")
+                    Text("1~99까지 입력해주세요.")
                         .font(.caption)
                         .foregroundStyle(.red)
                         .frame(maxWidth: .infinity, alignment: .trailing)
@@ -301,12 +301,12 @@ struct StrategyConfigView: View {
                                 overboughtError = false
                                 store.action(.updateOverboughtThreshold(Double(value)))
                             } else {
-                                overboughtError = !filtered.isEmpty
+                                overboughtError = true
                             }
                         }
                 }
                 if overboughtError {
-                    Text("1~99 사이의 정수를 입력해주세요")
+                    Text("1~99까지 입력해주세요.")
                         .font(.caption)
                         .foregroundStyle(.red)
                         .frame(maxWidth: .infinity, alignment: .trailing)
