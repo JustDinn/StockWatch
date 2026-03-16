@@ -96,10 +96,22 @@ struct StrategyConfigView: View {
     @State private var shortPeriodError: Bool = false
     @State private var longPeriodError: Bool = false
 
+    @State private var rsiPeriodText: String = ""
+    @State private var rsiPeriodError: Bool = false
+    @State private var oversoldText: String = ""
+    @State private var oversoldError: Bool = false
+    @State private var overboughtText: String = ""
+    @State private var overboughtError: Bool = false
+
     private var crossOrderError: Bool {
         let short = Int(shortPeriodText) ?? 0
         let long = Int(longPeriodText) ?? 0
         return !shortPeriodError && !longPeriodError && short >= 1 && long >= 1 && short >= long
+    }
+
+    private var isRSIInputValid: Bool {
+        guard strategy.id == "rsi" else { return true }
+        return !rsiPeriodText.isEmpty && !oversoldText.isEmpty && !overboughtText.isEmpty
     }
 
     private var crossParameterControls: some View {
@@ -187,15 +199,40 @@ struct StrategyConfigView: View {
     }
 
     private var rsiParameterControls: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Text("기간")
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Stepper("\(store.state.rsiPeriod)일", value: Binding(
-                    get: { store.state.rsiPeriod },
-                    set: { store.action(.updateRSIPeriod($0)) }
-                ), in: 7...28)
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("기간")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    TextField("", text: $rsiPeriodText)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                        .textFieldStyle(.roundedBorder)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(rsiPeriodError ? Color.red : Color.clear, lineWidth: 1)
+                        )
+                        .onChange(of: rsiPeriodText) { _, newValue in
+                            let filtered = newValue.filter { $0.isNumber }
+                            if filtered != newValue { rsiPeriodText = filtered }
+                            if let value = Int(filtered), value >= 1, value <= 250 {
+                                rsiPeriodError = false
+                                store.action(.updateRSIPeriod(value))
+                            } else {
+                                rsiPeriodError = !filtered.isEmpty
+                            }
+                        }
+                    Text("일")
+                        .foregroundStyle(.secondary)
+                }
+                if rsiPeriodError {
+                    Text("1~250 사이의 정수를 입력해주세요")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -203,14 +240,32 @@ struct StrategyConfigView: View {
                     Text("과매도 임계값")
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text(String(format: "%.0f", store.state.oversoldThreshold))
-                        .monospacedDigit()
+                    TextField("", text: $oversoldText)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                        .textFieldStyle(.roundedBorder)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(oversoldError ? Color.red : Color.clear, lineWidth: 1)
+                        )
+                        .onChange(of: oversoldText) { _, newValue in
+                            let filtered = newValue.filter { $0.isNumber }
+                            if filtered != newValue { oversoldText = filtered }
+                            if let value = Int(filtered), value >= 1, value <= 99 {
+                                oversoldError = false
+                                store.action(.updateOversoldThreshold(Double(value)))
+                            } else {
+                                oversoldError = !filtered.isEmpty
+                            }
+                        }
                 }
-                Slider(value: Binding(
-                    get: { store.state.oversoldThreshold },
-                    set: { store.action(.updateOversoldThreshold($0)) }
-                ), in: 10...40, step: 1)
-                .tint(.green)
+                if oversoldError {
+                    Text("1~99 사이의 정수를 입력해주세요")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -218,15 +273,38 @@ struct StrategyConfigView: View {
                     Text("과매수 임계값")
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text(String(format: "%.0f", store.state.overboughtThreshold))
-                        .monospacedDigit()
+                    TextField("", text: $overboughtText)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                        .textFieldStyle(.roundedBorder)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(overboughtError ? Color.red : Color.clear, lineWidth: 1)
+                        )
+                        .onChange(of: overboughtText) { _, newValue in
+                            let filtered = newValue.filter { $0.isNumber }
+                            if filtered != newValue { overboughtText = filtered }
+                            if let value = Int(filtered), value >= 1, value <= 99 {
+                                overboughtError = false
+                                store.action(.updateOverboughtThreshold(Double(value)))
+                            } else {
+                                overboughtError = !filtered.isEmpty
+                            }
+                        }
                 }
-                Slider(value: Binding(
-                    get: { store.state.overboughtThreshold },
-                    set: { store.action(.updateOverboughtThreshold($0)) }
-                ), in: 60...90, step: 1)
-                .tint(.red)
+                if overboughtError {
+                    Text("1~99 사이의 정수를 입력해주세요")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
             }
+        }
+        .onAppear {
+            rsiPeriodText = "\(store.state.rsiPeriod)"
+            oversoldText = "\(Int(store.state.oversoldThreshold))"
+            overboughtText = "\(Int(store.state.overboughtThreshold))"
         }
     }
 
@@ -377,6 +455,6 @@ struct StrategyConfigView: View {
             }
         }
         .buttonStyle(.borderedProminent)
-        .disabled(store.state.isLoading || !store.state.canApply)
+        .disabled(store.state.isLoading || !store.state.canApply || !isRSIInputValid)
     }
 }
