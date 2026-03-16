@@ -11,6 +11,7 @@
 
 import { fetchCandles, CandleData } from "./yahooFinance";
 import { calculateSMA, calculateEMA, calculateRSI } from "./indicators";
+import { evaluate, clearCandleCache, StrategyParams } from "./alertEvaluator";
 
 const TICKER = "AAPL";
 
@@ -141,4 +142,99 @@ describe("[4] RSI(14) 계산", () => {
     expect(currentRsi).toBeGreaterThanOrEqual(0);
     expect(currentRsi).toBeLessThanOrEqual(100);
   });
+});
+
+// ─── 5. 전략 신호 평가 (실제 주가 데이터 기반) ───────────────────────────────
+
+const SIGNAL_LABEL: Record<string, string> = {
+  buy: "🟢 매수 (buy)",
+  sell: "🔴 매도 (sell)",
+  neutral: "⚪ 중립 (neutral)",
+};
+
+describe("[5] 전략 신호 평가 — 실제 Yahoo Finance 데이터", () => {
+  beforeEach(() => {
+    clearCandleCache();
+  });
+
+  test(`${TICKER} SMA(20/50) 신호`, async () => {
+    const params: StrategyParams = { type: "sma", shortPeriod: 20, longPeriod: 50 };
+    const signal = await evaluate(TICKER, params);
+
+    const sma20 = calculateSMA(candles.closes, 20);
+    const sma50 = calculateSMA(candles.closes, 50);
+
+    console.log(`\n🔍 ${TICKER} SMA(20/50) 전략 평가`);
+    console.log("─".repeat(40));
+    console.log(`  현재 SMA(20): $${sma20[sma20.length - 1].toFixed(2)}`);
+    console.log(`  현재 SMA(50): $${sma50[sma50.length - 1].toFixed(2)}`);
+    console.log(`  이전 SMA(20): $${sma20[sma20.length - 2].toFixed(2)}`);
+    console.log(`  이전 SMA(50): $${sma50[sma50.length - 2].toFixed(2)}`);
+    console.log(`  신호: ${SIGNAL_LABEL[signal]}`);
+
+    expect(["buy", "sell", "neutral"]).toContain(signal);
+  });
+
+  test(`${TICKER} EMA(12/26) 신호`, async () => {
+    const params: StrategyParams = { type: "ema", shortPeriod: 12, longPeriod: 26 };
+    const signal = await evaluate(TICKER, params);
+
+    const ema12 = calculateEMA(candles.closes, 12);
+    const ema26 = calculateEMA(candles.closes, 26);
+
+    console.log(`\n🔍 ${TICKER} EMA(12/26) 전략 평가`);
+    console.log("─".repeat(40));
+    console.log(`  현재 EMA(12): $${ema12[ema12.length - 1].toFixed(2)}`);
+    console.log(`  현재 EMA(26): $${ema26[ema26.length - 1].toFixed(2)}`);
+    console.log(`  이전 EMA(12): $${ema12[ema12.length - 2].toFixed(2)}`);
+    console.log(`  이전 EMA(26): $${ema26[ema26.length - 2].toFixed(2)}`);
+    console.log(`  신호: ${SIGNAL_LABEL[signal]}`);
+
+    expect(["buy", "sell", "neutral"]).toContain(signal);
+  });
+
+  test(`${TICKER} RSI(14) 신호`, async () => {
+    const params: StrategyParams = {
+      type: "rsi",
+      period: 14,
+      oversoldThreshold: 30,
+      overboughtThreshold: 70,
+    };
+    const signal = await evaluate(TICKER, params);
+
+    const rsi = calculateRSI(candles.closes, 14);
+    const currentRsi = rsi[rsi.length - 1];
+    const prevRsi = rsi[rsi.length - 2];
+
+    console.log(`\n🔍 ${TICKER} RSI(14) 전략 평가`);
+    console.log("─".repeat(40));
+    console.log(`  현재 RSI: ${currentRsi.toFixed(2)}`);
+    console.log(`  이전 RSI: ${prevRsi.toFixed(2)}`);
+    console.log(`  신호: ${SIGNAL_LABEL[signal]}`);
+
+    expect(["buy", "sell", "neutral"]).toContain(signal);
+  });
+
+  test("복수 종목 × 복수 전략 시그널 매트릭스", async () => {
+    const tickers = ["AAPL", "TSLA", "NVDA"];
+    const strategies: Array<{ label: string; params: StrategyParams }> = [
+      { label: "SMA(20/50)", params: { type: "sma", shortPeriod: 20, longPeriod: 50 } },
+      { label: "EMA(12/26)", params: { type: "ema", shortPeriod: 12, longPeriod: 26 } },
+      { label: "RSI(14)",    params: { type: "rsi", period: 14, oversoldThreshold: 30, overboughtThreshold: 70 } },
+    ];
+
+    console.log("\n📋 전략 시그널 매트릭스");
+    console.log("─".repeat(52));
+    console.log(`  ${"종목".padEnd(8)}${"전략".padEnd(14)}신호`);
+    console.log("─".repeat(52));
+
+    for (const ticker of tickers) {
+      for (const { label, params } of strategies) {
+        clearCandleCache();
+        const signal = await evaluate(ticker, params);
+        console.log(`  ${ticker.padEnd(8)}${label.padEnd(14)}${SIGNAL_LABEL[signal]}`);
+        expect(["buy", "sell", "neutral"]).toContain(signal);
+      }
+    }
+  }, 30000); // 복수 API 호출로 타임아웃 30초
 });
