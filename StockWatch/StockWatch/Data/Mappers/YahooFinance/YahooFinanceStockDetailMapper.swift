@@ -20,12 +20,14 @@ enum YahooFinanceStockDetailMapper {
         } else {
             priceChangePercent = 0.0
         }
+        let currency = meta?.currency ?? ticker.currencyFromTickerSuffix
         return StockDetail(
             ticker: ticker,
             companyName: meta?.longName ?? meta?.shortName ?? ticker,
             currentPrice: currentPrice,
             priceChangePercent: priceChangePercent,
-            logoURL: logoURL
+            logoURL: logoURL,
+            currency: currency
         )
     }
 }

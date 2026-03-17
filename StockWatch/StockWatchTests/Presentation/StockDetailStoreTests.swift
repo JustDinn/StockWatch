@@ -19,7 +19,8 @@ final class MockFetchStockDetailUseCase: FetchStockDetailUseCaseProtocol {
             companyName: "Test Corp",
             currentPrice: 100.0,
             priceChangePercent: 1.0,
-            logoURL: ""
+            logoURL: "",
+            currency: "USD"
         )
     }
 }
