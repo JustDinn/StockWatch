@@ -65,14 +65,14 @@ private struct SuggestionRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(result.displayTicker)
+                Text(result.description)
                     .font(.headline)
                     .fontWeight(.bold)
+                    .lineLimit(1)
 
-                Text(result.description)
+                Text(result.displayTicker)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
             }
 
             Spacer()
