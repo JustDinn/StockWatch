@@ -40,6 +40,9 @@ enum NetworkError: Error {
     /// 요청이 명시적으로 취소됨 (화면 이탈 등)
     case requestCancelled
     
+    /// 429 - 요청 횟수 초과 (Rate Limit)
+    case rateLimitExceeded
+
     /// 알 수 없는 오류
     case unknownError
 }
@@ -69,6 +72,8 @@ extension NetworkError: LocalizedError {
             return "보안 연결에 실패했습니다."
         case .requestCancelled:
             return nil
+        case .rateLimitExceeded:
+            return "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."
         case .unknownError:
             return "알 수 없는 오류가 발생했습니다."
         }

@@ -17,6 +17,9 @@ final class NotificationHistoryStore: ObservableObject {
     private let fetchUseCase: FetchNotificationHistoryUseCaseProtocol
     private let markAsReadUseCase: MarkNotificationAsReadUseCaseProtocol
     private let notificationCenterService: NotificationCenterServiceProtocol
+    private let badgeService: BadgeServiceProtocol
+
+    var lastMarkAsReadTask: Task<Void, Never>?
 
     // MARK: - Init
 
@@ -24,11 +27,13 @@ final class NotificationHistoryStore: ObservableObject {
         fetchUseCase: FetchNotificationHistoryUseCaseProtocol,
         markAsReadUseCase: MarkNotificationAsReadUseCaseProtocol,
         notificationCenterService: NotificationCenterServiceProtocol = NotificationCenterService(),
+        badgeService: BadgeServiceProtocol = LiveBadgeService(),
         state: NotificationHistoryState = NotificationHistoryState()
     ) {
         self.fetchUseCase = fetchUseCase
         self.markAsReadUseCase = markAsReadUseCase
         self.notificationCenterService = notificationCenterService
+        self.badgeService = badgeService
         self.state = state
     }
 
@@ -97,10 +102,10 @@ private extension NotificationHistoryStore {
     }
 
     func handleMarkAsRead(id: String) {
-        Task {
+        lastMarkAsReadTask = Task {
             let didChange = (try? markAsReadUseCase.execute(id: id)) ?? false
             if didChange {
-                await BadgeResetService.decrement()
+                await badgeService.decrement()
                 await notificationCenterService.removeDeliveredNotification(matchingId: id)
                 state.notifications = state.notifications.map { item in
                     guard item.id == id else { return item }

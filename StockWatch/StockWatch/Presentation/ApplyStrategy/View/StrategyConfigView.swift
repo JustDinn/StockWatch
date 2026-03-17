@@ -23,10 +23,10 @@ struct StrategyConfigView: View {
                 // 파라미터 설정
                 parameterSection
 
-//                Divider()
-//
-//                // 즉시 확인
-//                evaluationSection
+                Divider()
+
+                // 즉시 확인
+                evaluationSection
 
                 Divider()
 
@@ -91,40 +91,160 @@ struct StrategyConfigView: View {
         }
     }
 
+    @State private var shortPeriodText: String = ""
+    @State private var longPeriodText: String = ""
+    @State private var shortPeriodError: Bool = false
+    @State private var longPeriodError: Bool = false
+
+    @State private var rsiPeriodText: String = ""
+    @State private var rsiPeriodError: Bool = false
+    @State private var oversoldText: String = ""
+    @State private var oversoldError: Bool = false
+    @State private var overboughtText: String = ""
+    @State private var overboughtError: Bool = false
+
+    private var crossOrderError: Bool {
+        let short = Int(shortPeriodText) ?? 0
+        let long = Int(longPeriodText) ?? 0
+        return !shortPeriodError && !longPeriodError
+            && short >= 1 && short <= 1000
+            && long >= 1 && long <= 1000
+            && short >= long
+    }
+
+    private var isCrossInputValid: Bool {
+        guard strategy.id == "sma_cross" || strategy.id == "ema_cross" else { return true }
+        let short = Int(shortPeriodText) ?? 0
+        let long = Int(longPeriodText) ?? 0
+        return !shortPeriodText.isEmpty && !longPeriodText.isEmpty
+            && short >= 1 && short <= 1000
+            && long >= 1 && long <= 1000
+    }
+
+    private var isRSIInputValid: Bool {
+        guard strategy.id == "rsi" else { return true }
+        return !rsiPeriodText.isEmpty && !oversoldText.isEmpty && !overboughtText.isEmpty
+    }
+
     private var crossParameterControls: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Text("단기 기간")
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Stepper("\(store.state.shortPeriod)일", value: Binding(
-                    get: { store.state.shortPeriod },
-                    set: { store.action(.updateShortPeriod($0)) }
-                ), in: 5...50)
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("단기 기간")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    TextField("", text: $shortPeriodText)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                        .textFieldStyle(.roundedBorder)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(shortPeriodError ? Color.red : Color.clear, lineWidth: 1)
+                        )
+                        .onChange(of: shortPeriodText) { _, newValue in
+                            let filtered = newValue.filter { $0.isNumber }
+                            if filtered != newValue { shortPeriodText = filtered }
+                            if let value = Int(filtered), value >= 1, value <= 1000 {
+                                shortPeriodError = false
+                                store.action(.updateShortPeriod(value))
+                            } else {
+                                shortPeriodError = true
+                            }
+                        }
+                    Text("일")
+                        .foregroundStyle(.secondary)
+                }
+                if shortPeriodError {
+                    Text("1~1,000까지 입력해주세요.")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
             }
 
-            HStack {
-                Text("장기 기간")
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Stepper("\(store.state.longPeriod)일", value: Binding(
-                    get: { store.state.longPeriod },
-                    set: { store.action(.updateLongPeriod($0)) }
-                ), in: 20...200)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("장기 기간")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    TextField("", text: $longPeriodText)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                        .textFieldStyle(.roundedBorder)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(longPeriodError ? Color.red : Color.clear, lineWidth: 1)
+                        )
+                        .onChange(of: longPeriodText) { _, newValue in
+                            let filtered = newValue.filter { $0.isNumber }
+                            if filtered != newValue { longPeriodText = filtered }
+                            if let value = Int(filtered), value >= 1, value <= 1000 {
+                                longPeriodError = false
+                                store.action(.updateLongPeriod(value))
+                            } else {
+                                longPeriodError = true
+                            }
+                        }
+                    Text("일")
+                        .foregroundStyle(.secondary)
+                }
+                if longPeriodError {
+                    Text("1~1,000까지 입력해주세요.")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
             }
+
+            if crossOrderError {
+                Text("단기 기간은 장기 기간보다 작아야 합니다")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+        .onAppear {
+            shortPeriodText = "\(store.state.shortPeriod)"
+            longPeriodText = "\(store.state.longPeriod)"
         }
     }
 
     private var rsiParameterControls: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Text("기간")
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Stepper("\(store.state.rsiPeriod)일", value: Binding(
-                    get: { store.state.rsiPeriod },
-                    set: { store.action(.updateRSIPeriod($0)) }
-                ), in: 7...28)
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("기간")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    TextField("", text: $rsiPeriodText)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                        .textFieldStyle(.roundedBorder)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(rsiPeriodError ? Color.red : Color.clear, lineWidth: 1)
+                        )
+                        .onChange(of: rsiPeriodText) { _, newValue in
+                            let filtered = newValue.filter { $0.isNumber }
+                            if filtered != newValue { rsiPeriodText = filtered }
+                            if let value = Int(filtered), value >= 1, value <= 250 {
+                                rsiPeriodError = false
+                                store.action(.updateRSIPeriod(value))
+                            } else {
+                                rsiPeriodError = true
+                            }
+                        }
+                    Text("일")
+                        .foregroundStyle(.secondary)
+                }
+                if rsiPeriodError {
+                    Text("1~250까지 입력해주세요.")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -132,14 +252,32 @@ struct StrategyConfigView: View {
                     Text("과매도 임계값")
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text(String(format: "%.0f", store.state.oversoldThreshold))
-                        .monospacedDigit()
+                    TextField("", text: $oversoldText)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                        .textFieldStyle(.roundedBorder)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(oversoldError ? Color.red : Color.clear, lineWidth: 1)
+                        )
+                        .onChange(of: oversoldText) { _, newValue in
+                            let filtered = newValue.filter { $0.isNumber }
+                            if filtered != newValue { oversoldText = filtered }
+                            if let value = Int(filtered), value >= 1, value <= 99 {
+                                oversoldError = false
+                                store.action(.updateOversoldThreshold(Double(value)))
+                            } else {
+                                oversoldError = true
+                            }
+                        }
                 }
-                Slider(value: Binding(
-                    get: { store.state.oversoldThreshold },
-                    set: { store.action(.updateOversoldThreshold($0)) }
-                ), in: 10...40, step: 1)
-                .tint(.green)
+                if oversoldError {
+                    Text("1~99까지 입력해주세요.")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -147,97 +285,120 @@ struct StrategyConfigView: View {
                     Text("과매수 임계값")
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text(String(format: "%.0f", store.state.overboughtThreshold))
-                        .monospacedDigit()
+                    TextField("", text: $overboughtText)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                        .textFieldStyle(.roundedBorder)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(overboughtError ? Color.red : Color.clear, lineWidth: 1)
+                        )
+                        .onChange(of: overboughtText) { _, newValue in
+                            let filtered = newValue.filter { $0.isNumber }
+                            if filtered != newValue { overboughtText = filtered }
+                            if let value = Int(filtered), value >= 1, value <= 99 {
+                                overboughtError = false
+                                store.action(.updateOverboughtThreshold(Double(value)))
+                            } else {
+                                overboughtError = true
+                            }
+                        }
                 }
-                Slider(value: Binding(
-                    get: { store.state.overboughtThreshold },
-                    set: { store.action(.updateOverboughtThreshold($0)) }
-                ), in: 60...90, step: 1)
-                .tint(.red)
+                if overboughtError {
+                    Text("1~99까지 입력해주세요.")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
             }
+        }
+        .onAppear {
+            rsiPeriodText = "\(store.state.rsiPeriod)"
+            oversoldText = "\(Int(store.state.oversoldThreshold))"
+            overboughtText = "\(Int(store.state.overboughtThreshold))"
         }
     }
 
     // MARK: - Evaluation Section
 
-//    private var evaluationSection: some View {
-//        VStack(alignment: .leading, spacing: 12) {
-//            Text("현재 상태 확인")
-//                .font(.headline)
-//
-//            if store.state.isEvaluating {
-//                HStack {
-//                    ProgressView()
-//                        .scaleEffect(0.8)
-//                    Text("평가 중...")
-//                        .foregroundStyle(.secondary)
-//                        .font(.subheadline)
-//                }
-//            } else if let signal = store.state.signal {
-//                signalCard(signal: signal)
-//            } else {
-//                Button {
-//                    store.action(.evaluate)
-//                } label: {
-//                    HStack {
-//                        Image(systemName: "chart.line.uptrend.xyaxis")
-//                        Text("즉시 확인")
-//                    }
-//                    .frame(maxWidth: .infinity)
-//                }
-//                .buttonStyle(.bordered)
-//            }
-//
-//            if let errorMessage = store.state.errorMessage {
-//                Text(errorMessage)
-//                    .font(.caption)
-//                    .foregroundStyle(.red)
-//            }
-//        }
-//    }
-//
-//    private func signalCard(signal: StrategySignal) -> some View {
-//        VStack(alignment: .leading, spacing: 8) {
-//            HStack {
-//                signalBadge(signal.signalType)
-//                Spacer()
-//                Button {
-//                    store.action(.evaluate)
-//                } label: {
-//                    Image(systemName: "arrow.clockwise")
-//                        .font(.caption)
-//                }
-//                .buttonStyle(.plain)
-//                .foregroundStyle(.secondary)
-//            }
-//
-//            Text(signal.description)
-//                .font(.subheadline)
-//                .foregroundStyle(.secondary)
-//        }
-//        .padding(12)
-//        .background(signalBackgroundColor(signal.signalType).opacity(0.08))
-//        .clipShape(RoundedRectangle(cornerRadius: 10))
-//    }
-//
-//    private func signalBadge(_ type: SignalType) -> some View {
-//        Text(type.rawValue)
-//            .font(.subheadline.bold())
-//            .foregroundStyle(.white)
-//            .padding(.horizontal, 12)
-//            .padding(.vertical, 4)
-//            .background(signalBackgroundColor(type))
-//            .clipShape(Capsule())
-//    }
-//
-//    private func signalBackgroundColor(_ type: SignalType) -> Color {
-//        switch type {
-//        case .buy: return .green
-//        case .sell: return .red
-//        case .neutral: return .gray
-//        }
-//    }
+    private var evaluationSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("현재 상태 확인")
+                .font(.headline)
+
+            if store.state.isEvaluating {
+                HStack {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text("평가 중...")
+                        .foregroundStyle(.secondary)
+                        .font(.subheadline)
+                }
+            } else if let signal = store.state.signal {
+                signalCard(signal: signal)
+            } else {
+                Button {
+                    store.action(.evaluate)
+                } label: {
+                    HStack {
+                        Image(systemName: "chart.line.uptrend.xyaxis")
+                        Text("즉시 확인")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+
+            if let errorMessage = store.state.errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
+    private func signalCard(signal: StrategySignal) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                signalBadge(signal.signalType)
+                Spacer()
+                Button {
+                    store.action(.evaluate)
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+            }
+
+            Text(signal.description)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .padding(12)
+        .background(signalBackgroundColor(signal.signalType).opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func signalBadge(_ type: SignalType) -> some View {
+        Text(type.rawValue)
+            .font(.subheadline.bold())
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+            .background(signalBackgroundColor(type))
+            .clipShape(Capsule())
+    }
+
+    private func signalBackgroundColor(_ type: SignalType) -> Color {
+        switch type {
+        case .buy: return .green
+        case .sell: return .red
+        case .neutral: return .gray
+        }
+    }
 
     // MARK: - Notification Section
 
@@ -306,6 +467,6 @@ struct StrategyConfigView: View {
             }
         }
         .buttonStyle(.borderedProminent)
-        .disabled(store.state.isLoading || !store.state.canApply)
+        .disabled(store.state.isLoading || !store.state.canApply || !isRSIInputValid || !isCrossInputValid)
     }
 }

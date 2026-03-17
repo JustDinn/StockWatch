@@ -8,70 +8,94 @@ import XCTest
 
 final class StockDetailMapperTests: XCTestCase {
 
-    func test_map_withValidProfile_returnsCorrectEntity() {
+    private func makeQuoteDTO(
+        symbol: String = "AAPL",
+        regularMarketPrice: Double? = 150.0,
+        previousClose: Double? = 148.0,
+        regularMarketChangePercent: Double? = nil,
+        chartPreviousClose: Double? = nil,
+        shortName: String? = nil,
+        longName: String? = nil
+    ) -> YahooFinanceQuoteDTO {
+        YahooFinanceQuoteDTO(
+            chart: .init(
+                result: [
+                    .init(meta: .init(
+                        symbol: symbol,
+                        regularMarketPrice: regularMarketPrice,
+                        previousClose: previousClose,
+                        regularMarketChangePercent: regularMarketChangePercent,
+                        chartPreviousClose: chartPreviousClose,
+                        shortName: shortName,
+                        longName: longName
+                    ))
+                ],
+                error: nil
+            )
+        )
+    }
+
+    // 정상 케이스: 유효한 meta 데이터를 Entity로 올바르게 변환하는지 검증
+    func test_map_withValidMeta_returnsCorrectEntity() {
         // Given
         let ticker = "AAPL"
-        let quote = QuoteResponseDTO(c: 150.0, d: 2.0, dp: 1.35, h: 155.0, l: 145.0, o: 148.0, pc: 148.0)
-        let profile = StockProfileDTO(
-            name: "Apple Inc",
-            logo: "https://logo.url/aapl.png",
-            ticker: "AAPL",
-            country: "US",
-            currency: "USD",
-            exchange: "NASDAQ"
+        let quote = makeQuoteDTO(
+            regularMarketPrice: 150.0,
+            previousClose: 148.0,
+            longName: "Apple Inc"
         )
 
         // When
-        let result = StockDetailMapper.map(ticker: ticker, quote: quote, profile: profile)
+        let result = YahooFinanceStockDetailMapper.map(ticker: ticker, quote: quote, logoURL: "https://logo.url/aapl.png")
 
         // Then
         XCTAssertEqual(result.ticker, ticker)
         XCTAssertEqual(result.companyName, "Apple Inc")
         XCTAssertEqual(result.currentPrice, 150.0)
-        XCTAssertEqual(result.priceChangePercent, 1.35)
+        XCTAssertEqual(result.priceChangePercent, ((150.0 - 148.0) / 148.0) * 100, accuracy: 0.0001)
         XCTAssertEqual(result.logoURL, "https://logo.url/aapl.png")
     }
 
-    func test_map_withMissingLogo_returnsEntityWithEmptyLogoURL() {
+    // longName 없이 shortName만 있는 경우 shortName을 companyName으로 사용
+    func test_map_withoutLongName_usesShortnameAsCompanyName() {
         // Given
         let ticker = "QQQ"
-        let quote = QuoteResponseDTO(c: 400.0, d: -4.0, dp: -1.0, h: 410.0, l: 390.0, o: 405.0, pc: 404.0)
-        let profile = StockProfileDTO(
-            name: "Invesco QQQ Trust",
-            logo: nil,
-            ticker: "QQQ",
-            country: "US",
-            currency: "USD",
-            exchange: "NASDAQ"
+        let quote = makeQuoteDTO(
+            symbol: "QQQ",
+            regularMarketPrice: 400.0,
+            previousClose: 404.0,
+            shortName: "Invesco QQQ Trust"
         )
 
         // When
-        let result = StockDetailMapper.map(ticker: ticker, quote: quote, profile: profile)
+        let result = YahooFinanceStockDetailMapper.map(ticker: ticker, quote: quote, logoURL: "")
 
         // Then
-        XCTAssertEqual(result.ticker, ticker)
-        XCTAssertEqual(result.logoURL, "")
+        XCTAssertEqual(result.companyName, "Invesco QQQ Trust")
     }
 
-    func test_map_withMissingName_returnsTickerAsCompanyName() {
+    // 이름 필드가 모두 없는 경우 ticker를 companyName으로 사용
+    func test_map_withNoNameFields_usesTickerAsCompanyName() {
         // Given
         let ticker = "SOXL"
-        let quote = QuoteResponseDTO(c: 50.0, d: 2.0, dp: 4.0, h: 55.0, l: 45.0, o: 48.0, pc: 48.0)
-        let profile = StockProfileDTO(
-            name: nil,
-            logo: nil,
-            ticker: nil,
-            country: nil,
-            currency: nil,
-            exchange: nil
-        )
+        let quote = makeQuoteDTO(symbol: "SOXL", shortName: nil, longName: nil)
 
         // When
-        let result = StockDetailMapper.map(ticker: ticker, quote: quote, profile: profile)
+        let result = YahooFinanceStockDetailMapper.map(ticker: ticker, quote: quote, logoURL: "")
 
         // Then
-        XCTAssertEqual(result.ticker, ticker)
         XCTAssertEqual(result.companyName, ticker)
-        XCTAssertEqual(result.logoURL, "")
+    }
+
+    // previousClose가 0인 경우 priceChangePercent는 0.0 반환
+    func test_map_withZeroPreviousClose_returnZeroPriceChangePercent() {
+        // Given
+        let quote = makeQuoteDTO(regularMarketPrice: 100.0, previousClose: 0.0)
+
+        // When
+        let result = YahooFinanceStockDetailMapper.map(ticker: "TEST", quote: quote, logoURL: "")
+
+        // Then
+        XCTAssertEqual(result.priceChangePercent, 0.0)
     }
 }

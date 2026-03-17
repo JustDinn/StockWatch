@@ -1,6 +1,6 @@
 import { evaluateEma, EmaParams } from "./emaEvaluator";
 import { calculateEMA } from "../indicators";
-import { CandleData } from "../finnhub";
+import { CandleData } from "../yahooFinance";
 
 jest.mock("../indicators");
 

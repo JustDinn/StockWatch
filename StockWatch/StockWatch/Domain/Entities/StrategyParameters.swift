@@ -29,7 +29,7 @@ extension StrategyParameters {
     static func defaultParameters(for strategyId: String) -> StrategyParameters? {
         switch strategyId {
         case "sma_cross": return .sma(shortPeriod: 20, longPeriod: 50)
-        case "ema_cross": return .ema(shortPeriod: 12, longPeriod: 26)
+        case "ema_cross": return .ema(shortPeriod: 20, longPeriod: 50)
         case "rsi": return .rsi(period: 14, oversoldThreshold: 30, overboughtThreshold: 70)
         default: return nil
         }

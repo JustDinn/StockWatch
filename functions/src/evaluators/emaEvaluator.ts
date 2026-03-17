@@ -1,4 +1,4 @@
-import { CandleData } from "../finnhub";
+import { CandleData } from "../yahooFinance";
 import { calculateEMA } from "../indicators";
 import { SignalType } from "./smaEvaluator";
 
