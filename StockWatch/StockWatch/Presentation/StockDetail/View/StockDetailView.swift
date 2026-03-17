@@ -52,11 +52,11 @@ private struct StockDetailContentView: View {
                     VStack(spacing: 8) {
                         logoView(state: state)
 
-                        Text(state.ticker)
+                        Text(state.companyName)
                             .font(.title.bold())
 
                         HStack(spacing: 4) {
-                            Text(state.companyName)
+                            Text(state.ticker)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.center)
