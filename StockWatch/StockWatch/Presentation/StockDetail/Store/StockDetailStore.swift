@@ -77,6 +77,7 @@ extension StockDetailStore {
                 state.currentPrice = stockDetail.currentPrice
                 state.priceChangePercent = stockDetail.priceChangePercent
                 state.logoURL = stockDetail.logoURL
+                state.currency = stockDetail.currency
             case .failure(let error):
                 state.errorMessage = error.localizedDescription
             }

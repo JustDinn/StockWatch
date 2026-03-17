@@ -23,6 +23,7 @@ struct YahooFinanceQuoteDTO: Decodable {
         let chartPreviousClose: Double?
         let shortName: String?
         let longName: String?
+        let currency: String?
     }
 
     struct ChartError: Decodable {

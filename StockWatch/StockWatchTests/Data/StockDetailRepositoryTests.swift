@@ -36,7 +36,8 @@ final class StockDetailRepositoryTests: XCTestCase {
                         regularMarketChangePercent: nil,
                         chartPreviousClose: nil,
                         shortName: "Apple Inc.",
-                        longName: "Apple Inc"
+                        longName: "Apple Inc",
+                        currency: "USD"
                     ))
                 ],
                 error: nil
@@ -78,7 +79,8 @@ final class StockDetailRepositoryTests: XCTestCase {
                         regularMarketChangePercent: nil,
                         chartPreviousClose: nil,
                         shortName: "Apple Inc.",
-                        longName: "Apple Inc"
+                        longName: "Apple Inc",
+                        currency: "USD"
                     ))
                 ],
                 error: nil

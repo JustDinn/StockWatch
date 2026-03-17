@@ -15,7 +15,8 @@ final class StockDetailMapperTests: XCTestCase {
         regularMarketChangePercent: Double? = nil,
         chartPreviousClose: Double? = nil,
         shortName: String? = nil,
-        longName: String? = nil
+        longName: String? = nil,
+        currency: String? = "USD"
     ) -> YahooFinanceQuoteDTO {
         YahooFinanceQuoteDTO(
             chart: .init(
@@ -27,7 +28,8 @@ final class StockDetailMapperTests: XCTestCase {
                         regularMarketChangePercent: regularMarketChangePercent,
                         chartPreviousClose: chartPreviousClose,
                         shortName: shortName,
-                        longName: longName
+                        longName: longName,
+                        currency: currency
                     ))
                 ],
                 error: nil
