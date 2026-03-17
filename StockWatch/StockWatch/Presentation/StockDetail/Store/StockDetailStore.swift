@@ -14,6 +14,7 @@ final class StockDetailStore: ObservableObject {
 
     @Published private(set) var state: StockDetailState
     private let fetchStockDetailUseCase: FetchStockDetailUseCaseProtocol
+    private let fetchCandlestickUseCase: FetchCandlestickUseCaseProtocol
     private let toggleFavoriteUseCase: ToggleFavoriteUseCaseProtocol
     private let checkFavoriteUseCase: CheckFavoriteUseCaseProtocol
 
@@ -24,11 +25,15 @@ final class StockDetailStore: ObservableObject {
         fetchStockDetailUseCase: FetchStockDetailUseCaseProtocol = FetchStockDetailUseCase(
             repository: StockDetailRepository()
         ),
+        fetchCandlestickUseCase: FetchCandlestickUseCaseProtocol = FetchCandlestickUseCase(
+            repository: CandlestickRepository()
+        ),
         toggleFavoriteUseCase: ToggleFavoriteUseCaseProtocol,
         checkFavoriteUseCase: CheckFavoriteUseCaseProtocol
     ) {
         self.state = StockDetailState(ticker: ticker)
         self.fetchStockDetailUseCase = fetchStockDetailUseCase
+        self.fetchCandlestickUseCase = fetchCandlestickUseCase
         self.toggleFavoriteUseCase = toggleFavoriteUseCase
         self.checkFavoriteUseCase = checkFavoriteUseCase
     }
@@ -62,12 +67,15 @@ extension StockDetailStore {
 
     private func loadDetail() {
         state.isLoading = true
+        state.isChartLoading = true
         state.errorMessage = nil
+        state.chartErrorMessage = nil
 
         Task {
-            // 즐겨찾기 상태와 주식 상세 정보를 병렬로 로드
+            // 즐겨찾기 상태, 주식 상세 정보, 캔들스틱 데이터를 병렬로 로드
             async let isFav = checkFavoriteUseCase.execute(ticker: state.ticker)
             async let detail = fetchDetail()
+            async let candlestick = fetchCandlestick()
 
             state.isFavorite = await isFav
 
@@ -83,7 +91,25 @@ extension StockDetailStore {
             case .failure(let error):
                 state.errorMessage = error.localizedDescription
             }
+
+            switch await candlestick {
+            case .success(let data):
+                state.candlestickData = data
+            case .failure(let error):
+                state.chartErrorMessage = error.localizedDescription
+            }
+
             state.isLoading = false
+            state.isChartLoading = false
+        }
+    }
+
+    private func fetchCandlestick() async -> Result<CandlestickData, Error> {
+        do {
+            let data = try await fetchCandlestickUseCase.execute(ticker: state.ticker)
+            return .success(data)
+        } catch {
+            return .failure(error)
         }
     }
 
