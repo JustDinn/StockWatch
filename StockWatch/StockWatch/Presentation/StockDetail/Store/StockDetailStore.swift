@@ -73,7 +73,9 @@ extension StockDetailStore {
 
             switch await detail {
             case .success(let stockDetail):
-                state.companyName = stockDetail.companyName
+                let koreanName = KoreanStockDictionary.shared.entries
+                    .first(where: { $0.ticker == state.ticker })?.nameKo
+                state.companyName = koreanName ?? stockDetail.companyName
                 state.currentPrice = stockDetail.currentPrice
                 state.priceChangePercent = stockDetail.priceChangePercent
                 state.logoURL = stockDetail.logoURL
