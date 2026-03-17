@@ -32,6 +32,9 @@ final class KoreanStockSearchService {
 extension String {
     /// 문자열에 한글(가-힣) 문자가 포함되어 있으면 true.
     var containsKorean: Bool {
-        unicodeScalars.contains { $0.value >= 0xAC00 && $0.value <= 0xD7AF }
+        unicodeScalars.contains {
+            ($0.value >= 0xAC00 && $0.value <= 0xD7AF) || // 완성형 가-힣
+            ($0.value >= 0x3131 && $0.value <= 0x3163)    // 자음 ㄱ-ㅎ, 모음 ㅏ-ㅣ
+        }
     }
 }
