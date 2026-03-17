@@ -94,7 +94,6 @@ private struct StockDetailContentView: View {
                 .padding()
             }
         }
-        .navigationTitle(state.ticker)
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: store.isShowingApplyStrategyBinding) {
             StrategyView(ticker: store.state.ticker)
