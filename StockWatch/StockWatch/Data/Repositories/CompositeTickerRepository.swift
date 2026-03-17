@@ -22,7 +22,8 @@ final class CompositeTickerRepository: TickerRepositoryProtocol {
             if !localResults.isEmpty {
                 return localResults
             }
-            return try await yahooRepository.search(query: query)
+            // 한국어 쿼리로 Yahoo 검색 실패 시(예: 400 Bad Request) 에러 대신 빈 배열 반환
+            return (try? await yahooRepository.search(query: query)) ?? []
         }
         return try await yahooRepository.search(query: query)
     }
