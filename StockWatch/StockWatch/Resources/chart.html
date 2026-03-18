@@ -10,7 +10,7 @@
 </head>
 <body>
   <div id="chart"></div>
-  <script src="https://unpkg.com/lightweight-charts@4/dist/lightweight-charts.standalone.production.js"></script>
+  <script src="https://unpkg.com/lightweight-charts@5.1.0/dist/lightweight-charts.standalone.production.js"></script>
   <script>
     var chart = LightweightCharts.createChart(document.getElementById('chart'), {
       layout: {
@@ -32,7 +32,7 @@
       handleScale: false
     });
 
-    var candleSeries = chart.addCandlestickSeries({
+    var candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
       upColor: '#26a69a',
       downColor: '#ef5350',
       borderVisible: false,
