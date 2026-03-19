@@ -15,6 +15,7 @@ struct StockDetailView: View {
 
     var body: some View {
         StockDetailContentView(store: makeStore())
+            .toolbar(.hidden, for: .tabBar)
     }
 
     private func makeStore() -> StockDetailStore {
