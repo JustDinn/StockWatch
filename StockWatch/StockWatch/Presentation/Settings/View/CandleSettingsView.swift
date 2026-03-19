@@ -13,7 +13,7 @@ struct CandleSettingsView: View {
         List {
             Section {
                 candleRow(
-                    label: "바디",
+                    label: "몸통",
                     upColor: Binding(
                         get: { store.state.bodyUpColor },
                         set: { store.action(.updateBodyUpColor($0)) }
@@ -24,7 +24,7 @@ struct CandleSettingsView: View {
                     )
                 )
                 candleRow(
-                    label: "경계선",
+                    label: "테두리",
                     upColor: Binding(
                         get: { store.state.borderUpColor },
                         set: { store.action(.updateBorderUpColor($0)) }
@@ -35,7 +35,7 @@ struct CandleSettingsView: View {
                     )
                 )
                 candleRow(
-                    label: "윅",
+                    label: "꼬리",
                     upColor: Binding(
                         get: { store.state.wickUpColor },
                         set: { store.action(.updateWickUpColor($0)) }
