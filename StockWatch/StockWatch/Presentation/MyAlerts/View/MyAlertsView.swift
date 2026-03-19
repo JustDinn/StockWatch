@@ -85,6 +85,7 @@ private struct MyAlertsContentView: View {
         if let applyStore = makeApplyStore(for: condition),
            let strategy = Strategy.from(strategyId: condition.strategyId) {
             StrategyConfigView(store: applyStore, strategy: strategy)
+                .toolbar(.hidden, for: .tabBar)
         }
     }
 
