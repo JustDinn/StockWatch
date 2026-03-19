@@ -129,7 +129,7 @@ private struct StockDetailContentView: View {
                     store.action(.selectPeriod(period))
                 } label: {
                     Text(period.rawValue)
-                        .font(.subheadline.weight(
+                        .font(.footnote.weight(
                             state.selectedPeriod == period ? .bold : .regular
                         ))
                         .foregroundStyle(
@@ -137,7 +137,7 @@ private struct StockDetailContentView: View {
                                 ? Color.primary
                                 : Color.secondary
                         )
-                        .frame(maxWidth: .infinity, minHeight: 36)
+                        .frame(maxWidth: .infinity, minHeight: 28)
                         .background(
                             Group {
                                 if state.selectedPeriod == period {
