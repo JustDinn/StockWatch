@@ -42,6 +42,7 @@ private struct NotificationHistoryContentView: View {
         }
         .navigationTitle("알림")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .navigationDestination(item: store.selectedNotificationBinding) { item in
             StockDetailView(ticker: item.ticker)
         }
