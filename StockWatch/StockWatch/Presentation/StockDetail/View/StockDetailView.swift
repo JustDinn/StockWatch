@@ -98,10 +98,11 @@ private struct StockDetailContentView: View {
                     Button {
                         store.action(.navigateToApplyStrategy)
                     } label: {
-                        Label("전략 적용하기", systemImage: "chart.line.uptrend.xyaxis")
-                            .frame(maxWidth: .infinity)
+                        Text("알림 설정하기")
+                            .frame(maxWidth: .infinity, minHeight: 36)
                     }
                     .buttonStyle(.borderedProminent)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
 
                     Spacer()
                 }
