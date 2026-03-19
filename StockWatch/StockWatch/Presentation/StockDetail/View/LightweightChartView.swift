@@ -10,6 +10,9 @@ struct LightweightChartView: UIViewRepresentable {
 
     let candles: [Candle]
 
+    @AppStorage("candle_up_color_hex") private var upColorHex: String = "#ef5350"
+    @AppStorage("candle_down_color_hex") private var downColorHex: String = "#1976d2"
+
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
@@ -35,7 +38,10 @@ struct LightweightChartView: UIViewRepresentable {
 
     func updateUIView(_ webView: WKWebView, context: Context) {
         context.coordinator.pendingCandles = candles
+        context.coordinator.upColorHex = upColorHex
+        context.coordinator.downColorHex = downColorHex
         if context.coordinator.isLoaded {
+            context.coordinator.injectColors(into: webView)
             context.coordinator.injectData(candles, into: webView)
         }
     }
@@ -49,10 +55,18 @@ extension LightweightChartView {
         var webView: WKWebView?
         var pendingCandles: [Candle] = []
         var isLoaded = false
+        var upColorHex: String = "#ef5350"
+        var downColorHex: String = "#1976d2"
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             isLoaded = true
+            injectColors(into: webView)
             injectData(pendingCandles, into: webView)
+        }
+
+        func injectColors(into webView: WKWebView) {
+            let js = "setColors('\(upColorHex)', '\(downColorHex)')"
+            webView.evaluateJavaScript(js, completionHandler: nil)
         }
 
         func injectData(_ candles: [Candle], into webView: WKWebView) {

@@ -40,6 +40,15 @@
       wickDownColor: '#1976d2'
     });
 
+    function setColors(upColor, downColor) {
+      candleSeries.applyOptions({
+        upColor: upColor,
+        downColor: downColor,
+        wickUpColor: upColor,
+        wickDownColor: downColor
+      });
+    }
+
     function setData(jsonString) {
       try {
         var data = JSON.parse(jsonString);
