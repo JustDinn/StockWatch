@@ -148,7 +148,7 @@ private struct MyAlertsContentView: View {
                         .clipShape(Capsule())
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(condition.ticker)
+                        Text(condition.companyName.isEmpty ? condition.ticker : condition.companyName)
                             .font(.headline)
                             .foregroundStyle(.primary)
 

@@ -12,6 +12,8 @@ struct StockCondition: Equatable, Hashable, Identifiable {
     let id: String
     /// 티커 심볼 (예: "AAPL")
     let ticker: String
+    /// 한글 종목명 (예: "삼성전자"). 미국 주식은 빈 문자열.
+    var companyName: String
     /// 전략 ID (예: "rsi", "sma_cross")
     let strategyId: String
     /// 사용자 커스텀 파라미터

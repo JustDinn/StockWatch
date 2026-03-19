@@ -146,9 +146,12 @@ extension ApplyStrategyStore {
         state.errorMessage = nil
 
         let conditionId = state.existingConditionId ?? UUID().uuidString
+        let companyName = KoreanStockDictionary.shared.entries
+            .first(where: { $0.ticker == state.ticker })?.nameKo ?? ""
         let condition = StockCondition(
             id: conditionId,
             ticker: state.ticker,
+            companyName: companyName,
             strategyId: parameters.strategyId,
             parameters: parameters,
             isNotificationEnabled: state.isNotificationEnabled,

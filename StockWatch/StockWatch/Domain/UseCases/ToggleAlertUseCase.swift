@@ -24,6 +24,7 @@ final class ToggleAlertUseCase: ToggleAlertUseCaseProtocol {
         updated = StockCondition(
             id: condition.id,
             ticker: condition.ticker,
+            companyName: condition.companyName,
             strategyId: condition.strategyId,
             parameters: condition.parameters,
             isNotificationEnabled: newState,
