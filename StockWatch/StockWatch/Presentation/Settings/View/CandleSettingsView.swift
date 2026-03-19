@@ -15,23 +15,34 @@ struct CandleSettingsView: View {
                 candleRow(
                     label: "바디",
                     upColor: Binding(
-                        get: { store.state.upColor },
-                        set: { store.action(.updateUpColor($0)) }
+                        get: { store.state.bodyUpColor },
+                        set: { store.action(.updateBodyUpColor($0)) }
                     ),
                     downColor: Binding(
-                        get: { store.state.downColor },
-                        set: { store.action(.updateDownColor($0)) }
+                        get: { store.state.bodyDownColor },
+                        set: { store.action(.updateBodyDownColor($0)) }
+                    )
+                )
+                candleRow(
+                    label: "경계선",
+                    upColor: Binding(
+                        get: { store.state.borderUpColor },
+                        set: { store.action(.updateBorderUpColor($0)) }
+                    ),
+                    downColor: Binding(
+                        get: { store.state.borderDownColor },
+                        set: { store.action(.updateBorderDownColor($0)) }
                     )
                 )
                 candleRow(
                     label: "윅",
                     upColor: Binding(
-                        get: { store.state.upColor },
-                        set: { store.action(.updateUpColor($0)) }
+                        get: { store.state.wickUpColor },
+                        set: { store.action(.updateWickUpColor($0)) }
                     ),
                     downColor: Binding(
-                        get: { store.state.downColor },
-                        set: { store.action(.updateDownColor($0)) }
+                        get: { store.state.wickDownColor },
+                        set: { store.action(.updateWickDownColor($0)) }
                     )
                 )
             }

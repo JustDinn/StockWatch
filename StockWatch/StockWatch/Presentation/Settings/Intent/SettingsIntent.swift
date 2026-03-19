@@ -6,6 +6,10 @@
 import SwiftUI
 
 enum SettingsIntent {
-    case updateUpColor(Color)
-    case updateDownColor(Color)
+    case updateBodyUpColor(Color)
+    case updateBodyDownColor(Color)
+    case updateBorderUpColor(Color)
+    case updateBorderDownColor(Color)
+    case updateWickUpColor(Color)
+    case updateWickDownColor(Color)
 }

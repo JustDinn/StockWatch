@@ -10,8 +10,12 @@ struct LightweightChartView: UIViewRepresentable {
 
     let candles: [Candle]
 
-    @AppStorage("candle_up_color_hex") private var upColorHex: String = "#ef5350"
-    @AppStorage("candle_down_color_hex") private var downColorHex: String = "#1976d2"
+    @AppStorage("candle_body_up_color_hex") private var bodyUpColorHex: String = "#ef5350"
+    @AppStorage("candle_body_down_color_hex") private var bodyDownColorHex: String = "#1976d2"
+    @AppStorage("candle_border_up_color_hex") private var borderUpColorHex: String = "#ef5350"
+    @AppStorage("candle_border_down_color_hex") private var borderDownColorHex: String = "#1976d2"
+    @AppStorage("candle_wick_up_color_hex") private var wickUpColorHex: String = "#ef5350"
+    @AppStorage("candle_wick_down_color_hex") private var wickDownColorHex: String = "#1976d2"
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
@@ -38,8 +42,12 @@ struct LightweightChartView: UIViewRepresentable {
 
     func updateUIView(_ webView: WKWebView, context: Context) {
         context.coordinator.pendingCandles = candles
-        context.coordinator.upColorHex = upColorHex
-        context.coordinator.downColorHex = downColorHex
+        context.coordinator.bodyUpColorHex = bodyUpColorHex
+        context.coordinator.bodyDownColorHex = bodyDownColorHex
+        context.coordinator.borderUpColorHex = borderUpColorHex
+        context.coordinator.borderDownColorHex = borderDownColorHex
+        context.coordinator.wickUpColorHex = wickUpColorHex
+        context.coordinator.wickDownColorHex = wickDownColorHex
         if context.coordinator.isLoaded {
             context.coordinator.injectColors(into: webView)
             context.coordinator.injectData(candles, into: webView)
@@ -55,8 +63,12 @@ extension LightweightChartView {
         var webView: WKWebView?
         var pendingCandles: [Candle] = []
         var isLoaded = false
-        var upColorHex: String = "#ef5350"
-        var downColorHex: String = "#1976d2"
+        var bodyUpColorHex: String = "#ef5350"
+        var bodyDownColorHex: String = "#1976d2"
+        var borderUpColorHex: String = "#ef5350"
+        var borderDownColorHex: String = "#1976d2"
+        var wickUpColorHex: String = "#ef5350"
+        var wickDownColorHex: String = "#1976d2"
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             isLoaded = true
@@ -65,7 +77,7 @@ extension LightweightChartView {
         }
 
         func injectColors(into webView: WKWebView) {
-            let js = "setColors('\(upColorHex)', '\(downColorHex)')"
+            let js = "setColors('\(bodyUpColorHex)', '\(bodyDownColorHex)', '\(borderUpColorHex)', '\(borderDownColorHex)', '\(wickUpColorHex)', '\(wickDownColorHex)')"
             webView.evaluateJavaScript(js, completionHandler: nil)
         }
 

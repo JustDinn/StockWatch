@@ -35,17 +35,20 @@
     var candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
       upColor: '#ef5350',
       downColor: '#1976d2',
-      borderVisible: false,
+      borderUpColor: '#ef5350',
+      borderDownColor: '#1976d2',
       wickUpColor: '#ef5350',
       wickDownColor: '#1976d2'
     });
 
-    function setColors(upColor, downColor) {
+    function setColors(bodyUp, bodyDown, borderUp, borderDown, wickUp, wickDown) {
       candleSeries.applyOptions({
-        upColor: upColor,
-        downColor: downColor,
-        wickUpColor: upColor,
-        wickDownColor: downColor
+        upColor: bodyUp,
+        downColor: bodyDown,
+        borderUpColor: borderUp,
+        borderDownColor: borderDown,
+        wickUpColor: wickUp,
+        wickDownColor: wickDown
       });
     }
 
