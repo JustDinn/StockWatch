@@ -13,6 +13,28 @@ enum ChartPeriod: String, CaseIterable, Equatable {
     case year  = "년"
 }
 
+extension ChartPeriod {
+    /// Yahoo Finance API range 파라미터 (캔들 약 20개 기준)
+    var range: String {
+        switch self {
+        case .day:   return "1mo"
+        case .week:  return "5mo"
+        case .month: return "20mo"
+        case .year:  return "20y"
+        }
+    }
+
+    /// Yahoo Finance API interval 파라미터 (봉 단위)
+    var interval: String {
+        switch self {
+        case .day:   return "1d"
+        case .week:  return "1wk"
+        case .month: return "1mo"
+        case .year:  return "1y"
+        }
+    }
+}
+
 /// StockDetail 화면 UI 상태
 struct StockDetailState: Equatable {
     /// 티커 심볼 (예: "AAPL") - 화면 진입 시 결정, 이후 변경 없음

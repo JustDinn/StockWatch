@@ -4,5 +4,5 @@
 //
 
 protocol CandlestickRepositoryProtocol {
-    func fetchCandlesticks(ticker: String) async throws -> CandlestickData
+    func fetchCandlesticks(ticker: String, period: ChartPeriod) async throws -> CandlestickData
 }

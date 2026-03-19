@@ -11,8 +11,10 @@ import XCTest
 final class MockCandlestickRepository: CandlestickRepositoryProtocol {
     var stubbedResult: CandlestickData?
     var stubbedError: Error?
+    private(set) var receivedPeriod: ChartPeriod?
 
-    func fetchCandlesticks(ticker: String) async throws -> CandlestickData {
+    func fetchCandlesticks(ticker: String, period: ChartPeriod) async throws -> CandlestickData {
+        receivedPeriod = period
         if let error = stubbedError { throw error }
         return stubbedResult ?? CandlestickData(ticker: ticker, candles: [])
     }
@@ -41,7 +43,7 @@ final class FetchCandlestickUseCaseTests: XCTestCase {
     func test_execute_withEmptyTicker_throwsEmptyTickerError() async {
         // When / Then
         do {
-            _ = try await sut.execute(ticker: "")
+            _ = try await sut.execute(ticker: "", period: .day)
             XCTFail("emptyTicker 에러가 발생해야 한다")
         } catch FetchCandlestickError.emptyTicker {
             // success
@@ -60,7 +62,7 @@ final class FetchCandlestickUseCaseTests: XCTestCase {
         mockRepository.stubbedResult = CandlestickData(ticker: "AAPL", candles: [candle])
 
         // When
-        let result = try await sut.execute(ticker: "AAPL")
+        let result = try await sut.execute(ticker: "AAPL", period: .day)
 
         // Then
         XCTAssertEqual(result.ticker, "AAPL")
@@ -74,7 +76,7 @@ final class FetchCandlestickUseCaseTests: XCTestCase {
 
         // When / Then
         do {
-            _ = try await sut.execute(ticker: "AAPL")
+            _ = try await sut.execute(ticker: "AAPL", period: .day)
             XCTFail("에러가 전파되어야 한다")
         } catch {
             XCTAssertNotNil(error)
@@ -92,12 +94,43 @@ final class FetchCandlestickUseCaseTests: XCTestCase {
         mockRepository.stubbedResult = CandlestickData(ticker: "AAPL", candles: candles)
 
         // When
-        let result = try await sut.execute(ticker: "AAPL")
+        let result = try await sut.execute(ticker: "AAPL", period: .day)
 
         // Then
         XCTAssertEqual(result.candles.count, 2)
         XCTAssertEqual(result.candles[0].open, 100.0)
         XCTAssertEqual(result.candles[1].close, 112.0)
         XCTAssertEqual(result.candles[0].volume, 1_000_000)
+    }
+
+    // period.day → repository에 .day 전달
+    func test_execute_withPeriodDay_forwardsCorrectPeriodToRepository() async throws {
+        // When
+        _ = try await sut.execute(ticker: "AAPL", period: .day)
+
+        // Then
+        XCTAssertEqual(mockRepository.receivedPeriod, .day)
+    }
+
+    // period.year → repository에 .year 전달
+    func test_execute_withPeriodYear_forwardsCorrectPeriodToRepository() async throws {
+        // When
+        _ = try await sut.execute(ticker: "AAPL", period: .year)
+
+        // Then
+        XCTAssertEqual(mockRepository.receivedPeriod, .year)
+    }
+
+    // 빈 ticker + 임의 period → emptyTicker 에러
+    func test_execute_withEmptyTicker_anyPeriod_throwsEmptyTickerError() async {
+        // When / Then
+        do {
+            _ = try await sut.execute(ticker: "", period: .month)
+            XCTFail("emptyTicker 에러가 발생해야 한다")
+        } catch FetchCandlestickError.emptyTicker {
+            // success
+        } catch {
+            XCTFail("예상치 못한 에러: \(error)")
+        }
     }
 }

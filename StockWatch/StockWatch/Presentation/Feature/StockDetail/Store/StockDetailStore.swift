@@ -17,6 +17,7 @@ final class StockDetailStore: ObservableObject {
     private let fetchCandlestickUseCase: FetchCandlestickUseCaseProtocol
     private let toggleFavoriteUseCase: ToggleFavoriteUseCaseProtocol
     private let checkFavoriteUseCase: CheckFavoriteUseCaseProtocol
+    private var chartTask: Task<Void, Never>?
 
     // MARK: - Init
 
@@ -52,6 +53,8 @@ final class StockDetailStore: ObservableObject {
             state.isShowingApplyStrategy = true
         case .selectPeriod(let period):
             state.selectedPeriod = period
+            chartTask?.cancel()
+            chartTask = Task { await reloadChart(period: period) }
         }
     }
 
@@ -77,7 +80,7 @@ extension StockDetailStore {
             // 즐겨찾기 상태, 주식 상세 정보, 캔들스틱 데이터를 병렬로 로드
             async let isFav = checkFavoriteUseCase.execute(ticker: state.ticker)
             async let detail = fetchDetail()
-            async let candlestick = fetchCandlestick()
+            async let candlestick = fetchCandlestick(period: state.selectedPeriod)
 
             state.isFavorite = await isFav
 
@@ -106,13 +109,29 @@ extension StockDetailStore {
         }
     }
 
-    private func fetchCandlestick() async -> Result<CandlestickData, Error> {
+    private func fetchCandlestick(period: ChartPeriod) async -> Result<CandlestickData, Error> {
         do {
-            let data = try await fetchCandlestickUseCase.execute(ticker: state.ticker)
+            let data = try await fetchCandlestickUseCase.execute(ticker: state.ticker, period: period)
             return .success(data)
         } catch {
             return .failure(error)
         }
+    }
+
+    private func reloadChart(period: ChartPeriod) async {
+        state.isChartLoading = true
+        state.chartErrorMessage = nil
+
+        switch await fetchCandlestick(period: period) {
+        case .success(let data):
+            guard !Task.isCancelled else { return }
+            state.candlestickData = data
+        case .failure(let error):
+            guard !Task.isCancelled else { return }
+            state.chartErrorMessage = error.localizedDescription
+        }
+
+        state.isChartLoading = false
     }
 
     private func fetchDetail() async -> Result<StockDetail, Error> {

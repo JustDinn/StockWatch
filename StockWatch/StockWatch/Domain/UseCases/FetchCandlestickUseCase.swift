@@ -8,7 +8,7 @@ enum FetchCandlestickError: Error {
 }
 
 protocol FetchCandlestickUseCaseProtocol {
-    func execute(ticker: String) async throws -> CandlestickData
+    func execute(ticker: String, period: ChartPeriod) async throws -> CandlestickData
 }
 
 final class FetchCandlestickUseCase: FetchCandlestickUseCaseProtocol {
@@ -19,8 +19,8 @@ final class FetchCandlestickUseCase: FetchCandlestickUseCaseProtocol {
         self.repository = repository
     }
 
-    func execute(ticker: String) async throws -> CandlestickData {
+    func execute(ticker: String, period: ChartPeriod) async throws -> CandlestickData {
         guard !ticker.isEmpty else { throw FetchCandlestickError.emptyTicker }
-        return try await repository.fetchCandlesticks(ticker: ticker)
+        return try await repository.fetchCandlesticks(ticker: ticker, period: period)
     }
 }
