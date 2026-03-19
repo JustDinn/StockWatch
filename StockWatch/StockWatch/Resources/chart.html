@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: transparent; }
+    #chart { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="chart"></div>
+  <script src="https://unpkg.com/lightweight-charts@5.1.0/dist/lightweight-charts.standalone.production.js"></script>
+  <script>
+    var chart = LightweightCharts.createChart(document.getElementById('chart'), {
+      layout: {
+        background: { type: 'solid', color: 'transparent' },
+        textColor: '#888888'
+      },
+      grid: {
+        vertLines: { color: 'rgba(128,128,128,0.15)' },
+        horzLines: { color: 'rgba(128,128,128,0.15)' }
+      },
+      timeScale: {
+        borderColor: 'rgba(128,128,128,0.3)',
+        timeVisible: false
+      },
+      rightPriceScale: {
+        borderColor: 'rgba(128,128,128,0.3)'
+      },
+      handleScroll: false,
+      handleScale: false
+    });
+
+    var candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
+      upColor: '#ef5350',
+      downColor: '#1976d2',
+      borderUpColor: '#ef5350',
+      borderDownColor: '#1976d2',
+      wickUpColor: '#ef5350',
+      wickDownColor: '#1976d2'
+    });
+
+    function setColors(bodyUp, bodyDown, borderUp, borderDown, wickUp, wickDown) {
+      candleSeries.applyOptions({
+        upColor: bodyUp,
+        downColor: bodyDown,
+        borderUpColor: borderUp,
+        borderDownColor: borderDown,
+        wickUpColor: wickUp,
+        wickDownColor: wickDown
+      });
+    }
+
+    function setData(jsonString) {
+      try {
+        var data = JSON.parse(jsonString);
+        candleSeries.setData(data);
+        chart.timeScale().fitContent();
+      } catch (e) {
+        console.error('차트 데이터 오류:', e);
+      }
+    }
+
+    window.addEventListener('resize', function() {
+      chart.applyOptions({
+        width: document.getElementById('chart').clientWidth,
+        height: document.getElementById('chart').clientHeight
+      });
+    });
+  </script>
+</body>
+</html>

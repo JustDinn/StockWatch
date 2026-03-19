@@ -8,6 +8,16 @@ import XCTest
 
 // MARK: - Mocks
 
+final class MockFetchCandlestickUseCase: FetchCandlestickUseCaseProtocol {
+    var stubbedResult: CandlestickData?
+    var stubbedError: Error?
+
+    func execute(ticker: String) async throws -> CandlestickData {
+        if let error = stubbedError { throw error }
+        return stubbedResult ?? CandlestickData(ticker: ticker, candles: [])
+    }
+}
+
 final class MockFetchStockDetailUseCase: FetchStockDetailUseCaseProtocol {
     var stubbedResult: StockDetail?
     var stubbedError: Error?
@@ -60,15 +70,18 @@ final class StockDetailStoreTests: XCTestCase {
     private var mockFetchUseCase: MockFetchStockDetailUseCase!
     private var mockToggleUseCase: MockToggleFavoriteUseCase!
     private var mockCheckUseCase: MockCheckFavoriteUseCase!
+    private var mockCandlestickUseCase: MockFetchCandlestickUseCase!
 
     override func setUp() {
         super.setUp()
         mockFetchUseCase = MockFetchStockDetailUseCase()
         mockToggleUseCase = MockToggleFavoriteUseCase()
         mockCheckUseCase = MockCheckFavoriteUseCase()
+        mockCandlestickUseCase = MockFetchCandlestickUseCase()
         sut = StockDetailStore(
             ticker: "AAPL",
             fetchStockDetailUseCase: mockFetchUseCase,
+            fetchCandlestickUseCase: mockCandlestickUseCase,
             toggleFavoriteUseCase: mockToggleUseCase,
             checkFavoriteUseCase: mockCheckUseCase
         )
@@ -79,6 +92,7 @@ final class StockDetailStoreTests: XCTestCase {
         mockFetchUseCase = nil
         mockToggleUseCase = nil
         mockCheckUseCase = nil
+        mockCandlestickUseCase = nil
         super.tearDown()
     }
 
@@ -136,6 +150,59 @@ final class StockDetailStoreTests: XCTestCase {
         // Then
         XCTAssertFalse(sut.state.isFavorite)
         XCTAssertEqual(mockToggleUseCase.executeCallCount, 1)
+    }
+
+    // loadDetail 완료 후 isChartLoading이 false가 되어야 함
+    func test_action_loadDetail_setsIsChartLoadingFalseAfterCompletion() async {
+        // When
+        sut.action(.loadDetail)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // Then
+        XCTAssertFalse(sut.state.isChartLoading)
+    }
+
+    // 캔들스틱 성공 → candlestickData 업데이트
+    func test_action_loadDetail_onCandlestickSuccess_updatesCandlestickData() async {
+        // Given
+        let candle = Candle(timestamp: Date(), open: 100.0, high: 110.0, low: 95.0, close: 105.0, volume: 1_000_000)
+        mockCandlestickUseCase.stubbedResult = CandlestickData(ticker: "AAPL", candles: [candle])
+
+        // When
+        sut.action(.loadDetail)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // Then
+        XCTAssertNotNil(sut.state.candlestickData)
+        XCTAssertEqual(sut.state.candlestickData?.candles.count, 1)
+    }
+
+    // 캔들스틱 실패 → chartErrorMessage 설정
+    func test_action_loadDetail_onCandlestickFailure_setsChartErrorMessage() async {
+        // Given
+        mockCandlestickUseCase.stubbedError = NSError(domain: "ChartError", code: 1, userInfo: [NSLocalizedDescriptionKey: "차트 로딩 실패"])
+
+        // When
+        sut.action(.loadDetail)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // Then
+        XCTAssertNotNil(sut.state.chartErrorMessage)
+        XCTAssertNil(sut.state.candlestickData)
+    }
+
+    // 캔들스틱 실패해도 주식 상세 정보는 정상 표시
+    func test_action_loadDetail_candlestickFailure_doesNotAffectStockDetail() async {
+        // Given
+        mockCandlestickUseCase.stubbedError = NSError(domain: "ChartError", code: 1)
+
+        // When
+        sut.action(.loadDetail)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // Then: 주식 상세 errorMessage는 nil, isLoading은 false
+        XCTAssertNil(sut.state.errorMessage)
+        XCTAssertFalse(sut.state.isLoading)
     }
 
     // UseCase 에러 시 상태 롤백

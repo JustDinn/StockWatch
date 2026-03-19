@@ -25,6 +25,11 @@ struct MainTabView: View {
                 .tabItem {
                     Label("내 알림", systemImage: "bell")
                 }
+
+            SettingsView()
+                .tabItem {
+                    Label("설정", systemImage: "gearshape")
+                }
         }
     }
 }

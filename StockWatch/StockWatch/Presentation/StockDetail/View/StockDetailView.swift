@@ -49,35 +49,48 @@ private struct StockDetailContentView: View {
             } else {
                 VStack(spacing: 24) {
                     // 로고 + 종목 정보
-                    VStack(spacing: 8) {
+                    HStack(spacing: 12) {
                         logoView(state: state)
 
-                        Text(state.companyName)
-                            .font(.title.bold())
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: 6) {
+                                Text(state.companyName)
+                                    .font(.subheadline.bold())
 
-                        HStack(spacing: 4) {
-                            Text(state.ticker)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .multilineTextAlignment(.center)
+                                Text(state.ticker)
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(.secondary)
 
-                            Button {
-                                store.action(.toggleFavorite)
-                            } label: {
-                                Image(systemName: state.isFavorite ? "heart.fill" : "heart")
-                                    .foregroundStyle(.red)
+                                Button {
+                                    store.action(.toggleFavorite)
+                                } label: {
+                                    Image(systemName: state.isFavorite ? "heart.fill" : "heart")
+                                        .foregroundStyle(.red)
+                                }
+                            }
+
+                            // 가격 정보
+                            HStack(spacing: 8) {
+                                Text(state.formattedPrice)
+                                    .font(.title2.bold())
+
+                                Text(state.formattedChangePercent)
+                                    .font(.subheadline)
+                                    .foregroundStyle(state.isPositiveChange ? .green : .red)
                             }
                         }
+
+                        Spacer()
                     }
 
-                    // 가격 정보
-                    VStack(spacing: 4) {
-                        Text(state.formattedPrice)
-                            .font(.largeTitle.bold())
-
-                        Text(state.formattedChangePercent)
-                            .font(.headline)
-                            .foregroundStyle(state.isPositiveChange ? .green : .red)
+                    // 캔들스틱 차트
+                    if state.isChartLoading {
+                        ProgressView()
+                            .frame(maxWidth: .infinity, minHeight: 240)
+                    } else if let data = state.candlestickData, !data.candles.isEmpty {
+                        LightweightChartView(candles: data.candles)
+                            .frame(maxWidth: .infinity, minHeight: 240)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
 
                     // 전략 적용하기 버튼
@@ -110,7 +123,7 @@ private struct StockDetailContentView: View {
                 .placeholder { initialsView(state: state) }
                 .resizable()
                 .scaledToFit()
-                .frame(width: 72, height: 72)
+                .frame(width: 48, height: 48)
                 .clipShape(Circle())
         } else {
             initialsView(state: state)
@@ -121,7 +134,7 @@ private struct StockDetailContentView: View {
     private func initialsView(state: StockDetailState) -> some View {
         Circle()
             .fill(Color.blue.opacity(0.15))
-            .frame(width: 72, height: 72)
+            .frame(width: 48, height: 48)
             .overlay(
                 Text(state.initials)
                     .font(.title2.bold())

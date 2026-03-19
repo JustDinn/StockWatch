@@ -27,6 +27,12 @@ struct StockDetailState: Equatable {
     var isFavorite: Bool
     /// 전략 적용 화면 표시 여부
     var isShowingApplyStrategy: Bool
+    /// 캔들스틱 차트 데이터 (nil이면 차트 미표시)
+    var candlestickData: CandlestickData?
+    /// 차트 로딩 상태
+    var isChartLoading: Bool
+    /// 차트 에러 메시지 (주식 정보 에러와 분리)
+    var chartErrorMessage: String?
 
     init(ticker: String) {
         self.ticker = ticker
@@ -39,6 +45,9 @@ struct StockDetailState: Equatable {
         self.errorMessage = nil
         self.isFavorite = false
         self.isShowingApplyStrategy = false
+        self.candlestickData = nil
+        self.isChartLoading = false
+        self.chartErrorMessage = nil
     }
 
     /// 가격 표시 문자열 (예: "₩193,900", "$150.25", "¥2,500")
