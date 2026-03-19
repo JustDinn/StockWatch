@@ -152,7 +152,7 @@ extension StockDetailStore {
 
         Task {
             do {
-                let newState = try await toggleFavoriteUseCase.execute(ticker: state.ticker)
+                let newState = try await toggleFavoriteUseCase.execute(ticker: state.ticker, companyName: state.companyName)
                 state.isFavorite = newState
             } catch {
                 // 실패 시 롤백

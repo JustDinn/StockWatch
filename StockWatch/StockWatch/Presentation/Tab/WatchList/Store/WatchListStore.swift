@@ -62,7 +62,7 @@ private extension WatchListStore {
     func loadFavorites() {
         state.isLoading = true
         Task {
-            state.tickers = await fetchFavoritesUseCase.execute()
+            state.favorites = await fetchFavoritesUseCase.execute()
             state.isLoading = false
         }
     }
@@ -70,14 +70,14 @@ private extension WatchListStore {
     /// 낙관적 UI 업데이트 후 SwiftData에서 제거한다.
     /// 실패 시 이전 목록으로 rollback한다.
     func removeFavorite(ticker: String) {
-        let previous = state.tickers
-        state.tickers.removeAll { $0 == ticker }
+        let previous = state.favorites
+        state.favorites.removeAll { $0.ticker == ticker }
 
         Task {
             do {
-                _ = try await toggleFavoriteUseCase.execute(ticker: ticker)
+                _ = try await toggleFavoriteUseCase.execute(ticker: ticker, companyName: "")
             } catch {
-                state.tickers = previous
+                state.favorites = previous
             }
         }
     }

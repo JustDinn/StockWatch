@@ -9,17 +9,8 @@ import XCTest
 // MARK: - Mocks
 
 final class MockFetchFavoritesUseCase: FetchFavoritesUseCaseProtocol {
-    var stubbedResult: [String] = []
-    func execute() async -> [String] { stubbedResult }
-}
-
-final class MockToggleFavoriteUseCase: ToggleFavoriteUseCaseProtocol {
-    var stubbedResult: Bool = true
-    var stubbedError: Error?
-    func execute(ticker: String) async throws -> Bool {
-        if let error = stubbedError { throw error }
-        return stubbedResult
-    }
+    var stubbedResult: [FavoriteItem] = []
+    func execute() async -> [FavoriteItem] { stubbedResult }
 }
 
 // MARK: - Tests
@@ -46,6 +37,69 @@ final class WatchListStoreTests: XCTestCase {
         mockFetchUseCase = nil
         mockToggleUseCase = nil
         super.tearDown()
+    }
+
+    // MARK: - loadFavorites
+
+    func test_action_loadFavorites_updatesFavorites() async {
+        // Arrange
+        let items = [
+            FavoriteItem(ticker: "AAPL", companyName: "Apple Inc.", addedAt: Date()),
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla, Inc.", addedAt: Date())
+        ]
+        mockFetchUseCase.stubbedResult = items
+
+        // Act
+        sut.action(.loadFavorites)
+        await Task.yield()
+
+        // Assert
+        XCTAssertEqual(sut.state.favorites.count, 2)
+        XCTAssertEqual(sut.state.favorites[0].ticker, "AAPL")
+        XCTAssertEqual(sut.state.favorites[1].ticker, "TSLA")
+    }
+
+    // MARK: - removeFavorite
+
+    func test_action_removeFavorite_removesOptimistically() async {
+        // Arrange
+        let items = [
+            FavoriteItem(ticker: "AAPL", companyName: "Apple Inc.", addedAt: Date()),
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla, Inc.", addedAt: Date())
+        ]
+        sut = WatchListStore(
+            fetchFavoritesUseCase: mockFetchUseCase,
+            toggleFavoriteUseCase: mockToggleUseCase,
+            state: WatchListState(favorites: items)
+        )
+        mockToggleUseCase.stubbedResult = false
+
+        // Act
+        sut.action(.removeFavorite(ticker: "AAPL"))
+
+        // Assert (낙관적 즉시 제거)
+        XCTAssertEqual(sut.state.favorites.count, 1)
+        XCTAssertEqual(sut.state.favorites[0].ticker, "TSLA")
+    }
+
+    func test_action_removeFavorite_rollsBackOnError() async {
+        // Arrange
+        let items = [
+            FavoriteItem(ticker: "AAPL", companyName: "Apple Inc.", addedAt: Date())
+        ]
+        sut = WatchListStore(
+            fetchFavoritesUseCase: mockFetchUseCase,
+            toggleFavoriteUseCase: mockToggleUseCase,
+            state: WatchListState(favorites: items)
+        )
+        mockToggleUseCase.stubbedError = NSError(domain: "TestError", code: 1)
+
+        // Act
+        sut.action(.removeFavorite(ticker: "AAPL"))
+        await Task.yield()
+
+        // Assert (에러 시 롤백)
+        XCTAssertEqual(sut.state.favorites.count, 1)
     }
 
     // MARK: - selectTicker

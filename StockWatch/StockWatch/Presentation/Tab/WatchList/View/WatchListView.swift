@@ -36,10 +36,10 @@ private struct WatchListContentView: View {
                 if store.state.isLoading {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if store.state.tickers.isEmpty {
+                } else if store.state.favorites.isEmpty {
                     emptyView
                 } else {
-                    tickerList
+                    favoriteList
                 }
             }
             .navigationTitle("워치리스트")
@@ -70,19 +70,24 @@ private struct WatchListContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var tickerList: some View {
+    private var favoriteList: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(store.state.tickers, id: \.self) { ticker in
+                ForEach(store.state.favorites, id: \.ticker) { item in
                     HStack {
-                        Text(ticker)
-                            .font(.headline)
-                            .foregroundStyle(.primary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(displayName(for: item))
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                            Text(item.ticker)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
 
                         Spacer()
 
                         Button {
-                            store.action(.removeFavorite(ticker: ticker))
+                            store.action(.removeFavorite(ticker: item.ticker))
                         } label: {
                             Image(systemName: "heart.fill")
                                 .foregroundStyle(.red)
@@ -93,11 +98,18 @@ private struct WatchListContentView: View {
                     .padding(.vertical, 12)
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        store.action(.selectTicker(ticker))
+                        store.action(.selectTicker(item.ticker))
                     }
                 }
             }
         }
+    }
+
+    /// 표시 이름: 한국어명 → 영어명 → 티커 fallback
+    private func displayName(for item: FavoriteItem) -> String {
+        KoreanStockDictionary.shared.entries
+            .first(where: { $0.ticker == item.ticker })?.nameKo
+            ?? (item.companyName.isEmpty ? item.ticker : item.companyName)
     }
 }
 

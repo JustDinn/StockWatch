@@ -45,7 +45,7 @@ final class MockToggleFavoriteUseCase: ToggleFavoriteUseCaseProtocol {
     private(set) var executeCallCount = 0
     private(set) var lastReceivedTicker: String?
 
-    func execute(ticker: String) async throws -> Bool {
+    func execute(ticker: String, companyName: String) async throws -> Bool {
         executeCallCount += 1
         lastReceivedTicker = ticker
         if let error = stubbedError { throw error }

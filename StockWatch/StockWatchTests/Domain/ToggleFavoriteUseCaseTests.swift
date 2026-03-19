@@ -16,6 +16,7 @@ final class MockFavoriteRepository: FavoriteRepositoryProtocol {
     private(set) var removeFavoriteCallCount = 0
     private(set) var isFavoriteCallCount = 0
     private(set) var lastReceivedTicker: String?
+    private(set) var lastReceivedCompanyName: String?
 
     func isFavorite(ticker: String) async -> Bool {
         isFavoriteCallCount += 1
@@ -23,10 +24,11 @@ final class MockFavoriteRepository: FavoriteRepositoryProtocol {
         return stubbedIsFavorite
     }
 
-    func addFavorite(ticker: String) async throws {
+    func addFavorite(ticker: String, companyName: String) async throws {
         if let error = stubbedError { throw error }
         addFavoriteCallCount += 1
         lastReceivedTicker = ticker
+        lastReceivedCompanyName = companyName
     }
 
     func removeFavorite(ticker: String) async throws {
@@ -35,9 +37,9 @@ final class MockFavoriteRepository: FavoriteRepositoryProtocol {
         lastReceivedTicker = ticker
     }
 
-    var stubbedFavorites: [String] = []
+    var stubbedFavorites: [FavoriteItem] = []
 
-    func fetchAllFavorites() async -> [String] {
+    func fetchAllFavorites() async -> [FavoriteItem] {
         return stubbedFavorites
     }
 }
@@ -61,19 +63,20 @@ final class ToggleFavoriteUseCaseTests: XCTestCase {
         super.tearDown()
     }
 
-    // 미등록 종목 토글 → addFavorite 호출, true 반환
-    func test_execute_whenNotFavorite_callsAddFavoriteAndReturnsTrue() async throws {
+    // 미등록 종목 토글 → addFavorite 호출 (companyName 포함), true 반환
+    func test_execute_whenNotFavorite_callsAddFavoriteWithCompanyNameAndReturnsTrue() async throws {
         // Given
         mockRepository.stubbedIsFavorite = false
 
         // When
-        let result = try await sut.execute(ticker: "AAPL")
+        let result = try await sut.execute(ticker: "AAPL", companyName: "Apple Inc.")
 
         // Then
         XCTAssertTrue(result)
         XCTAssertEqual(mockRepository.addFavoriteCallCount, 1)
         XCTAssertEqual(mockRepository.removeFavoriteCallCount, 0)
         XCTAssertEqual(mockRepository.lastReceivedTicker, "AAPL")
+        XCTAssertEqual(mockRepository.lastReceivedCompanyName, "Apple Inc.")
     }
 
     // 등록된 종목 토글 → removeFavorite 호출, false 반환
@@ -82,7 +85,7 @@ final class ToggleFavoriteUseCaseTests: XCTestCase {
         mockRepository.stubbedIsFavorite = true
 
         // When
-        let result = try await sut.execute(ticker: "AAPL")
+        let result = try await sut.execute(ticker: "AAPL", companyName: "Apple Inc.")
 
         // Then
         XCTAssertFalse(result)
@@ -99,7 +102,7 @@ final class ToggleFavoriteUseCaseTests: XCTestCase {
 
         // When / Then
         do {
-            _ = try await sut.execute(ticker: "AAPL")
+            _ = try await sut.execute(ticker: "AAPL", companyName: "Apple Inc.")
             XCTFail("에러가 전파되어야 한다")
         } catch {
             XCTAssertNotNil(error)
