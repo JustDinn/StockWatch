@@ -94,6 +94,9 @@ private struct StockDetailContentView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
 
+                    // 봉 주기 선택 탭
+                    periodTabView(state: state)
+
                     // 전략 적용하기 버튼
                     Button {
                         store.action(.navigateToApplyStrategy)
@@ -118,6 +121,43 @@ private struct StockDetailContentView: View {
         }
     }
     
+    @ViewBuilder
+    private func periodTabView(state: StockDetailState) -> some View {
+        HStack(spacing: 0) {
+            ForEach(ChartPeriod.allCases, id: \.self) { period in
+                Button {
+                    store.action(.selectPeriod(period))
+                } label: {
+                    Text(period.rawValue)
+                        .font(.subheadline.weight(
+                            state.selectedPeriod == period ? .bold : .regular
+                        ))
+                        .foregroundStyle(
+                            state.selectedPeriod == period
+                                ? Color.primary
+                                : Color.secondary
+                        )
+                        .frame(maxWidth: .infinity, minHeight: 36)
+                        .background(
+                            Group {
+                                if state.selectedPeriod == period {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.white)
+                                        .shadow(color: .black.opacity(0.12), radius: 4, x: 0, y: 2)
+                                }
+                            }
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(.systemGray6))
+        )
+    }
+
     @ViewBuilder
     private func logoView(state: StockDetailState) -> some View {
         if !state.logoURL.isEmpty, let url = URL(string: state.logoURL) {

@@ -50,6 +50,8 @@ final class StockDetailStore: ObservableObject {
             persistToggleFavorite()
         case .navigateToApplyStrategy:
             state.isShowingApplyStrategy = true
+        case .selectPeriod(let period):
+            state.selectedPeriod = period
         }
     }
 

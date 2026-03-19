@@ -5,6 +5,14 @@
 
 import Foundation
 
+/// 차트 봉 주기 선택
+enum ChartPeriod: String, CaseIterable, Equatable {
+    case day   = "일"
+    case week  = "주"
+    case month = "월"
+    case year  = "년"
+}
+
 /// StockDetail 화면 UI 상태
 struct StockDetailState: Equatable {
     /// 티커 심볼 (예: "AAPL") - 화면 진입 시 결정, 이후 변경 없음
@@ -33,6 +41,8 @@ struct StockDetailState: Equatable {
     var isChartLoading: Bool
     /// 차트 에러 메시지 (주식 정보 에러와 분리)
     var chartErrorMessage: String?
+    /// 선택된 봉 주기 (기본값: 일봉)
+    var selectedPeriod: ChartPeriod
 
     init(ticker: String) {
         self.ticker = ticker
@@ -48,6 +58,7 @@ struct StockDetailState: Equatable {
         self.candlestickData = nil
         self.isChartLoading = false
         self.chartErrorMessage = nil
+        self.selectedPeriod = .day
     }
 
     /// 가격 표시 문자열 (예: "₩193,900", "$150.25", "¥2,500")

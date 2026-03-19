@@ -13,4 +13,6 @@ enum StockDetailIntent {
     case toggleFavorite
     /// 전략 적용 화면으로 이동
     case navigateToApplyStrategy
+    /// 봉 주기 선택
+    case selectPeriod(ChartPeriod)
 }
