@@ -15,6 +15,7 @@ struct SettingsView: View {
                 Section("차트") {
                     NavigationLink("캔들 설정") {
                         CandleSettingsView(store: store)
+                            .toolbar(.hidden, for: .tabBar)
                     }
                 }
             }
