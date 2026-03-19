@@ -49,13 +49,9 @@ struct SuggestionListView: View {
                 .font(.headline)
                 .foregroundStyle(.secondary)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("영문 종목명 또는 티커로 검색해주세요")
-                Text("ex) 애플 → APPLE or AAPL")
-                Text("      엔비디아 → NVIDIA or NVDA")
-            }
-            .font(.subheadline)
-            .foregroundStyle(.tertiary)
+            Text("종목명 또는 티커로 검색해주세요")
+                .font(.subheadline)
+                .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -69,14 +65,14 @@ private struct SuggestionRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(result.displayTicker)
+                Text(result.description)
                     .font(.headline)
                     .fontWeight(.bold)
+                    .lineLimit(1)
 
-                Text(result.description)
+                Text(result.displayTicker)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
             }
 
             Spacer()

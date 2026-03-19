@@ -11,4 +11,5 @@ struct StockDetail: Equatable {
     let currentPrice: Double
     let priceChangePercent: Double
     let logoURL: String     // 빈 문자열이면 이니셜 폴백
+    let currency: String    // 통화 코드 (예: "KRW", "USD", "JPY")
 }
