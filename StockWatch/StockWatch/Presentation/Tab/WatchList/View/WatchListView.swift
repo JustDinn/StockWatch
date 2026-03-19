@@ -6,21 +6,13 @@
 import SwiftUI
 import SwiftData
 
-/// WatchList 화면 진입점 — modelContext를 Environment에서 받아 Store를 구성한다.
+/// WatchList 화면 진입점 — modelContext를 Environment에서 받아 ContentView에 전달한다.
 struct WatchListView: View {
 
     @Environment(\.modelContext) private var modelContext
 
     var body: some View {
-        WatchListContentView(store: makeStore())
-    }
-
-    private func makeStore() -> WatchListStore {
-        let repository = FavoriteRepository(modelContext: modelContext)
-        return WatchListStore(
-            fetchFavoritesUseCase: FetchFavoritesUseCase(repository: repository),
-            toggleFavoriteUseCase: ToggleFavoriteUseCase(repository: repository)
-        )
+        WatchListContentView(modelContext: modelContext)
     }
 }
 
@@ -28,8 +20,15 @@ struct WatchListView: View {
 
 private struct WatchListContentView: View {
 
-    @StateObject var store: WatchListStore
-    @State private var selectedTicker: String? = nil
+    @StateObject private var store: WatchListStore
+
+    init(modelContext: ModelContext) {
+        let repository = FavoriteRepository(modelContext: modelContext)
+        _store = StateObject(wrappedValue: WatchListStore(
+            fetchFavoritesUseCase: FetchFavoritesUseCase(repository: repository),
+            toggleFavoriteUseCase: ToggleFavoriteUseCase(repository: repository)
+        ))
+    }
 
     var body: some View {
         NavigationStack {
@@ -44,7 +43,7 @@ private struct WatchListContentView: View {
                 }
             }
             .navigationTitle("워치리스트")
-            .navigationDestination(item: $selectedTicker) { ticker in
+            .navigationDestination(item: store.selectedTickerBinding) { ticker in
                 StockDetailView(ticker: ticker)
             }
             .onAppear {
@@ -72,29 +71,31 @@ private struct WatchListContentView: View {
     }
 
     private var tickerList: some View {
-        List {
-            ForEach(store.state.tickers, id: \.self) { ticker in
-                HStack {
-                    Button {
-                        selectedTicker = ticker
-                    } label: {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0) {
+                ForEach(store.state.tickers, id: \.self) { ticker in
+                    HStack {
                         Text(ticker)
                             .font(.headline)
                             .foregroundStyle(.primary)
-                    }
-                    .buttonStyle(.plain)
 
-                    Spacer()
+                        Spacer()
 
-                    Button {
-                        store.action(.removeFavorite(ticker: ticker))
-                    } label: {
-                        Image(systemName: "heart.fill")
-                            .foregroundStyle(.red)
+                        Button {
+                            store.action(.removeFavorite(ticker: ticker))
+                        } label: {
+                            Image(systemName: "heart.fill")
+                                .foregroundStyle(.red)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        store.action(.selectTicker(ticker))
+                    }
                 }
-                .padding(.vertical, 4)
             }
         }
     }

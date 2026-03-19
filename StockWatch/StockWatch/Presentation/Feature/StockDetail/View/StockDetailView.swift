@@ -7,24 +7,15 @@ import SwiftUI
 import SwiftData
 import Kingfisher
 
-/// StockDetail 화면 진입점 — modelContext를 Environment에서 받아 Store를 구성한다.
+/// StockDetail 화면 진입점 — modelContext를 Environment에서 받아 ContentView에 전달한다.
 struct StockDetailView: View {
 
     @Environment(\.modelContext) private var modelContext
     let ticker: String
 
     var body: some View {
-        StockDetailContentView(store: makeStore())
+        StockDetailContentView(ticker: ticker, modelContext: modelContext)
             .toolbar(.hidden, for: .tabBar)
-    }
-
-    private func makeStore() -> StockDetailStore {
-        let repository = FavoriteRepository(modelContext: modelContext)
-        return StockDetailStore(
-            ticker: ticker,
-            toggleFavoriteUseCase: ToggleFavoriteUseCase(repository: repository),
-            checkFavoriteUseCase: CheckFavoriteUseCase(repository: repository)
-        )
     }
 }
 
@@ -33,7 +24,16 @@ struct StockDetailView: View {
 /// Store를 @StateObject로 보유하는 실제 UI 컴포넌트
 private struct StockDetailContentView: View {
 
-    @StateObject var store: StockDetailStore
+    @StateObject private var store: StockDetailStore
+
+    init(ticker: String, modelContext: ModelContext) {
+        let repository = FavoriteRepository(modelContext: modelContext)
+        _store = StateObject(wrappedValue: StockDetailStore(
+            ticker: ticker,
+            toggleFavoriteUseCase: ToggleFavoriteUseCase(repository: repository),
+            checkFavoriteUseCase: CheckFavoriteUseCase(repository: repository)
+        ))
+    }
 
     var body: some View {
         let state = store.state

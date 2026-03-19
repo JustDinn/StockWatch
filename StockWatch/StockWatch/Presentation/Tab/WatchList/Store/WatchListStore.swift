@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 /// WatchList 화면 Store
 @MainActor
@@ -35,7 +36,22 @@ final class WatchListStore: ObservableObject {
             loadFavorites()
         case .removeFavorite(let ticker):
             removeFavorite(ticker: ticker)
+        case .selectTicker(let ticker):
+            state.selectedTicker = ticker
         }
+    }
+
+    // MARK: - Navigation Binding
+
+    var selectedTickerBinding: Binding<String?> {
+        Binding(
+            get: {
+                return self.state.selectedTicker
+            },
+            set: {
+                self.state.selectedTicker = $0
+            }
+        )
     }
 }
 

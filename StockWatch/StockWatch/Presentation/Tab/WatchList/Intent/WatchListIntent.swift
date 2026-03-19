@@ -9,4 +9,6 @@ enum WatchListIntent {
     case loadFavorites
     /// 특정 종목을 관심 목록에서 제거
     case removeFavorite(ticker: String)
+    /// 종목 상세 화면으로 이동
+    case selectTicker(String)
 }
