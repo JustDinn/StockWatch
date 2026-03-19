@@ -221,9 +221,10 @@
 				};
 			};
 			buildConfigurationList = 3F915FA02F4B3E0D00EC99A0 /* Build configuration list for PBXProject "StockWatch" */;
-			developmentRegion = en;
+			developmentRegion = ko;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				ko,
 				en,
 				Base,
 			);
