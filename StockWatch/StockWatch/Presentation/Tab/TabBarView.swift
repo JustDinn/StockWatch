@@ -1,5 +1,5 @@
 //
-//  MainTabView.swift
+//  TabBarView.swift
 //  StockWatch
 //
 
@@ -7,7 +7,7 @@ import SwiftUI
 
 /// 앱 루트 탭 뷰
 /// 홈(검색/전략 탐색)과 내 알림(등록된 조건 목록)으로 구성된다.
-struct MainTabView: View {
+struct TabBarView: View {
 
     var body: some View {
         TabView {
@@ -35,5 +35,5 @@ struct MainTabView: View {
 }
 
 #Preview {
-    MainTabView()
+    TabBarView()
 }
