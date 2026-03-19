@@ -89,9 +89,14 @@ private struct StockDetailContentView: View {
                         ProgressView()
                             .frame(maxWidth: .infinity, minHeight: 240)
                     } else if let data = state.candlestickData, !data.candles.isEmpty {
-                        LightweightChartView(candles: data.candles)
-                            .frame(maxWidth: .infinity, minHeight: 240)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        LightweightChartView(
+                            candles: data.candles,
+                            olderCandles: state.pendingOlderCandles,
+                            onReachedLeftEdge: { store.action(.loadOlderCandles) },
+                            onOlderDataInjected: { store.action(.clearPendingOlderCandles) }
+                        )
+                        .frame(maxWidth: .infinity, minHeight: 240)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
 
                     // 봉 주기 선택 탭

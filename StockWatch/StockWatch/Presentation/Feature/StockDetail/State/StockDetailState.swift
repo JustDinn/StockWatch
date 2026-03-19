@@ -14,12 +14,12 @@ enum ChartPeriod: String, CaseIterable, Equatable {
 }
 
 extension ChartPeriod {
-    /// Yahoo Finance API range 파라미터 (캔들 약 20개 기준)
+    /// Yahoo Finance API range 파라미터
     var range: String {
         switch self {
-        case .day:   return "1mo"
-        case .week:  return "5mo"
-        case .month: return "20mo"
+        case .day:   return "6mo"
+        case .week:  return "2y"
+        case .month: return "5y"
         case .year:  return "20y"
         }
     }
@@ -65,6 +65,12 @@ struct StockDetailState: Equatable {
     var chartErrorMessage: String?
     /// 선택된 봉 주기 (기본값: 일봉)
     var selectedPeriod: ChartPeriod
+    /// 과거 데이터 로딩 중 여부
+    var isLoadingOlderCandles: Bool
+    /// 더 불러올 과거 데이터 존재 여부
+    var hasMoreOlderCandles: Bool
+    /// 차트에 주입할 과거 캔들 (nil이면 전체 갱신, 값이 있으면 prepend)
+    var pendingOlderCandles: [Candle]?
 
     init(ticker: String) {
         self.ticker = ticker
@@ -81,6 +87,9 @@ struct StockDetailState: Equatable {
         self.isChartLoading = false
         self.chartErrorMessage = nil
         self.selectedPeriod = .day
+        self.isLoadingOlderCandles = false
+        self.hasMoreOlderCandles = true
+        self.pendingOlderCandles = nil
     }
 
     /// 가격 표시 문자열 (예: "₩193,900", "$150.25", "¥2,500")

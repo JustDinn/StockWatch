@@ -15,4 +15,8 @@ enum StockDetailIntent {
     case navigateToApplyStrategy
     /// 봉 주기 선택
     case selectPeriod(ChartPeriod)
+    /// 차트 좌측 끝 도달 시 과거 데이터 로드
+    case loadOlderCandles
+    /// 과거 캔들 차트 주입 완료 후 pending 초기화
+    case clearPendingOlderCandles
 }

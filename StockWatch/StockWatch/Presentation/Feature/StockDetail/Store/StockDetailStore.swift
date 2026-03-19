@@ -53,8 +53,16 @@ final class StockDetailStore: ObservableObject {
             state.isShowingApplyStrategy = true
         case .selectPeriod(let period):
             state.selectedPeriod = period
+            state.hasMoreOlderCandles = true
+            state.isLoadingOlderCandles = false
+            state.pendingOlderCandles = nil
             chartTask?.cancel()
             chartTask = Task { await reloadChart(period: period) }
+        case .loadOlderCandles:
+            guard !state.isLoadingOlderCandles, state.hasMoreOlderCandles else { return }
+            chartTask = Task { await loadOlderCandles() }
+        case .clearPendingOlderCandles:
+            state.pendingOlderCandles = nil
         }
     }
 
@@ -116,6 +124,41 @@ extension StockDetailStore {
         } catch {
             return .failure(error)
         }
+    }
+
+    private func loadOlderCandles() async {
+        guard let existingCandles = state.candlestickData?.candles,
+              let oldestCandle = existingCandles.first else { return }
+
+        state.isLoadingOlderCandles = true
+        state.pendingOlderCandles = nil
+
+        do {
+            let olderData = try await fetchCandlestickUseCase.fetchOlderCandles(
+                ticker: state.ticker,
+                period: state.selectedPeriod,
+                before: oldestCandle.timestamp
+            )
+            guard !Task.isCancelled else { return }
+
+            if olderData.candles.isEmpty {
+                state.hasMoreOlderCandles = false
+            } else {
+                // 기존 캔들과 병합 (중복 제거, 시간순 정렬)
+                let merged = (olderData.candles + existingCandles)
+                    .reduce(into: [Date: Candle]()) { dict, candle in
+                        dict[candle.timestamp] = candle
+                    }
+                    .values
+                    .sorted { $0.timestamp < $1.timestamp }
+                state.candlestickData = CandlestickData(ticker: state.ticker, candles: merged)
+                state.pendingOlderCandles = olderData.candles
+            }
+        } catch {
+            // 과거 데이터 로드 실패는 무시 (현재 차트 유지)
+        }
+
+        state.isLoadingOlderCandles = false
     }
 
     private func reloadChart(period: ChartPeriod) async {

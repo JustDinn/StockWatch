@@ -31,8 +31,8 @@
       rightPriceScale: {
         borderColor: 'rgba(128,128,128,0.3)'
       },
-      handleScroll: false,
-      handleScale: false
+      handleScroll: true,
+      handleScale: true
     });
 
     var candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
@@ -64,6 +64,46 @@
         console.error('차트 데이터 오류:', e);
       }
     }
+
+    function appendOlderData(jsonString) {
+      try {
+        var olderData = JSON.parse(jsonString);
+        var currentData = candleSeries.data();
+        var merged = olderData.concat(currentData);
+        var seen = {};
+        merged = merged.filter(function(d) {
+          if (seen[d.time]) return false;
+          seen[d.time] = true;
+          return true;
+        });
+        merged.sort(function(a, b) { return a.time - b.time; });
+        var visibleRange = chart.timeScale().getVisibleLogicalRange();
+        candleSeries.setData(merged);
+        if (visibleRange) {
+          var addedCount = merged.length - currentData.length;
+          chart.timeScale().setVisibleLogicalRange({
+            from: visibleRange.from + addedCount,
+            to: visibleRange.to + addedCount
+          });
+        }
+      } catch (e) {
+        console.error('과거 데이터 추가 오류:', e);
+      }
+    }
+
+    var edgeDebounceTimer = null;
+    chart.timeScale().subscribeVisibleLogicalRangeChange(function(range) {
+      if (!range) return;
+      if (range.from <= 2) {
+        if (edgeDebounceTimer) return;
+        edgeDebounceTimer = setTimeout(function() {
+          edgeDebounceTimer = null;
+          if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.chartEdge) {
+            window.webkit.messageHandlers.chartEdge.postMessage('reachedLeftEdge');
+          }
+        }, 500);
+      }
+    });
 
     window.addEventListener('resize', function() {
       chart.applyOptions({
