@@ -462,8 +462,10 @@ struct StrategyConfigView: View {
                 ProgressView()
                     .frame(maxWidth: .infinity)
             } else {
-                Text("적용하기")
-                    .frame(maxWidth: .infinity)
+                Text("알림 설정하기")
+                    .frame(maxWidth: .infinity, minHeight: 36)
+                    .buttonStyle(.borderedProminent)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
         .buttonStyle(.borderedProminent)
