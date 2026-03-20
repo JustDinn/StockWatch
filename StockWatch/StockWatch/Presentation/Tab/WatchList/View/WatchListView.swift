@@ -39,7 +39,6 @@ private struct WatchListContentView: View {
                     onSelect: { store.action(.selectGroup(index: $0)) },
                     onAddGroup: { /* TODO: 그룹 생성 화면 이동 */ }
                 )
-                Divider()
                 Group {
                     if store.state.isLoading {
                         ProgressView()
@@ -89,7 +88,6 @@ private struct WatchListContentView: View {
                         displayName: displayName(for: item),
                         onTap: { store.action(.selectTicker(item.ticker)) }
                     )
-                    Divider().padding(.leading, 72)
                 }
                 WatchListAddStockRow(onTap: { })
             }
