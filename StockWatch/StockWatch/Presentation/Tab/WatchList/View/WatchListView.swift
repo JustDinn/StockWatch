@@ -219,7 +219,7 @@ private struct WatchListStockRow: View {
                 let positive = data.priceChangePercent >= 0
                 Text(String(format: "%@%.1f%%", positive ? "+" : "", data.priceChangePercent))
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(positive ? .green : .red)
+                    .foregroundStyle(positive ? Color(hex: "#ef5350") : Color(hex: "#1976d2"))
                 Text(formattedPrice(data.currentPrice, currency: data.currency))
                     .font(.caption)
                     .foregroundStyle(.secondary)
