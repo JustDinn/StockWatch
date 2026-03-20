@@ -49,17 +49,13 @@ private struct FavoriteGroupModalContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            dragIndicator
             stockHeader
-            Divider()
             addGroupButton
             if isShowingNewGroupInput { newGroupInputRow }
-            Divider()
             groupList
-            Spacer()
-            Divider()
             bottomButtons
         }
+        .frame(maxHeight: 420)
         .onAppear { store.action(.loadGroups) }
         .onChange(of: store.state.isDismissed) { _, v in if v { onDismiss() } }
     }
@@ -80,7 +76,8 @@ private struct FavoriteGroupModalContentView: View {
             Spacer()
         }
         .padding(.horizontal, 20)
-        .padding(.bottom, 20)
+        .padding(.top, 20)
+        .padding(.bottom, 16)
     }
 
     private var addGroupButton: some View {
@@ -167,14 +164,14 @@ private struct FavoriteGroupModalContentView: View {
                 .padding(.vertical, 14)
                 .background(Color(.systemGray5))
                 .foregroundStyle(.primary)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: 16))
 
             Button("확인") { store.action(.confirm) }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .background(Color.blue)
                 .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: 16))
         }
         .font(.subheadline.weight(.semibold))
         .padding(.horizontal, 20)

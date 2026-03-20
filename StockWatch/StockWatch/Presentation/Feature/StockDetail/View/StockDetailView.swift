@@ -40,7 +40,8 @@ private struct StockDetailContentView: View {
     var body: some View {
         let state = store.state
 
-        Group {
+        ZStack {
+         Group {
             if state.isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -127,26 +128,40 @@ private struct StockDetailContentView: View {
                 }
                 .padding()
             }
+         }
+         .navigationBarTitleDisplayMode(.inline)
+         .navigationDestination(isPresented: store.isShowingApplyStrategyBinding) {
+             StrategyView(ticker: store.state.ticker)
+         }
+         .task {
+             store.action(.loadDetail)
+         }
+
+         if state.isShowingFavoriteModal {
+             Color.black.opacity(0.4)
+                 .ignoresSafeArea()
+                 .onTapGesture {
+                     store.action(.reloadFavoriteStatus)
+                     store.isFavoriteModalBinding.wrappedValue = false
+                 }
+
+             FavoriteGroupModalView(
+                 ticker: store.state.ticker,
+                 companyName: store.state.companyName,
+                 logoURL: store.state.logoURL,
+                 onDismiss: {
+                     store.action(.reloadFavoriteStatus)
+                     store.isFavoriteModalBinding.wrappedValue = false
+                 }
+             )
+             .background(Color(.systemBackground))
+             .clipShape(RoundedRectangle(cornerRadius: 28))
+             .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 8)
+             .padding(20)
+             .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .center)))
+         }
         }
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(isPresented: store.isShowingApplyStrategyBinding) {
-            StrategyView(ticker: store.state.ticker)
-        }
-        .sheet(isPresented: store.isFavoriteModalBinding) {
-            FavoriteGroupModalView(
-                ticker: store.state.ticker,
-                companyName: store.state.companyName,
-                logoURL: store.state.logoURL,
-                onDismiss: {
-                    store.action(.reloadFavoriteStatus)
-                    store.isFavoriteModalBinding.wrappedValue = false
-                }
-            )
-            .presentationDetents([.medium, .large])
-        }
-        .task {
-            store.action(.loadDetail)
-        }
+        .animation(.easeInOut(duration: 0.2), value: state.isShowingFavoriteModal)
     }
     
     @ViewBuilder
