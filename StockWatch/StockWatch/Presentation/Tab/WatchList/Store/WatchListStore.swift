@@ -38,6 +38,9 @@ final class WatchListStore: ObservableObject {
             removeFavorite(ticker: ticker)
         case .selectTicker(let ticker):
             state.selectedTicker = ticker
+        case .selectGroup(let index):
+            guard index >= 0 && index < state.groups.count else { return }
+            state.selectedGroupIndex = index
         }
     }
 
@@ -63,6 +66,9 @@ private extension WatchListStore {
         state.isLoading = true
         Task {
             state.favorites = await fetchFavoritesUseCase.execute()
+            state.mockPriceData = Dictionary(uniqueKeysWithValues:
+                state.favorites.map { ($0.ticker, WatchListState.mockData(for: $0.ticker)) }
+            )
             state.isLoading = false
         }
     }

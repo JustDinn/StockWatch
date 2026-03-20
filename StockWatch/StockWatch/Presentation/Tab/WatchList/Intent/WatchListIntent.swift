@@ -11,4 +11,6 @@ enum WatchListIntent {
     case removeFavorite(ticker: String)
     /// 종목 상세 화면으로 이동
     case selectTicker(String)
+    /// 그룹 탭 선택
+    case selectGroup(index: Int)
 }

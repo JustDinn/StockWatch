@@ -32,14 +32,23 @@ private struct WatchListContentView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if store.state.isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if store.state.favorites.isEmpty {
-                    emptyView
-                } else {
-                    favoriteList
+            VStack(spacing: 0) {
+                WatchListGroupTabBar(
+                    groups: store.state.groups,
+                    selectedIndex: store.state.selectedGroupIndex,
+                    onSelect: { store.action(.selectGroup(index: $0)) },
+                    onAddGroup: { /* TODO: 그룹 생성 화면 이동 */ }
+                )
+                Divider()
+                Group {
+                    if store.state.isLoading {
+                        ProgressView()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if store.state.favorites.isEmpty {
+                        emptyView
+                    } else {
+                        stockList
+                    }
                 }
             }
             .navigationTitle("워치리스트")
@@ -70,37 +79,19 @@ private struct WatchListContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var favoriteList: some View {
+    private var stockList: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
+            LazyVStack(spacing: 0) {
                 ForEach(store.state.favorites, id: \.ticker) { item in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(displayName(for: item))
-                                .font(.headline)
-                                .foregroundStyle(.primary)
-                            Text(item.ticker)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        Button {
-                            store.action(.removeFavorite(ticker: item.ticker))
-                        } label: {
-                            Image(systemName: "heart.fill")
-                                .foregroundStyle(.red)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        store.action(.selectTicker(item.ticker))
-                    }
+                    WatchListStockRow(
+                        item: item,
+                        mockData: store.state.mockPriceData[item.ticker],
+                        displayName: displayName(for: item),
+                        onTap: { store.action(.selectTicker(item.ticker)) }
+                    )
+                    Divider().padding(.leading, 72)
                 }
+                WatchListAddStockRow(onTap: { })
             }
         }
     }
@@ -110,6 +101,165 @@ private struct WatchListContentView: View {
         KoreanStockDictionary.shared.entries
             .first(where: { $0.ticker == item.ticker })?.nameKo
             ?? (item.companyName.isEmpty ? item.ticker : item.companyName)
+    }
+}
+
+// MARK: - Group Tab Bar
+
+private struct WatchListGroupTabBar: View {
+    let groups: [String]
+    let selectedIndex: Int
+    let onSelect: (Int) -> Void
+    let onAddGroup: () -> Void
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(groups.indices, id: \.self) { idx in
+                    groupTab(groups[idx], isSelected: selectedIndex == idx) {
+                        onSelect(idx)
+                    }
+                }
+                Button("그룹추가", action: onAddGroup)
+                    .font(.subheadline)
+                    .foregroundStyle(.blue)
+                    .padding(.horizontal, 4)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+        }
+    }
+
+    @ViewBuilder
+    private func groupTab(_ title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline.weight(isSelected ? .semibold : .regular))
+                .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .background {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(.systemGray5))
+                    }
+                }
+        }
+        .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.15), value: isSelected)
+    }
+}
+
+// MARK: - Stock Row
+
+private struct WatchListStockRow: View {
+    let item: FavoriteItem
+    let mockData: WatchListRowMockData?
+    let displayName: String
+    let onTap: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            logoView
+            nameColumn
+            Spacer()
+            priceColumn
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onTap)
+    }
+
+    @ViewBuilder
+    private var logoView: some View {
+        let size: CGFloat = 44
+        if let logoURL = mockData?.logoURL,
+           !logoURL.isEmpty,
+           let url = URL(string: logoURL) {
+            AsyncImage(url: url) { phase in
+                if case .success(let image) = phase {
+                    image.resizable().scaledToFit()
+                        .frame(width: size, height: size)
+                        .clipShape(Circle())
+                } else {
+                    initialsCircle(size: size)
+                }
+            }
+        } else {
+            initialsCircle(size: size)
+        }
+    }
+
+    private func initialsCircle(size: CGFloat) -> some View {
+        Circle()
+            .fill(Color.blue.opacity(0.15))
+            .frame(width: size, height: size)
+            .overlay(
+                Text(String(item.ticker.prefix(2)).uppercased())
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.blue)
+            )
+    }
+
+    private var nameColumn: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(displayName)
+                .font(.subheadline.weight(.medium))
+                .lineLimit(1)
+            Text(item.ticker)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var priceColumn: some View {
+        VStack(alignment: .trailing, spacing: 2) {
+            if let data = mockData {
+                let positive = data.priceChangePercent >= 0
+                Text(String(format: "%@%.1f%%", positive ? "+" : "", data.priceChangePercent))
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(positive ? .green : .red)
+                Text(formattedPrice(data.currentPrice, currency: data.currency))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func formattedPrice(_ price: Double, currency: String) -> String {
+        let fmt = NumberFormatter()
+        fmt.numberStyle = .currency
+        fmt.currencyCode = currency.isEmpty ? "USD" : currency
+        fmt.locale = Locale(identifier: "en_US")
+        return fmt.string(from: NSNumber(value: price)) ?? "\(price)"
+    }
+}
+
+// MARK: - Add Stock Row
+
+private struct WatchListAddStockRow: View {
+    let onTap: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(Color(.systemGray5))
+                .frame(width: 44, height: 44)
+                .overlay(
+                    Image(systemName: "plus")
+                        .font(.title3.weight(.medium))
+                        .foregroundStyle(.secondary)
+                )
+            Text("종목 추가하기")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onTap)
     }
 }
 
