@@ -25,6 +25,8 @@ struct StockDetailView: View {
 private struct StockDetailContentView: View {
 
     @StateObject private var store: StockDetailStore
+    @AppStorage("candle_body_up_color_hex") private var upColorHex: String = "#ef5350"
+    @AppStorage("candle_body_down_color_hex") private var downColorHex: String = "#1976d2"
 
     init(ticker: String, modelContext: ModelContext) {
         let repository = FavoriteRepository(modelContext: modelContext)
@@ -77,7 +79,7 @@ private struct StockDetailContentView: View {
 
                                 Text(state.formattedChangePercent)
                                     .font(.subheadline)
-                                    .foregroundStyle(state.isPositiveChange ? .green : .red)
+                                    .foregroundStyle(state.isPositiveChange ? Color(hex: upColorHex) : Color(hex: downColorHex))
                             }
                         }
 
