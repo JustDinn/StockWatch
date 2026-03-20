@@ -85,10 +85,7 @@ private struct StockDetailContentView: View {
                     }
 
                     // 캔들스틱 차트
-                    if state.isChartLoading {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, minHeight: 240)
-                    } else if let data = state.candlestickData, !data.candles.isEmpty {
+                    if let data = state.candlestickData, !data.candles.isEmpty {
                         LightweightChartView(
                             candles: data.candles,
                             olderCandles: state.pendingOlderCandles,
@@ -97,6 +94,18 @@ private struct StockDetailContentView: View {
                         )
                         .frame(maxWidth: .infinity, minHeight: 240)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay {
+                            if state.isChartLoading {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(.ultraThinMaterial)
+                                ProgressView()
+                            }
+                        }
+                    } else if state.isChartLoading {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.systemGray6))
+                            .frame(maxWidth: .infinity, minHeight: 240)
+                            .overlay { ProgressView() }
                     }
 
                     // 봉 주기 선택 탭
