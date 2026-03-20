@@ -145,20 +145,24 @@ private struct StockDetailContentView: View {
                      store.isFavoriteModalBinding.wrappedValue = false
                  }
 
-             FavoriteGroupModalView(
-                 ticker: store.state.ticker,
-                 companyName: store.state.companyName,
-                 logoURL: store.state.logoURL,
-                 onDismiss: {
-                     store.action(.reloadFavoriteStatus)
-                     store.isFavoriteModalBinding.wrappedValue = false
-                 }
-             )
-             .background(Color(.systemBackground))
-             .clipShape(RoundedRectangle(cornerRadius: 28))
-             .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 8)
-             .padding(20)
-             .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .center)))
+             VStack {
+                 Spacer()
+                 FavoriteGroupModalView(
+                     ticker: store.state.ticker,
+                     companyName: store.state.companyName,
+                     logoURL: store.state.logoURL,
+                     onDismiss: {
+                         store.action(.reloadFavoriteStatus)
+                         store.isFavoriteModalBinding.wrappedValue = false
+                     }
+                 )
+                 .background(Color(.systemBackground))
+                 .clipShape(RoundedRectangle(cornerRadius: 28))
+                 .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 8)
+                 .padding(.horizontal, 20)
+                 .padding(.bottom, 12)
+             }
+             .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .bottom)))
          }
         }
         .animation(.easeInOut(duration: 0.2), value: state.isShowingFavoriteModal)
