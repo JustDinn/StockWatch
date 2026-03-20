@@ -24,10 +24,10 @@ final class FavoriteRepository: FavoriteRepositoryProtocol {
         return !results.isEmpty
     }
 
-    func addFavorite(ticker: String) async throws {
+    func addFavorite(ticker: String, companyName: String) async throws {
         // 이미 존재하는 경우 중복 추가하지 않는다
         guard await !isFavorite(ticker: ticker) else { return }
-        let favorite = FavoriteStock(ticker: ticker)
+        let favorite = FavoriteStock(ticker: ticker, companyName: companyName)
         modelContext.insert(favorite)
         try modelContext.save()
     }
@@ -41,11 +41,11 @@ final class FavoriteRepository: FavoriteRepositoryProtocol {
         try modelContext.save()
     }
 
-    func fetchAllFavorites() async -> [String] {
+    func fetchAllFavorites() async -> [FavoriteItem] {
         let descriptor = FetchDescriptor<FavoriteStock>(
             sortBy: [SortDescriptor(\.addedAt, order: .reverse)]
         )
         let results = (try? modelContext.fetch(descriptor)) ?? []
-        return results.map { $0.ticker }
+        return results.map { FavoriteItem(ticker: $0.ticker, companyName: $0.companyName, addedAt: $0.addedAt) }
     }
 }

@@ -34,17 +34,27 @@ final class FavoriteRepositoryTests: XCTestCase {
     // 추가 후 조회 시 존재 확인
     func test_addFavorite_persistsToStore() async throws {
         // When
-        try await sut.addFavorite(ticker: "AAPL")
+        try await sut.addFavorite(ticker: "AAPL", companyName: "Apple Inc.")
 
         // Then
         let isFav = await sut.isFavorite(ticker: "AAPL")
         XCTAssertTrue(isFav)
     }
 
+    // companyName이 함께 저장되는지 확인
+    func test_addFavorite_storesCompanyName() async throws {
+        // When
+        try await sut.addFavorite(ticker: "AAPL", companyName: "Apple Inc.")
+
+        // Then
+        let favorites = await sut.fetchAllFavorites()
+        XCTAssertEqual(favorites.first?.companyName, "Apple Inc.")
+    }
+
     // 삭제 후 조회 시 미존재 확인
     func test_removeFavorite_deletesFromStore() async throws {
         // Given
-        try await sut.addFavorite(ticker: "AAPL")
+        try await sut.addFavorite(ticker: "AAPL", companyName: "Apple Inc.")
 
         // When
         try await sut.removeFavorite(ticker: "AAPL")
@@ -57,7 +67,7 @@ final class FavoriteRepositoryTests: XCTestCase {
     // 존재하는 ticker → true
     func test_isFavorite_whenExists_returnsTrue() async throws {
         // Given
-        try await sut.addFavorite(ticker: "TSLA")
+        try await sut.addFavorite(ticker: "TSLA", companyName: "Tesla, Inc.")
 
         // When
         let result = await sut.isFavorite(ticker: "TSLA")
@@ -78,8 +88,8 @@ final class FavoriteRepositoryTests: XCTestCase {
     // 중복 추가 방지: 동일 ticker를 두 번 추가해도 하나만 저장
     func test_addFavorite_duplicateTicker_doesNotCreateDuplicate() async throws {
         // When
-        try await sut.addFavorite(ticker: "AAPL")
-        try await sut.addFavorite(ticker: "AAPL")
+        try await sut.addFavorite(ticker: "AAPL", companyName: "Apple Inc.")
+        try await sut.addFavorite(ticker: "AAPL", companyName: "Apple Inc.")
 
         // Then: 조회 결과가 여전히 true이고, 중복 없음
         let descriptor = FetchDescriptor<FavoriteStock>(
@@ -87,5 +97,20 @@ final class FavoriteRepositoryTests: XCTestCase {
         )
         let results = try modelContext.fetch(descriptor)
         XCTAssertEqual(results.count, 1)
+    }
+
+    // fetchAllFavorites → FavoriteItem 배열 반환
+    func test_fetchAllFavorites_returnsFavoriteItems() async throws {
+        // Given
+        try await sut.addFavorite(ticker: "AAPL", companyName: "Apple Inc.")
+        try await sut.addFavorite(ticker: "TSLA", companyName: "Tesla, Inc.")
+
+        // When
+        let result = await sut.fetchAllFavorites()
+
+        // Then
+        XCTAssertEqual(result.count, 2)
+        XCTAssertTrue(result.contains(where: { $0.ticker == "AAPL" && $0.companyName == "Apple Inc." }))
+        XCTAssertTrue(result.contains(where: { $0.ticker == "TSLA" && $0.companyName == "Tesla, Inc." }))
     }
 }

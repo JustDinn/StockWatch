@@ -13,14 +13,14 @@ final class ToggleFavoriteUseCase: ToggleFavoriteUseCaseProtocol {
         self.repository = repository
     }
 
-    func execute(ticker: String) async throws -> Bool {
+    func execute(ticker: String, companyName: String) async throws -> Bool {
         let currentlyFavorite = await repository.isFavorite(ticker: ticker)
 
         if currentlyFavorite {
             try await repository.removeFavorite(ticker: ticker)
             return false
         } else {
-            try await repository.addFavorite(ticker: ticker)
+            try await repository.addFavorite(ticker: ticker, companyName: companyName)
             return true
         }
     }

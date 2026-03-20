@@ -8,10 +8,10 @@
 protocol FavoriteRepositoryProtocol {
     /// 특정 ticker가 관심 종목으로 저장되어 있는지 확인한다.
     func isFavorite(ticker: String) async -> Bool
-    /// 관심 종목을 추가한다.
-    func addFavorite(ticker: String) async throws
+    /// 관심 종목을 추가한다. companyName은 영문 회사명으로 오프라인 표시에 활용된다.
+    func addFavorite(ticker: String, companyName: String) async throws
     /// 관심 종목을 삭제한다.
     func removeFavorite(ticker: String) async throws
-    /// 저장된 모든 관심 종목 ticker를 addedAt 내림차순으로 반환한다.
-    func fetchAllFavorites() async -> [String]
+    /// 저장된 모든 관심 종목을 addedAt 내림차순으로 반환한다.
+    func fetchAllFavorites() async -> [FavoriteItem]
 }
