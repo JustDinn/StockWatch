@@ -55,11 +55,15 @@
       });
     }
 
+    var isReady = false;
+
     function setData(jsonString) {
       try {
         var data = JSON.parse(jsonString);
+        isReady = false;
         candleSeries.setData(data);
         chart.timeScale().fitContent();
+        setTimeout(function() { isReady = true; }, 600);
       } catch (e) {
         console.error('차트 데이터 오류:', e);
       }
@@ -93,7 +97,7 @@
 
     var edgeDebounceTimer = null;
     chart.timeScale().subscribeVisibleLogicalRangeChange(function(range) {
-      if (!range) return;
+      if (!range || !isReady) return;
       if (range.from <= 2) {
         if (edgeDebounceTimer) return;
         edgeDebounceTimer = setTimeout(function() {
