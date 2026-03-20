@@ -182,8 +182,8 @@ private struct StockDetailContentView: View {
              .zIndex(2)
          }
         }
-        .animation(.easeInOut(duration: 0.2), value: state.isShowingFavoriteModal)
-        .animation(.easeInOut(duration: 0.25), value: state.isShowingToast)
+        .animation(.easeInOut(duration: 0.35), value: state.isShowingFavoriteModal)
+        .animation(.easeInOut(duration: 0.4), value: state.isShowingToast)
     }
     
     @ViewBuilder

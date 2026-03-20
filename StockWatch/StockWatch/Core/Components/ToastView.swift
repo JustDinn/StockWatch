@@ -35,7 +35,7 @@ struct ToastView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
-        .background(Color.gray.opacity(0.85))
+        .background(Color(red: 0.28, green: 0.28, blue: 0.30).opacity(0.95))
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .padding(.horizontal, 20)
     }
