@@ -222,19 +222,33 @@ struct StockWatchApp: App {
 
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @State private var isAuthReady = false
+    @State private var isVersionCheckDone = false
+    @StateObject private var forceUpdateStore = ForceUpdateStore()
 
     var body: some Scene {
         WindowGroup {
-            if isAuthReady {
-                TabBarView()
-            } else {
-                ProgressView()
-                    .task {
-                        if Auth.auth().currentUser == nil {
-                            try? await Auth.auth().signInAnonymously()
+            ZStack {
+                if isAuthReady && isVersionCheckDone {
+                    TabBarView()
+                } else {
+                    ProgressView()
+                        .task {
+                            if Auth.auth().currentUser == nil {
+                                try? await Auth.auth().signInAnonymously()
+                            }
+                            isAuthReady = true
+
+                            let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+                            await forceUpdateStore.checkVersionAsync(currentVersion: currentVersion)
+                            isVersionCheckDone = true
                         }
-                        isAuthReady = true
+                }
+
+                if forceUpdateStore.state.showUpdate {
+                    ForceUpdateView {
+                        forceUpdateStore.action(.openAppStore)
                     }
+                }
             }
         }
         .modelContainer(
