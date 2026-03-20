@@ -11,7 +11,7 @@ struct ForceUpdateView: View {
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.45)
+            Color(white: 0.4)
                 .ignoresSafeArea()
 
             VStack(spacing: 16) {
