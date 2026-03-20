@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3F13A2EE2F6D3F80000D8119 /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = 3F13A2ED2F6D3F80000D8119 /* FirebaseRemoteConfig */; };
 		3F5468882F5AC84600DC5AEB /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 3F5468872F5AC84600DC5AEB /* FirebaseFirestore */; };
 		3F54688A2F5AC84600DC5AEB /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 3F5468892F5AC84600DC5AEB /* FirebaseMessaging */; };
 		3F54688D2F5AD01600DC5AEB /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 3F54688C2F5AD01600DC5AEB /* Kingfisher */; };
@@ -77,6 +78,7 @@
 				3F54688D2F5AD01600DC5AEB /* Kingfisher in Frameworks */,
 				3F88A7DC2F5C740000A6A4A9 /* FirebaseAuth in Frameworks */,
 				3F54688A2F5AC84600DC5AEB /* FirebaseMessaging in Frameworks */,
+				3F13A2EE2F6D3F80000D8119 /* FirebaseRemoteConfig in Frameworks */,
 				3F5B8A852F5D8F7D00B73065 /* FirebaseFunctions in Frameworks */,
 				3FC2468C2F4B41F000AD955A /* Alamofire in Frameworks */,
 				3F5468882F5AC84600DC5AEB /* FirebaseFirestore in Frameworks */,
@@ -146,6 +148,7 @@
 				3F54688C2F5AD01600DC5AEB /* Kingfisher */,
 				3F88A7DB2F5C740000A6A4A9 /* FirebaseAuth */,
 				3F5B8A842F5D8F7D00B73065 /* FirebaseFunctions */,
+				3F13A2ED2F6D3F80000D8119 /* FirebaseRemoteConfig */,
 			);
 			productName = StockWatch;
 			productReference = 3F915FA52F4B3E0D00EC99A0 /* StockWatch.app */;
@@ -458,7 +461,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
-				MARKETING_VERSION = 1.0.3;
+				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.JustDin.StockWatch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -505,7 +508,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
-				MARKETING_VERSION = 1.0.3;
+				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.JustDin.StockWatch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -682,6 +685,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		3F13A2ED2F6D3F80000D8119 /* FirebaseRemoteConfig */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3F5468862F5AC84600DC5AEB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseRemoteConfig;
+		};
 		3F5468872F5AC84600DC5AEB /* FirebaseFirestore */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 3F5468862F5AC84600DC5AEB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
