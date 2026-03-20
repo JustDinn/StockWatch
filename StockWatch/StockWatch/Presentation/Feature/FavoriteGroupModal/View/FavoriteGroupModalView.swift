@@ -49,7 +49,6 @@ private struct FavoriteGroupModalContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            stockHeader
             addGroupButton
             if isShowingNewGroupInput { newGroupInputRow }
             groupList
@@ -58,26 +57,6 @@ private struct FavoriteGroupModalContentView: View {
         .frame(maxHeight: 420)
         .onAppear { store.action(.loadGroups) }
         .onChange(of: store.state.isDismissed) { _, v in if v { onDismiss() } }
-    }
-
-    private var dragIndicator: some View {
-        RoundedRectangle(cornerRadius: 2.5)
-            .fill(Color(.systemGray4))
-            .frame(width: 36, height: 5)
-            .padding(.top, 8)
-            .padding(.bottom, 20)
-    }
-
-    private var stockHeader: some View {
-        HStack(spacing: 12) {
-            logoView
-            Text(store.state.companyName)
-                .font(.title3.weight(.semibold))
-            Spacer()
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
-        .padding(.bottom, 16)
     }
 
     private var addGroupButton: some View {
@@ -97,7 +76,8 @@ private struct FavoriteGroupModalContentView: View {
                 Spacer()
             }
             .padding(.horizontal, 20)
-            .padding(.vertical, 14)
+            .padding(.top, 20)
+            .padding(.bottom, 14)
         }
         .buttonStyle(.plain)
     }
