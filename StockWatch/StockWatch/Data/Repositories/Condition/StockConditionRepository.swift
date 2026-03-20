@@ -8,6 +8,7 @@ import Foundation
 
 /// 종목 전략 조건 Repository 구현체
 /// SwiftData의 ModelContext를 통해 StockConditionModel을 CRUD한다.
+@MainActor
 final class StockConditionRepository: StockConditionRepositoryProtocol {
 
     private let modelContext: ModelContext

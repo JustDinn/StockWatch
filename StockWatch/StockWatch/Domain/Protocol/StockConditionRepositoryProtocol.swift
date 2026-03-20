@@ -5,6 +5,7 @@
 
 /// 로컬 저장소 인터페이스 (SwiftData 기반)
 /// 구현체는 Data 레이어에 위치하며, Domain은 이 Protocol에만 의존한다.
+@MainActor
 protocol StockConditionRepositoryProtocol {
     /// 전체 조건 목록을 조회한다.
     func fetchAll() async -> [StockCondition]

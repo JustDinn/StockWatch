@@ -8,6 +8,7 @@ import Foundation
 
 /// 관심 종목 Repository 구현체
 /// SwiftData의 ModelContext를 통해 FavoriteStock을 CRUD한다.
+@MainActor
 final class FavoriteRepository: FavoriteRepositoryProtocol {
 
     private let modelContext: ModelContext

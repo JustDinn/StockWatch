@@ -3,10 +3,12 @@
 //  StockWatch
 //
 
+@MainActor
 protocol CheckUnreadNotificationUseCaseProtocol {
     func execute() throws -> Bool
 }
 
+@MainActor
 final class CheckUnreadNotificationUseCase: CheckUnreadNotificationUseCaseProtocol {
 
     private let repository: NotificationHistoryRepositoryProtocol

@@ -5,10 +5,12 @@
 
 import Foundation
 
+@MainActor
 protocol FetchNotificationHistoryUseCaseProtocol {
     func execute() throws -> [NotificationItem]
 }
 
+@MainActor
 final class FetchNotificationHistoryUseCase: FetchNotificationHistoryUseCaseProtocol {
 
     private let repository: NotificationHistoryRepositoryProtocol

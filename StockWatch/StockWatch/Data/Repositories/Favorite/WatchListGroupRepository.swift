@@ -6,6 +6,7 @@
 import SwiftData
 import Foundation
 
+@MainActor
 final class WatchListGroupRepository: WatchListGroupRepositoryProtocol {
     private let modelContext: ModelContext
 
