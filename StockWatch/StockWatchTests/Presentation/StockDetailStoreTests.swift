@@ -8,6 +8,26 @@ import XCTest
 
 // MARK: - Mocks
 
+final class MockFetchGroupIdsForTickerUseCase: FetchGroupIdsForTickerUseCaseProtocol {
+    var stubbedResult: [UUID] = []
+
+    func execute(ticker: String) async -> [UUID] {
+        stubbedResult
+    }
+}
+
+final class MockUpdateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCaseProtocol {
+    var stubbedError: Error?
+    private(set) var executeCallCount = 0
+    private(set) var lastGroupIds: [UUID]?
+
+    func execute(ticker: String, companyName: String, logoURL: String, groupIds: [UUID]) async throws {
+        executeCallCount += 1
+        lastGroupIds = groupIds
+        if let error = stubbedError { throw error }
+    }
+}
+
 final class MockFetchCandlestickUseCase: FetchCandlestickUseCaseProtocol {
     var stubbedResult: CandlestickData?
     var stubbedError: Error?
@@ -19,6 +39,11 @@ final class MockFetchCandlestickUseCase: FetchCandlestickUseCaseProtocol {
         receivedPeriod = period
         if let error = stubbedError { throw error }
         return stubbedResult ?? CandlestickData(ticker: ticker, candles: [])
+    }
+
+    func fetchOlderCandles(ticker: String, period: ChartPeriod, before: Date) async throws -> CandlestickData {
+        if let error = stubbedError { throw error }
+        return CandlestickData(ticker: ticker, candles: [])
     }
 }
 
@@ -75,6 +100,8 @@ final class StockDetailStoreTests: XCTestCase {
     private var mockToggleUseCase: MockToggleFavoriteUseCase!
     private var mockCheckUseCase: MockCheckFavoriteUseCase!
     private var mockCandlestickUseCase: MockFetchCandlestickUseCase!
+    private var mockFetchGroupIdsUseCase: MockFetchGroupIdsForTickerUseCase!
+    private var mockUpdateFavoriteGroupsUseCase: MockUpdateFavoriteGroupsUseCase!
 
     override func setUp() {
         super.setUp()
@@ -82,12 +109,16 @@ final class StockDetailStoreTests: XCTestCase {
         mockToggleUseCase = MockToggleFavoriteUseCase()
         mockCheckUseCase = MockCheckFavoriteUseCase()
         mockCandlestickUseCase = MockFetchCandlestickUseCase()
+        mockFetchGroupIdsUseCase = MockFetchGroupIdsForTickerUseCase()
+        mockUpdateFavoriteGroupsUseCase = MockUpdateFavoriteGroupsUseCase()
         sut = StockDetailStore(
             ticker: "AAPL",
             fetchStockDetailUseCase: mockFetchUseCase,
             fetchCandlestickUseCase: mockCandlestickUseCase,
             toggleFavoriteUseCase: mockToggleUseCase,
-            checkFavoriteUseCase: mockCheckUseCase
+            checkFavoriteUseCase: mockCheckUseCase,
+            fetchGroupIdsForTickerUseCase: mockFetchGroupIdsUseCase,
+            updateFavoriteGroupsUseCase: mockUpdateFavoriteGroupsUseCase
         )
     }
 
@@ -97,6 +128,8 @@ final class StockDetailStoreTests: XCTestCase {
         mockToggleUseCase = nil
         mockCheckUseCase = nil
         mockCandlestickUseCase = nil
+        mockFetchGroupIdsUseCase = nil
+        mockUpdateFavoriteGroupsUseCase = nil
         super.tearDown()
     }
 
@@ -123,10 +156,9 @@ final class StockDetailStoreTests: XCTestCase {
         XCTAssertTrue(sut.state.isFavorite)
     }
 
-    // 미등록 종목 토글 → isFavorite이 true로 변경
-    func test_action_toggleFavorite_whenNotFavorite_updatesStateToTrue() async {
+    // 즐겨찾기 아닐 때 toggleFavorite → 모달 표시
+    func test_action_toggleFavorite_whenNotFavorite_showsModal() async {
         // Given
-        mockToggleUseCase.stubbedResult = true
         XCTAssertFalse(sut.state.isFavorite)
 
         // When
@@ -134,18 +166,18 @@ final class StockDetailStoreTests: XCTestCase {
         try? await Task.sleep(nanoseconds: 100_000_000)
 
         // Then
-        XCTAssertTrue(sut.state.isFavorite)
-        XCTAssertEqual(mockToggleUseCase.executeCallCount, 1)
-        XCTAssertEqual(mockToggleUseCase.lastReceivedTicker, "AAPL")
+        XCTAssertTrue(sut.state.isShowingFavoriteModal)
+        XCTAssertFalse(sut.state.isFavorite)
     }
 
-    // 등록된 종목 토글 → isFavorite이 false로 변경
-    func test_action_toggleFavorite_whenFavorite_updatesStateToFalse() async {
-        // Given: 먼저 즐겨찾기 상태로 만들기
+    // 단일 그룹 소속일 때 toggleFavorite → 즉시 삭제 + 토스트
+    func test_action_toggleFavorite_whenSingleGroup_removesAndShowsToast() async {
+        // Given
+        let groupId = UUID()
         mockCheckUseCase.stubbedResult = true
+        mockFetchGroupIdsUseCase.stubbedResult = [groupId]
         sut.action(.loadDetail)
         try? await Task.sleep(nanoseconds: 100_000_000)
-        mockToggleUseCase.stubbedResult = false
 
         // When
         sut.action(.toggleFavorite)
@@ -153,7 +185,28 @@ final class StockDetailStoreTests: XCTestCase {
 
         // Then
         XCTAssertFalse(sut.state.isFavorite)
-        XCTAssertEqual(mockToggleUseCase.executeCallCount, 1)
+        XCTAssertTrue(sut.state.isShowingToast)
+        XCTAssertNotNil(sut.state.toastMessage)
+        XCTAssertNotNil(sut.state.undoInfo)
+        XCTAssertEqual(sut.state.undoInfo?.groupId, groupId)
+        XCTAssertEqual(mockUpdateFavoriteGroupsUseCase.lastGroupIds, [])
+    }
+
+    // 다중 그룹 소속일 때 toggleFavorite → 모달 표시
+    func test_action_toggleFavorite_whenMultipleGroups_showsModal() async {
+        // Given
+        mockCheckUseCase.stubbedResult = true
+        mockFetchGroupIdsUseCase.stubbedResult = [UUID(), UUID()]
+        sut.action(.loadDetail)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // When
+        sut.action(.toggleFavorite)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // Then
+        XCTAssertTrue(sut.state.isShowingFavoriteModal)
+        XCTAssertFalse(sut.state.isShowingToast)
     }
 
     // loadDetail 완료 후 isChartLoading이 false가 되어야 함
@@ -209,17 +262,47 @@ final class StockDetailStoreTests: XCTestCase {
         XCTAssertFalse(sut.state.isLoading)
     }
 
-    // UseCase 에러 시 상태 롤백
-    func test_action_toggleFavorite_whenUseCaseFails_revertsState() async {
-        // Given: isFavorite = false 상태에서 에러 발생
-        mockToggleUseCase.stubbedError = NSError(domain: "TestError", code: 1)
-
-        // When
+    // 되돌리기 → 즐겨찾기 복원 + 토스트 닫힘
+    func test_action_undoRemoveFavorite_restoresFavoriteAndDismissesToast() async {
+        // Given: 단일 그룹 삭제 후 토스트 표시 상태 만들기
+        let groupId = UUID()
+        mockCheckUseCase.stubbedResult = true
+        mockFetchGroupIdsUseCase.stubbedResult = [groupId]
+        sut.action(.loadDetail)
+        try? await Task.sleep(nanoseconds: 100_000_000)
         sut.action(.toggleFavorite)
         try? await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertTrue(sut.state.isShowingToast)
 
-        // Then: 낙관적 업데이트가 롤백되어 원래 false로 복구
-        XCTAssertFalse(sut.state.isFavorite)
+        // When
+        sut.action(.undoRemoveFavorite)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // Then
+        XCTAssertTrue(sut.state.isFavorite)
+        XCTAssertFalse(sut.state.isShowingToast)
+        XCTAssertNil(sut.state.undoInfo)
+        XCTAssertEqual(mockUpdateFavoriteGroupsUseCase.lastGroupIds, [groupId])
+    }
+
+    // dismissToast → 상태 초기화
+    func test_action_dismissToast_clearsToastState() async {
+        // Given: 단일 그룹 삭제 후 토스트 표시 상태 만들기
+        mockCheckUseCase.stubbedResult = true
+        mockFetchGroupIdsUseCase.stubbedResult = [UUID()]
+        sut.action(.loadDetail)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        sut.action(.toggleFavorite)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertTrue(sut.state.isShowingToast)
+
+        // When
+        sut.action(.dismissToast)
+
+        // Then
+        XCTAssertFalse(sut.state.isShowingToast)
+        XCTAssertNil(sut.state.toastMessage)
+        XCTAssertNil(sut.state.undoInfo)
     }
 
     // loadDetail 시 기본 period(.day)를 UseCase에 전달

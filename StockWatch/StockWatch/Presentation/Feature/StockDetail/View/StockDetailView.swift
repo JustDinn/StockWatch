@@ -33,7 +33,9 @@ private struct StockDetailContentView: View {
         _store = StateObject(wrappedValue: StockDetailStore(
             ticker: ticker,
             toggleFavoriteUseCase: ToggleFavoriteUseCase(repository: repository),
-            checkFavoriteUseCase: CheckFavoriteUseCase(repository: repository)
+            checkFavoriteUseCase: CheckFavoriteUseCase(repository: repository),
+            fetchGroupIdsForTickerUseCase: FetchGroupIdsForTickerUseCase(repository: repository),
+            updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCase(repository: repository)
         ))
     }
 
@@ -66,7 +68,7 @@ private struct StockDetailContentView: View {
                                     .foregroundStyle(.secondary)
 
                                 Button {
-                                    store.action(.showFavoriteModal)
+                                    store.action(.toggleFavorite)
                                 } label: {
                                     Image(systemName: state.isFavorite ? "heart.fill" : "heart")
                                         .foregroundStyle(.red)
@@ -164,8 +166,24 @@ private struct StockDetailContentView: View {
              }
              .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .bottom)))
          }
+
+         if state.isShowingToast, let message = state.toastMessage {
+             VStack {
+                 Spacer()
+                 ToastView(
+                     icon: "heart.slash",
+                     message: message,
+                     actionLabel: "되돌리기",
+                     onAction: { store.action(.undoRemoveFavorite) }
+                 )
+                 .padding(.bottom, 40)
+             }
+             .transition(.move(edge: .bottom).combined(with: .opacity))
+             .zIndex(2)
+         }
         }
         .animation(.easeInOut(duration: 0.2), value: state.isShowingFavoriteModal)
+        .animation(.easeInOut(duration: 0.25), value: state.isShowingToast)
     }
     
     @ViewBuilder

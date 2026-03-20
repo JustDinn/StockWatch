@@ -11,8 +11,14 @@ enum StockDetailIntent {
     case dismiss
     /// 관심 종목 그룹 선택 모달 표시
     case showFavoriteModal
+    /// 하트 탭 — 그룹 수에 따라 모달 표시 or 즉시 삭제
+    case toggleFavorite
     /// 관심 종목 상태 재조회 (모달 닫힌 후)
     case reloadFavoriteStatus
+    /// 워치리스트 단일 삭제 되돌리기
+    case undoRemoveFavorite
+    /// 토스트 닫기
+    case dismissToast
     /// 전략 적용 화면으로 이동
     case navigateToApplyStrategy
     /// 봉 주기 선택
