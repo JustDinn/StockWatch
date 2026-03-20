@@ -5,7 +5,6 @@
 
 /// WatchList 행에 표시할 Mock 가격 데이터 (Presentation 레이어 전용)
 struct WatchListRowMockData: Equatable {
-    let logoURL: String           // 빈 문자열 → initials fallback
     let currentPrice: Double
     let priceChangePercent: Double
     let currency: String          // "USD", "KRW"
@@ -18,9 +17,12 @@ struct WatchListState {
     var errorMessage: String? = nil
     var selectedTicker: String? = nil  /// 선택된 종목 (nil이면 상세 화면 미표시)
 
-    /// 그룹 탭 목록 (이번엔 "전체" 하나만, 추후 SwiftData 그룹으로 확장)
-    var groups: [String] = ["전체"]
+    /// DB에서 로드된 그룹 목록
+    var dbGroups: [WatchListGroup] = []
     var selectedGroupIndex: Int = 0
+
+    /// "전체" + DB 그룹명 목록
+    var groups: [String] { ["전체"] + dbGroups.map(\.name) }
 
     /// 티커 → Mock 가격 데이터
     var mockPriceData: [String: WatchListRowMockData] = [:]
@@ -31,7 +33,6 @@ struct WatchListState {
         let price = Double(50 + seed % 450) + Double(seed % 100) / 100.0
         let change = (Double(seed % 200) - 100.0) / 10.0  // -10.0 ~ +9.9%
         return WatchListRowMockData(
-            logoURL: "",
             currentPrice: price,
             priceChangePercent: change,
             currency: "USD"

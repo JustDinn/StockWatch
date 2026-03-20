@@ -47,8 +47,10 @@ final class StockDetailStore: ObservableObject {
             loadDetail()
         case .dismiss:
             break
-        case .toggleFavorite:
-            persistToggleFavorite()
+        case .showFavoriteModal:
+            state.isShowingFavoriteModal = true
+        case .reloadFavoriteStatus:
+            reloadFavoriteStatus()
         case .navigateToApplyStrategy:
             state.isShowingApplyStrategy = true
         case .selectPeriod(let period):
@@ -70,6 +72,16 @@ final class StockDetailStore: ObservableObject {
         Binding(
             get: { self.state.isShowingApplyStrategy },
             set: { self.state.isShowingApplyStrategy = $0 }
+        )
+    }
+
+    var isFavoriteModalBinding: Binding<Bool> {
+        Binding(
+            get: { self.state.isShowingFavoriteModal },
+            set: { newValue in
+                self.state.isShowingFavoriteModal = newValue
+                if !newValue { self.reloadFavoriteStatus() }
+            }
         )
     }
 }
@@ -186,21 +198,9 @@ extension StockDetailStore {
         }
     }
 
-    /// 낙관적 UI 업데이트 후 SwiftData에 영구 저장
-    /// 저장 실패 시 원래 상태로 롤백한다.
-    private func persistToggleFavorite() {
-        let previousState = state.isFavorite
-        // 낙관적 업데이트: 즉시 UI 반영
-        state.isFavorite.toggle()
-
+    private func reloadFavoriteStatus() {
         Task {
-            do {
-                let newState = try await toggleFavoriteUseCase.execute(ticker: state.ticker, companyName: state.companyName)
-                state.isFavorite = newState
-            } catch {
-                // 실패 시 롤백
-                state.isFavorite = previousState
-            }
+            state.isFavorite = await checkFavoriteUseCase.execute(ticker: state.ticker)
         }
     }
 }

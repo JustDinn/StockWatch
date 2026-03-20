@@ -5,6 +5,7 @@
 
 import SwiftUI
 import SwiftData
+import Kingfisher
 
 /// WatchList 화면 진입점 — modelContext를 Environment에서 받아 ContentView에 전달한다.
 struct WatchListView: View {
@@ -21,12 +22,17 @@ struct WatchListView: View {
 private struct WatchListContentView: View {
 
     @StateObject private var store: WatchListStore
+    @State private var isShowingAddGroupAlert = false
+    @State private var newGroupName = ""
 
     init(modelContext: ModelContext) {
         let repository = FavoriteRepository(modelContext: modelContext)
+        let groupRepository = WatchListGroupRepository(modelContext: modelContext)
         _store = StateObject(wrappedValue: WatchListStore(
             fetchFavoritesUseCase: FetchFavoritesUseCase(repository: repository),
-            toggleFavoriteUseCase: ToggleFavoriteUseCase(repository: repository)
+            toggleFavoriteUseCase: ToggleFavoriteUseCase(repository: repository),
+            manageGroupUseCase: ManageWatchListGroupUseCase(repository: groupRepository),
+            fetchFavoritesByGroupUseCase: FetchFavoritesByGroupUseCase(repository: repository)
         ))
     }
 
@@ -37,7 +43,7 @@ private struct WatchListContentView: View {
                     groups: store.state.groups,
                     selectedIndex: store.state.selectedGroupIndex,
                     onSelect: { store.action(.selectGroup(index: $0)) },
-                    onAddGroup: { /* TODO: 그룹 생성 화면 이동 */ }
+                    onAddGroup: { isShowingAddGroupAlert = true }
                 )
                 Group {
                     if store.state.isLoading {
@@ -55,7 +61,23 @@ private struct WatchListContentView: View {
                 StockDetailView(ticker: ticker)
             }
             .onAppear {
+                store.action(.loadGroups)
                 store.action(.loadFavorites)
+            }
+            .alert("새 그룹 추가", isPresented: $isShowingAddGroupAlert) {
+                TextField("그룹 이름", text: $newGroupName)
+                Button("추가") {
+                    let name = newGroupName.trimmingCharacters(in: .whitespaces)
+                    if !name.isEmpty {
+                        store.action(.createGroup(name))
+                    }
+                    newGroupName = ""
+                }
+                Button("취소", role: .cancel) {
+                    newGroupName = ""
+                }
+            } message: {
+                Text("새로운 워치리스트 그룹 이름을 입력하세요.")
             }
         }
     }
@@ -172,18 +194,13 @@ private struct WatchListStockRow: View {
     @ViewBuilder
     private var logoView: some View {
         let size: CGFloat = 44
-        if let logoURL = mockData?.logoURL,
-           !logoURL.isEmpty,
-           let url = URL(string: logoURL) {
-            AsyncImage(url: url) { phase in
-                if case .success(let image) = phase {
-                    image.resizable().scaledToFit()
-                        .frame(width: size, height: size)
-                        .clipShape(Circle())
-                } else {
-                    initialsCircle(size: size)
-                }
-            }
+        if !item.logoURL.isEmpty, let url = URL(string: item.logoURL) {
+            KFImage(url)
+                .placeholder { initialsCircle(size: size) }
+                .resizable()
+                .scaledToFit()
+                .frame(width: size, height: size)
+                .clipShape(Circle())
         } else {
             initialsCircle(size: size)
         }

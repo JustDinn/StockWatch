@@ -65,7 +65,7 @@ private struct StockDetailContentView: View {
                                     .foregroundStyle(.secondary)
 
                                 Button {
-                                    store.action(.toggleFavorite)
+                                    store.action(.showFavoriteModal)
                                 } label: {
                                     Image(systemName: state.isFavorite ? "heart.fill" : "heart")
                                         .foregroundStyle(.red)
@@ -131,6 +131,18 @@ private struct StockDetailContentView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: store.isShowingApplyStrategyBinding) {
             StrategyView(ticker: store.state.ticker)
+        }
+        .sheet(isPresented: store.isFavoriteModalBinding) {
+            FavoriteGroupModalView(
+                ticker: store.state.ticker,
+                companyName: store.state.companyName,
+                logoURL: store.state.logoURL,
+                onDismiss: {
+                    store.action(.reloadFavoriteStatus)
+                    store.isFavoriteModalBinding.wrappedValue = false
+                }
+            )
+            .presentationDetents([.medium, .large])
         }
         .task {
             store.action(.loadDetail)

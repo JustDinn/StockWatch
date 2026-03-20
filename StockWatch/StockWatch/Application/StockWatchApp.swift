@@ -252,7 +252,7 @@ struct StockWatchApp: App {
             }
         }
         .modelContainer(
-            for: [FavoriteStock.self, SavedStrategy.self, StockConditionModel.self, NotificationHistoryModel.self]
+            for: [FavoriteStock.self, SavedStrategy.self, StockConditionModel.self, NotificationHistoryModel.self, WatchListGroupModel.self]
         ) { result in
             if case .success(let container) = result {
                 delegate.modelContainer = container

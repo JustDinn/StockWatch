@@ -13,4 +13,8 @@ enum WatchListIntent {
     case selectTicker(String)
     /// 그룹 탭 선택
     case selectGroup(index: Int)
+    /// 그룹 목록 로드
+    case loadGroups
+    /// 새 그룹 생성
+    case createGroup(String)
 }

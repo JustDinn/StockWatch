@@ -57,6 +57,8 @@ struct StockDetailState: Equatable {
     var isFavorite: Bool
     /// 전략 적용 화면 표시 여부
     var isShowingApplyStrategy: Bool
+    /// 관심 종목 그룹 선택 모달 표시 여부
+    var isShowingFavoriteModal: Bool
     /// 캔들스틱 차트 데이터 (nil이면 차트 미표시)
     var candlestickData: CandlestickData?
     /// 차트 로딩 상태
@@ -83,6 +85,7 @@ struct StockDetailState: Equatable {
         self.errorMessage = nil
         self.isFavorite = false
         self.isShowingApplyStrategy = false
+        self.isShowingFavoriteModal = false
         self.candlestickData = nil
         self.isChartLoading = false
         self.chartErrorMessage = nil

@@ -15,17 +15,23 @@ final class WatchListStore: ObservableObject {
     @Published private(set) var state: WatchListState
     private let fetchFavoritesUseCase: FetchFavoritesUseCaseProtocol
     private let toggleFavoriteUseCase: ToggleFavoriteUseCaseProtocol
+    private let manageGroupUseCase: ManageWatchListGroupUseCaseProtocol
+    private let fetchFavoritesByGroupUseCase: FetchFavoritesByGroupUseCaseProtocol
 
     // MARK: - Init
 
     init(
         fetchFavoritesUseCase: FetchFavoritesUseCaseProtocol,
         toggleFavoriteUseCase: ToggleFavoriteUseCaseProtocol,
+        manageGroupUseCase: ManageWatchListGroupUseCaseProtocol,
+        fetchFavoritesByGroupUseCase: FetchFavoritesByGroupUseCaseProtocol,
         state: WatchListState = WatchListState()
     ) {
         self.state = state
         self.fetchFavoritesUseCase = fetchFavoritesUseCase
         self.toggleFavoriteUseCase = toggleFavoriteUseCase
+        self.manageGroupUseCase = manageGroupUseCase
+        self.fetchFavoritesByGroupUseCase = fetchFavoritesByGroupUseCase
     }
 
     // MARK: - Action
@@ -41,6 +47,11 @@ final class WatchListStore: ObservableObject {
         case .selectGroup(let index):
             guard index >= 0 && index < state.groups.count else { return }
             state.selectedGroupIndex = index
+            loadFavorites()
+        case .loadGroups:
+            loadGroups()
+        case .createGroup(let name):
+            createGroup(name: name)
         }
     }
 
@@ -65,11 +76,35 @@ private extension WatchListStore {
     func loadFavorites() {
         state.isLoading = true
         Task {
-            state.favorites = await fetchFavoritesUseCase.execute()
+            if state.selectedGroupIndex == 0 {
+                state.favorites = await fetchFavoritesUseCase.execute()
+            } else {
+                let groupIndex = state.selectedGroupIndex - 1
+                guard groupIndex < state.dbGroups.count else {
+                    state.favorites = []
+                    state.isLoading = false
+                    return
+                }
+                let groupId = state.dbGroups[groupIndex].id
+                state.favorites = await fetchFavoritesByGroupUseCase.execute(groupId: groupId)
+            }
             state.mockPriceData = Dictionary(uniqueKeysWithValues:
                 state.favorites.map { ($0.ticker, WatchListState.mockData(for: $0.ticker)) }
             )
             state.isLoading = false
+        }
+    }
+
+    func loadGroups() {
+        Task {
+            state.dbGroups = await manageGroupUseCase.fetchGroups()
+        }
+    }
+
+    func createGroup(name: String) {
+        Task {
+            _ = try? await manageGroupUseCase.createGroup(name: name)
+            state.dbGroups = await manageGroupUseCase.fetchGroups()
         }
     }
 
