@@ -61,8 +61,13 @@ struct LightweightChartView: UIViewRepresentable {
             context.coordinator.injectColors(into: webView)
             if let older = olderCandles {
                 context.coordinator.injectOlderData(older, into: webView)
+                context.coordinator.lastInjectedDataID = context.coordinator.dataID(for: candles)
             } else {
-                context.coordinator.injectData(candles, into: webView)
+                let newID = context.coordinator.dataID(for: candles)
+                if newID != context.coordinator.lastInjectedDataID {
+                    context.coordinator.injectData(candles, into: webView)
+                    context.coordinator.lastInjectedDataID = newID
+                }
             }
         } else {
             context.coordinator.pendingCandles = candles
@@ -94,6 +99,7 @@ extension LightweightChartView {
         var isLoaded = false
         var onReachedLeftEdge: (() -> Void)?
         var onOlderDataInjected: (() -> Void)?
+        var lastInjectedDataID: String?
         var bodyUpColorHex: String = "#ef5350"
         var bodyDownColorHex: String = "#1976d2"
         var borderUpColorHex: String = "#ef5350"
@@ -105,6 +111,7 @@ extension LightweightChartView {
             isLoaded = true
             injectColors(into: webView)
             injectData(pendingCandles, into: webView)
+            lastInjectedDataID = dataID(for: pendingCandles)
         }
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -137,6 +144,11 @@ extension LightweightChartView {
                     self?.onOlderDataInjected?()
                 }
             }
+        }
+
+        func dataID(for candles: [Candle]) -> String {
+            guard let first = candles.first, let last = candles.last else { return "" }
+            return "\(candles.count)_\(Int(first.timestamp.timeIntervalSince1970))_\(Int(last.timestamp.timeIntervalSince1970))"
         }
 
         private func buildJSArray(_ candles: [Candle]) -> String {
