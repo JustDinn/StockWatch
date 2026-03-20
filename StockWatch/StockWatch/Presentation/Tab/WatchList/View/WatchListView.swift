@@ -23,6 +23,7 @@ private struct WatchListContentView: View {
 
     @StateObject private var store: WatchListStore
     @State private var isShowingAddGroupAlert = false
+    @State private var isShowingGroupManageModal = false
     @State private var newGroupName = ""
 
     init(modelContext: ModelContext) {
@@ -37,48 +38,74 @@ private struct WatchListContentView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                WatchListGroupTabBar(
-                    groups: store.state.groups,
-                    selectedIndex: store.state.selectedGroupIndex,
-                    onSelect: { store.action(.selectGroup(index: $0)) },
-                    onAddGroup: { isShowingAddGroupAlert = true }
-                )
-                Group {
-                    if store.state.isLoading {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if store.state.favorites.isEmpty {
-                        emptyView
-                    } else {
-                        stockList
+        ZStack {
+            NavigationStack {
+                VStack(spacing: 0) {
+                    WatchListGroupTabBar(
+                        groups: store.state.groups,
+                        selectedIndex: store.state.selectedGroupIndex,
+                        onSelect: { store.action(.selectGroup(index: $0)) },
+                        onAddGroup: { isShowingGroupManageModal = true }
+                    )
+                    Group {
+                        if store.state.isLoading {
+                            ProgressView()
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        } else if store.state.favorites.isEmpty {
+                            emptyView
+                        } else {
+                            stockList
+                        }
                     }
                 }
-            }
-            .navigationTitle("워치리스트")
-            .navigationDestination(item: store.selectedTickerBinding) { ticker in
-                StockDetailView(ticker: ticker)
-            }
-            .onAppear {
-                store.action(.loadGroups)
-                store.action(.loadFavorites)
-            }
-            .alert("새 그룹 추가", isPresented: $isShowingAddGroupAlert) {
-                TextField("그룹 이름", text: $newGroupName)
-                Button("추가") {
-                    let name = newGroupName.trimmingCharacters(in: .whitespaces)
-                    if !name.isEmpty {
-                        store.action(.createGroup(name))
-                    }
-                    newGroupName = ""
+                .navigationTitle("워치리스트")
+                .navigationDestination(item: store.selectedTickerBinding) { ticker in
+                    StockDetailView(ticker: ticker)
                 }
-                Button("취소", role: .cancel) {
-                    newGroupName = ""
+                .onAppear {
+                    store.action(.loadGroups)
+                    store.action(.loadFavorites)
                 }
-            } message: {
-                Text("새로운 워치리스트 그룹 이름을 입력하세요.")
             }
+
+            if isShowingGroupManageModal {
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+                    .onTapGesture { isShowingGroupManageModal = false }
+
+                VStack {
+                    Spacer()
+                    WatchListGroupManageModalView(
+                        groups: store.state.dbGroups,
+                        onAddGroup: {
+                            isShowingGroupManageModal = false
+                            isShowingAddGroupAlert = true
+                        }
+                    )
+                    .background(Color(.systemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 28))
+                    .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 8)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 12)
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .bottom)))
+            }
+        }
+        .animation(.easeInOut(duration: 0.35), value: isShowingGroupManageModal)
+        .alert("새 그룹 추가", isPresented: $isShowingAddGroupAlert) {
+            TextField("그룹 이름", text: $newGroupName)
+            Button("추가") {
+                let name = newGroupName.trimmingCharacters(in: .whitespaces)
+                if !name.isEmpty {
+                    store.action(.createGroup(name))
+                }
+                newGroupName = ""
+            }
+            Button("취소", role: .cancel) {
+                newGroupName = ""
+            }
+        } message: {
+            Text("새로운 워치리스트 그룹 이름을 입력하세요.")
         }
     }
 
@@ -140,7 +167,7 @@ private struct WatchListGroupTabBar: View {
                         onSelect(idx)
                     }
                 }
-                Button("그룹추가", action: onAddGroup)
+                Button("그룹관리", action: onAddGroup)
                     .font(.subheadline)
                     .foregroundStyle(.blue)
                     .padding(.horizontal, 4)
@@ -167,6 +194,76 @@ private struct WatchListGroupTabBar: View {
         }
         .buttonStyle(.plain)
         .animation(.easeInOut(duration: 0.15), value: isSelected)
+    }
+}
+
+// MARK: - Group Manage Modal
+
+private struct WatchListGroupManageModalView: View {
+    let groups: [WatchListGroup]
+    let onAddGroup: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Button(action: onAddGroup) {
+                HStack(spacing: 12) {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundStyle(.blue)
+                        .font(.title3)
+                    Text("새 그룹 추가")
+                        .foregroundStyle(.blue)
+                        .font(.subheadline)
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 14)
+            }
+            .buttonStyle(.plain)
+
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    recentGroupRow
+                    ForEach(groups, id: \.id) { group in
+                        userGroupRow(group)
+                    }
+                }
+            }
+        }
+        .frame(maxHeight: 420)
+    }
+
+    private var recentGroupRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "minus.circle.fill")
+                .foregroundStyle(Color(.systemGray3))
+                .font(.title3)
+            Text("최근 본")
+                .font(.subheadline)
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+    }
+
+    private func userGroupRow(_ group: WatchListGroup) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "minus.circle.fill")
+                .foregroundStyle(.red)
+                .font(.title3)
+            Text(group.name)
+                .font(.subheadline)
+            Image(systemName: "pencil")
+                .foregroundStyle(.secondary)
+                .font(.caption)
+            Spacer()
+            Image(systemName: "ellipsis")
+                .rotationEffect(.degrees(90))
+                .foregroundStyle(Color(.systemGray3))
+                .font(.subheadline)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
     }
 }
 
