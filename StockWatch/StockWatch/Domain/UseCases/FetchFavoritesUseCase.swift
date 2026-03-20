@@ -12,7 +12,7 @@ final class FetchFavoritesUseCase: FetchFavoritesUseCaseProtocol {
         self.repository = repository
     }
 
-    func execute() async -> [String] {
+    func execute() async -> [FavoriteItem] {
         await repository.fetchAllFavorites()
     }
 }

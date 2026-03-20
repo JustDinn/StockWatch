@@ -11,8 +11,12 @@ import XCTest
 final class MockFetchCandlestickUseCase: FetchCandlestickUseCaseProtocol {
     var stubbedResult: CandlestickData?
     var stubbedError: Error?
+    private(set) var receivedPeriod: ChartPeriod?
+    private(set) var executeCallCount = 0
 
-    func execute(ticker: String) async throws -> CandlestickData {
+    func execute(ticker: String, period: ChartPeriod) async throws -> CandlestickData {
+        executeCallCount += 1
+        receivedPeriod = period
         if let error = stubbedError { throw error }
         return stubbedResult ?? CandlestickData(ticker: ticker, candles: [])
     }
@@ -41,7 +45,7 @@ final class MockToggleFavoriteUseCase: ToggleFavoriteUseCaseProtocol {
     private(set) var executeCallCount = 0
     private(set) var lastReceivedTicker: String?
 
-    func execute(ticker: String) async throws -> Bool {
+    func execute(ticker: String, companyName: String) async throws -> Bool {
         executeCallCount += 1
         lastReceivedTicker = ticker
         if let error = stubbedError { throw error }
@@ -216,5 +220,82 @@ final class StockDetailStoreTests: XCTestCase {
 
         // Then: 낙관적 업데이트가 롤백되어 원래 false로 복구
         XCTAssertFalse(sut.state.isFavorite)
+    }
+
+    // loadDetail 시 기본 period(.day)를 UseCase에 전달
+    func test_action_loadDetail_passesDefaultPeriodToUseCase() async {
+        // When
+        sut.action(.loadDetail)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // Then
+        XCTAssertEqual(mockCandlestickUseCase.receivedPeriod, .day)
+    }
+
+    // selectPeriod → state.selectedPeriod 업데이트
+    func test_action_selectPeriod_updatesSelectedPeriod() async {
+        // When
+        sut.action(.selectPeriod(.week))
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // Then
+        XCTAssertEqual(sut.state.selectedPeriod, .week)
+    }
+
+    // selectPeriod → 해당 period로 차트 재조회
+    func test_action_selectPeriod_triggersChartRefetch_withCorrectPeriod() async {
+        // Given
+        let candle = Candle(timestamp: Date(), open: 100.0, high: 110.0, low: 95.0, close: 105.0, volume: 1_000_000)
+        mockCandlestickUseCase.stubbedResult = CandlestickData(ticker: "AAPL", candles: [candle])
+
+        // When
+        sut.action(.selectPeriod(.month))
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // Then
+        XCTAssertEqual(mockCandlestickUseCase.receivedPeriod, .month)
+        XCTAssertNotNil(sut.state.candlestickData)
+    }
+
+    // selectPeriod 후 로딩 완료 → isChartLoading == false
+    func test_action_selectPeriod_setsIsChartLoadingFalseAfterCompletion() async {
+        // When
+        sut.action(.selectPeriod(.year))
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // Then
+        XCTAssertFalse(sut.state.isChartLoading)
+    }
+
+    // selectPeriod 에러 → chartErrorMessage 설정
+    func test_action_selectPeriod_withError_setsChartErrorMessage() async {
+        // Given
+        mockCandlestickUseCase.stubbedError = NSError(domain: "ChartError", code: 1, userInfo: [NSLocalizedDescriptionKey: "차트 로딩 실패"])
+
+        // When
+        sut.action(.selectPeriod(.week))
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // Then
+        XCTAssertNotNil(sut.state.chartErrorMessage)
+        XCTAssertNil(sut.state.candlestickData)
+    }
+
+    // selectPeriod 성공 → chartErrorMessage 초기화
+    func test_action_selectPeriod_clearsChartErrorOnSuccess() async {
+        // Given: 먼저 에러 상태 만들기
+        mockCandlestickUseCase.stubbedError = NSError(domain: "ChartError", code: 1)
+        sut.action(.selectPeriod(.week))
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertNotNil(sut.state.chartErrorMessage)
+
+        // When: 이번엔 성공
+        mockCandlestickUseCase.stubbedError = nil
+        mockCandlestickUseCase.stubbedResult = CandlestickData(ticker: "AAPL", candles: [])
+        sut.action(.selectPeriod(.day))
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // Then
+        XCTAssertNil(sut.state.chartErrorMessage)
     }
 }

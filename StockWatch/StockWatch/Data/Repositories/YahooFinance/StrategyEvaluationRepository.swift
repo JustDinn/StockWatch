@@ -16,8 +16,11 @@ final class StrategyEvaluationRepository: StrategyEvaluationRepositoryProtocol {
     }
 
     func evaluate(ticker: String, parameters: StrategyParameters) async throws -> StrategySignal {
+        // 거래일 → 캘린더일 변환: 1 거래일 ≈ 1.45 캘린더일 (연간 252 거래일 / 365 캘린더일)
+        // 여유분 20일 추가로 공휴일·주말 편차 보정
+        let daysBack = Int(Double(parameters.requiredTradingDays) * 1.5) + 20
         let dto = try await networkService.request(
-            router: YahooFinanceChartRouter.dailyChart(symbol: ticker),
+            router: YahooFinanceChartRouter.dailyChart(symbol: ticker, daysBack: daysBack),
             model: YahooFinanceChartDTO.self
         )
         let closes = YahooFinanceChartMapper.mapToCloses(dto)

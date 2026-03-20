@@ -16,6 +16,15 @@ enum StrategyParameters: Equatable, Hashable {
 
 extension StrategyParameters {
 
+    /// 기술 지표 계산에 필요한 최소 거래일 수
+    var requiredTradingDays: Int {
+        switch self {
+        case let .sma(shortPeriod, longPeriod): return max(shortPeriod, longPeriod)
+        case let .ema(shortPeriod, longPeriod): return max(shortPeriod, longPeriod)
+        case let .rsi(period, _, _): return period + 1
+        }
+    }
+
     /// 파라미터의 전략 ID
     var strategyId: String {
         switch self {

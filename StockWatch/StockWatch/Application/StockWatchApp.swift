@@ -226,7 +226,7 @@ struct StockWatchApp: App {
     var body: some Scene {
         WindowGroup {
             if isAuthReady {
-                MainTabView()
+                TabBarView()
             } else {
                 ProgressView()
                     .task {

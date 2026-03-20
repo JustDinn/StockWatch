@@ -14,6 +14,7 @@ enum StockConditionMapper {
         return StockCondition(
             id: model.conditionId,
             ticker: model.ticker,
+            companyName: model.companyName,
             strategyId: model.strategyId,
             parameters: parameters,
             isNotificationEnabled: model.isNotificationEnabled,
@@ -28,6 +29,7 @@ enum StockConditionMapper {
         StockConditionModel(
             conditionId: entity.id,
             ticker: entity.ticker,
+            companyName: entity.companyName,
             strategyId: entity.strategyId,
             parametersJSON: StrategyParametersMapper.encode(entity.parameters),
             isNotificationEnabled: entity.isNotificationEnabled,
