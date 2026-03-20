@@ -238,7 +238,7 @@ private struct WatchListGroupManageModalView: View {
             Image(systemName: "minus.circle.fill")
                 .foregroundStyle(Color(.systemGray3))
                 .font(.title3)
-            Text("최근 본")
+            Text("전체")
                 .font(.subheadline)
             Spacer()
         }
@@ -255,7 +255,7 @@ private struct WatchListGroupManageModalView: View {
                 .font(.subheadline)
             Image(systemName: "pencil")
                 .foregroundStyle(.secondary)
-                .font(.caption)
+                .font(.subheadline)
             Spacer()
             Image(systemName: "ellipsis")
                 .rotationEffect(.degrees(90))
