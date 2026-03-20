@@ -12,10 +12,10 @@ import Foundation
 @Model
 final class FavoriteStock {
     @Attribute(.unique) var ticker: String
-    var companyName: String
+    var companyName: String?
     var addedAt: Date
 
-    init(ticker: String, companyName: String = "", addedAt: Date = .now) {
+    init(ticker: String, companyName: String? = nil, addedAt: Date = .now) {
         self.ticker = ticker
         self.companyName = companyName
         self.addedAt = addedAt

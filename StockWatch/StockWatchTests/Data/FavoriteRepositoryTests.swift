@@ -99,6 +99,20 @@ final class FavoriteRepositoryTests: XCTestCase {
         XCTAssertEqual(results.count, 1)
     }
 
+    // 구버전 데이터 마이그레이션 시나리오: companyName이 nil인 레코드도 빈 문자열로 정상 매핑
+    func test_fetchAllFavorites_whenCompanyNameIsNil_returnsEmptyString() async throws {
+        // Given: companyName을 nil로 직접 삽입 (구버전 데이터 시뮬레이션)
+        let stock = FavoriteStock(ticker: "LEGACY", companyName: nil)
+        modelContext.insert(stock)
+        try modelContext.save()
+
+        // When
+        let result = await sut.fetchAllFavorites()
+
+        // Then
+        XCTAssertEqual(result.first?.companyName, "")
+    }
+
     // fetchAllFavorites → FavoriteItem 배열 반환
     func test_fetchAllFavorites_returnsFavoriteItems() async throws {
         // Given

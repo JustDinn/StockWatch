@@ -14,7 +14,7 @@ enum StockConditionMapper {
         return StockCondition(
             id: model.conditionId,
             ticker: model.ticker,
-            companyName: model.companyName,
+            companyName: model.companyName ?? "",
             strategyId: model.strategyId,
             parameters: parameters,
             isNotificationEnabled: model.isNotificationEnabled,

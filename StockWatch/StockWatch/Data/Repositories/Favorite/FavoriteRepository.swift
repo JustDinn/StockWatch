@@ -46,6 +46,6 @@ final class FavoriteRepository: FavoriteRepositoryProtocol {
             sortBy: [SortDescriptor(\.addedAt, order: .reverse)]
         )
         let results = (try? modelContext.fetch(descriptor)) ?? []
-        return results.map { FavoriteItem(ticker: $0.ticker, companyName: $0.companyName, addedAt: $0.addedAt) }
+        return results.map { FavoriteItem(ticker: $0.ticker, companyName: $0.companyName ?? "", addedAt: $0.addedAt) }
     }
 }
