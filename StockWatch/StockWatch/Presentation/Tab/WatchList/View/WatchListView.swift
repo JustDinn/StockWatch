@@ -24,6 +24,7 @@ private struct WatchListContentView: View {
     @StateObject private var store: WatchListStore
     @State private var isShowingAddGroupAlert = false
     @State private var isShowingGroupManageModal = false
+    @State private var isShowingAddStock = false
     @State private var newGroupName = ""
 
     init(modelContext: ModelContext) {
@@ -65,6 +66,9 @@ private struct WatchListContentView: View {
                 .navigationTitle("워치리스트")
                 .navigationDestination(item: store.selectedTickerBinding) { ticker in
                     StockDetailView(ticker: ticker)
+                }
+                .navigationDestination(isPresented: $isShowingAddStock) {
+                    AddStockToGroupView(groupName: currentGroupName)
                 }
                 .onAppear {
                     store.action(.loadGroups)
@@ -130,7 +134,7 @@ private struct WatchListContentView: View {
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
 
-            Button(action: { }) {
+            Button(action: { isShowingAddStock = true }) {
                 Label("추가하기", systemImage: "plus")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.white)
@@ -155,9 +159,16 @@ private struct WatchListContentView: View {
                         onTap: { store.action(.selectTicker(item.ticker)) }
                     )
                 }
-                WatchListAddStockRow(onTap: { })
+                WatchListAddStockRow(onTap: { isShowingAddStock = true })
             }
         }
+    }
+
+    private var currentGroupName: String {
+        let groups = store.state.groups
+        let idx = store.state.selectedGroupIndex
+        guard idx < groups.count else { return "그룹" }
+        return groups[idx]
     }
 
     /// 표시 이름: 한국어명 → 영어명 → 티커 fallback
