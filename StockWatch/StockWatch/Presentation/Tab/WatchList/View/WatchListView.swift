@@ -34,7 +34,8 @@ private struct WatchListContentView: View {
             fetchFavoritesUseCase: FetchFavoritesUseCase(repository: repository),
             toggleFavoriteUseCase: ToggleFavoriteUseCase(repository: repository),
             manageGroupUseCase: ManageWatchListGroupUseCase(repository: groupRepository),
-            fetchFavoritesByGroupUseCase: FetchFavoritesByGroupUseCase(repository: repository)
+            fetchFavoritesByGroupUseCase: FetchFavoritesByGroupUseCase(repository: repository),
+            addFavoriteToGroupUseCase: AddFavoriteToGroupUseCase(repository: repository)
         ))
     }
 
@@ -68,7 +69,10 @@ private struct WatchListContentView: View {
                     StockDetailView(ticker: ticker)
                 }
                 .navigationDestination(isPresented: $isShowingAddStock) {
-                    AddStockToGroupView(groupName: currentGroupName)
+                    AddStockToGroupView(groupName: currentGroupName) { selectedStocks in
+                        store.action(.addStocksToGroup(selectedStocks))
+                        isShowingAddStock = false
+                    }
                 }
                 .onAppear {
                     store.action(.loadGroups)

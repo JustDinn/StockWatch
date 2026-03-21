@@ -17,6 +17,7 @@ final class WatchListStore: ObservableObject {
     private let toggleFavoriteUseCase: ToggleFavoriteUseCaseProtocol
     private let manageGroupUseCase: ManageWatchListGroupUseCaseProtocol
     private let fetchFavoritesByGroupUseCase: FetchFavoritesByGroupUseCaseProtocol
+    private let addFavoriteToGroupUseCase: AddFavoriteToGroupUseCaseProtocol
 
     // MARK: - Init
 
@@ -25,6 +26,7 @@ final class WatchListStore: ObservableObject {
         toggleFavoriteUseCase: ToggleFavoriteUseCaseProtocol,
         manageGroupUseCase: ManageWatchListGroupUseCaseProtocol,
         fetchFavoritesByGroupUseCase: FetchFavoritesByGroupUseCaseProtocol,
+        addFavoriteToGroupUseCase: AddFavoriteToGroupUseCaseProtocol,
         state: WatchListState = WatchListState()
     ) {
         self.state = state
@@ -32,6 +34,7 @@ final class WatchListStore: ObservableObject {
         self.toggleFavoriteUseCase = toggleFavoriteUseCase
         self.manageGroupUseCase = manageGroupUseCase
         self.fetchFavoritesByGroupUseCase = fetchFavoritesByGroupUseCase
+        self.addFavoriteToGroupUseCase = addFavoriteToGroupUseCase
     }
 
     // MARK: - Action
@@ -55,6 +58,8 @@ final class WatchListStore: ObservableObject {
             createGroup(name: name)
         case .deleteGroup(let id):
             deleteGroup(id: id)
+        case .addStocksToGroup(let results):
+            addStocksToGroup(results)
         }
     }
 
@@ -160,6 +165,21 @@ private extension WatchListStore {
             return
         }
         state.selectedGroupIndex = index
+    }
+
+    func addStocksToGroup(_ results: [SearchResult]) {
+        guard state.selectedGroupIndex < state.dbGroups.count else { return }
+        let groupId = state.dbGroups[state.selectedGroupIndex].id
+        Task {
+            for result in results {
+                try? await addFavoriteToGroupUseCase.execute(
+                    ticker: result.displayTicker,
+                    companyName: result.description,
+                    groupId: groupId
+                )
+            }
+            loadFavorites()
+        }
     }
 
     /// 낙관적 UI 업데이트 후 SwiftData에서 제거한다.

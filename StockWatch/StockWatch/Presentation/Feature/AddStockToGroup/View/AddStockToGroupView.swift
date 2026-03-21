@@ -5,89 +5,75 @@
 
 import SwiftUI
 
-// MARK: - Dummy Model
-
-private struct DummyStock: Identifiable {
-    let id: String
-    let ticker: String
-    let nameKo: String
-    let nameEn: String
-    let logoColor: Color
-}
-
 // MARK: - Main View
 
 struct AddStockToGroupView: View {
 
     let groupName: String
-
+    @StateObject private var store: AddStockToGroupStore
     @State private var searchText = ""
-    @State private var selectedTickers: Set<String> = []
 
-    private let dummyStocks: [DummyStock] = [
-        DummyStock(id: "000660", ticker: "000660", nameKo: "SK하이닉스", nameEn: "SK hynix", logoColor: .red),
-        DummyStock(id: "005930", ticker: "005930", nameKo: "삼성전자", nameEn: "Samsung Electronics", logoColor: .blue),
-        DummyStock(id: "035420", ticker: "035420", nameKo: "NAVER", nameEn: "NAVER Corp", logoColor: .green),
-        DummyStock(id: "035720", ticker: "035720", nameKo: "카카오", nameEn: "Kakao Corp", logoColor: .yellow),
-        DummyStock(id: "051910", ticker: "051910", nameKo: "LG화학", nameEn: "LG Chem", logoColor: .purple),
-        DummyStock(id: "006400", ticker: "006400", nameKo: "삼성SDI", nameEn: "Samsung SDI", logoColor: .orange),
-        DummyStock(id: "207940", ticker: "207940", nameKo: "삼성바이오로직스", nameEn: "Samsung Biologics", logoColor: .teal),
-        DummyStock(id: "068270", ticker: "068270", nameKo: "셀트리온", nameEn: "Celltrion", logoColor: .indigo),
-    ]
-
-    private var filteredStocks: [DummyStock] {
-        guard !searchText.isEmpty else { return dummyStocks }
-        return dummyStocks.filter {
-            $0.nameKo.localizedCaseInsensitiveContains(searchText)
-            || $0.nameEn.localizedCaseInsensitiveContains(searchText)
-            || $0.ticker.localizedCaseInsensitiveContains(searchText)
-        }
+    init(groupName: String, onConfirm: @escaping ([SearchResult]) -> Void) {
+        self.groupName = groupName
+        _store = StateObject(wrappedValue: AddStockToGroupStore(
+            tickerUseCase: TickerUseCase(repository: CompositeTickerRepository()),
+            onConfirm: onConfirm
+        ))
     }
 
     var body: some View {
         VStack(spacing: 0) {
             FilledSearchBar(text: $searchText)
-
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(filteredStocks) { stock in
-                        AddStockRow(
-                            stock: stock,
-                            isSelected: selectedTickers.contains(stock.ticker)
-                        ) {
-                            toggleSelection(stock.ticker)
-                        }
-                    }
+                .onChange(of: searchText) { _, newValue in
+                    store.action(.search(newValue))
                 }
-            }
 
+            contentView
             selectButton
         }
         .navigationTitle("\(groupName)에 종목 추가")
         .navigationBarTitleDisplayMode(.inline)
     }
 
+    @ViewBuilder
+    private var contentView: some View {
+        if store.state.isLoading {
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let error = store.state.errorMessage {
+            Text(error)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(store.state.searchResults, id: \.displayTicker) { result in
+                        AddStockRow(
+                            result: result,
+                            isSelected: store.state.selectedStocks.contains(result)
+                        ) {
+                            store.action(.toggleSelection(result))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private var selectButton: some View {
-        Button(action: { }) {
-            Text("\(selectedTickers.count)개 선택")
+        Button(action: { store.action(.confirmSelection) }) {
+            Text("\(store.state.selectedStocks.count)개 선택")
                 .font(.headline)
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(selectedTickers.isEmpty ? Color.blue.opacity(0.4) : Color.blue)
+                .background(store.state.selectedStocks.isEmpty ? Color.blue.opacity(0.4) : Color.blue)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
         }
-        .disabled(selectedTickers.isEmpty)
+        .disabled(store.state.selectedStocks.isEmpty)
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-    }
-
-    private func toggleSelection(_ ticker: String) {
-        if selectedTickers.contains(ticker) {
-            selectedTickers.remove(ticker)
-        } else {
-            selectedTickers.insert(ticker)
-        }
     }
 }
 
@@ -95,26 +81,27 @@ struct AddStockToGroupView: View {
 
 private struct AddStockRow: View {
 
-    let stock: DummyStock
+    let result: SearchResult
     let isSelected: Bool
     let onToggle: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
             Circle()
-                .fill(stock.logoColor.opacity(0.15))
+                .fill(Color.blue.opacity(0.15))
                 .frame(width: 44, height: 44)
                 .overlay(
-                    Text(String(stock.nameKo.prefix(1)))
+                    Text(String(result.description.prefix(1)))
                         .font(.headline.bold())
-                        .foregroundStyle(stock.logoColor)
+                        .foregroundStyle(.blue)
                 )
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(stock.nameKo)
+                Text(result.description)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.primary)
-                Text(stock.nameEn)
+                    .lineLimit(1)
+                Text(result.displayTicker)
                     .font(.caption)
                     .foregroundStyle(.blue)
             }
@@ -131,11 +118,8 @@ private struct AddStockRow: View {
     }
 }
 
-// MARK: - DummyStock needs to be accessible in AddStockRow
-// DummyStock is defined as private at file scope, so AddStockRow (also private) can access it fine.
-
 #Preview {
     NavigationStack {
-        AddStockToGroupView(groupName: "ㄱ")
+        AddStockToGroupView(groupName: "테스트") { _ in }
     }
 }
