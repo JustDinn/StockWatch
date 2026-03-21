@@ -86,6 +86,9 @@ private extension AddStockToGroupStore {
                 print("<< [AddStockToGroupStore] search succeeded - results count: \(results.count)")
                 state.searchResults = results
                 fetchLogos(for: results)
+            } catch NetworkError.requestCancelled {
+                // 사용자가 입력을 변경해 Task가 취소된 정상 흐름 — 무시
+                print("<< [AddStockToGroupStore] search cancelled (normal flow) - ignoring")
             } catch {
                 print("<< [AddStockToGroupStore] search failed - error type: \(type(of: error)), description: \(error.localizedDescription), error: \(error)")
                 state.errorMessage = error.localizedDescription
