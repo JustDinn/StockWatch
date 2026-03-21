@@ -248,7 +248,7 @@ extension StockDetailStore {
                 state.isShowingToast = true
                 scheduleToastDismiss()
             } catch {
-                // 삭제 실패 시 상태 유지
+                // 삭제 실패 시 무시
             }
         } else {
             state.isShowingFavoriteModal = true

@@ -76,16 +76,17 @@ private extension WatchListStore {
     func loadFavorites() {
         state.isLoading = true
         Task {
-            if state.selectedGroupIndex == 0 {
+            let index = state.selectedGroupIndex
+            let isDefaultSelected = index < state.dbGroups.count && state.dbGroups[index].isDefault
+            if isDefaultSelected || state.dbGroups.isEmpty {
                 state.favorites = await fetchFavoritesUseCase.execute()
             } else {
-                let groupIndex = state.selectedGroupIndex - 1
-                guard groupIndex < state.dbGroups.count else {
+                guard index < state.dbGroups.count else {
                     state.favorites = []
                     state.isLoading = false
                     return
                 }
-                let groupId = state.dbGroups[groupIndex].id
+                let groupId = state.dbGroups[index].id
                 state.favorites = await fetchFavoritesByGroupUseCase.execute(groupId: groupId)
             }
             state.mockPriceData = Dictionary(uniqueKeysWithValues:
@@ -97,13 +98,22 @@ private extension WatchListStore {
 
     func loadGroups() {
         Task {
+            do {
+                _ = try await manageGroupUseCase.ensureDefaultGroup()
+            } catch {
+                // 기본 그룹 생성 실패 시 무시
+            }
             state.dbGroups = await manageGroupUseCase.fetchGroups()
         }
     }
 
     func createGroup(name: String) {
         Task {
-            _ = try? await manageGroupUseCase.createGroup(name: name)
+            do {
+                _ = try await manageGroupUseCase.createGroup(name: name)
+            } catch {
+                // 그룹 생성 실패 시 무시
+            }
             state.dbGroups = await manageGroupUseCase.fetchGroups()
         }
     }

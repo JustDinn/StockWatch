@@ -223,9 +223,12 @@ private struct WatchListGroupManageModalView: View {
 
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    recentGroupRow
                     ForEach(groups, id: \.id) { group in
-                        userGroupRow(group)
+                        if group.isDefault {
+                            defaultGroupRow(group)
+                        } else {
+                            userGroupRow(group)
+                        }
                     }
                 }
             }
@@ -233,12 +236,12 @@ private struct WatchListGroupManageModalView: View {
         .frame(maxHeight: 420)
     }
 
-    private var recentGroupRow: some View {
+    private func defaultGroupRow(_ group: WatchListGroup) -> some View {
         HStack(spacing: 12) {
             Image(systemName: "minus.circle.fill")
                 .foregroundStyle(Color(.systemGray3))
                 .font(.title3)
-            Text("전체")
+            Text(group.name)
                 .font(.subheadline)
             Spacer()
         }

@@ -35,8 +35,7 @@ final class FavoriteRepository: FavoriteRepositoryProtocol {
     func addFavorite(ticker: String, companyName: String, logoURL: String, groupIds: [UUID]) async throws {
         guard await !isFavorite(ticker: ticker) else { return }
         let favorite = FavoriteStock(ticker: ticker, companyName: companyName, logoURL: logoURL)
-        let groups = fetchGroupModels(by: groupIds)
-        favorite.groups = groups
+        favorite.groups = fetchGroupModels(by: groupIds)
         modelContext.insert(favorite)
         try modelContext.save()
     }

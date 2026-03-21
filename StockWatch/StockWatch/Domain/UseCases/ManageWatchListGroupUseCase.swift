@@ -13,14 +13,18 @@ final class ManageWatchListGroupUseCase: ManageWatchListGroupUseCaseProtocol {
     }
 
     func fetchGroups() async -> [WatchListGroup] {
-        await repository.fetchAllGroups()
+        return await repository.fetchAllGroups()
     }
 
     func createGroup(name: String) async throws -> WatchListGroup {
-        try await repository.createGroup(name: name)
+        return try await repository.createGroup(name: name)
     }
 
     func deleteGroup(id: UUID) async throws {
         try await repository.deleteGroup(id: id)
+    }
+
+    func ensureDefaultGroup() async throws -> WatchListGroup {
+        return try await repository.ensureDefaultGroup()
     }
 }

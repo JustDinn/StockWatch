@@ -19,21 +19,20 @@ final class WatchListGroupRepository: WatchListGroupRepositoryProtocol {
             sortBy: [SortDescriptor(\.createdAt, order: .forward)]
         )
         let results = (try? modelContext.fetch(descriptor)) ?? []
-        return results.map { WatchListGroup(id: $0.id, name: $0.name, createdAt: $0.createdAt) }
+        let sorted = results.sorted { ($0.isDefault ?? false) && !($1.isDefault ?? false) }
+        return sorted.map { WatchListGroup(id: $0.id, name: $0.name, createdAt: $0.createdAt, isDefault: $0.isDefault ?? false) }
     }
 
     func createGroup(name: String) async throws -> WatchListGroup {
-        let descriptor = FetchDescriptor<WatchListGroupModel>(
-            predicate: #Predicate { $0.name == name }
-        )
-        let existing = (try? modelContext.fetch(descriptor)) ?? []
-        guard existing.isEmpty else {
+        let descriptor = FetchDescriptor<WatchListGroupModel>()
+        let all = (try? modelContext.fetch(descriptor)) ?? []
+        guard !all.contains(where: { $0.name == name }) else {
             throw WatchListGroupError.duplicateName
         }
         let model = WatchListGroupModel(name: name)
         modelContext.insert(model)
         try modelContext.save()
-        return WatchListGroup(id: model.id, name: model.name, createdAt: model.createdAt)
+        return WatchListGroup(id: model.id, name: model.name, createdAt: model.createdAt, isDefault: model.isDefault ?? false)
     }
 
     func deleteGroup(id: UUID) async throws {
@@ -43,6 +42,18 @@ final class WatchListGroupRepository: WatchListGroupRepositoryProtocol {
         let results = (try? modelContext.fetch(descriptor)) ?? []
         results.forEach { modelContext.delete($0) }
         try modelContext.save()
+    }
+
+    func ensureDefaultGroup() async throws -> WatchListGroup {
+        let descriptor = FetchDescriptor<WatchListGroupModel>()
+        let all = (try? modelContext.fetch(descriptor)) ?? []
+        if let model = all.first(where: { $0.isDefault ?? false }) {
+            return WatchListGroup(id: model.id, name: model.name, createdAt: model.createdAt, isDefault: model.isDefault ?? false)
+        }
+        let model = WatchListGroupModel(name: "전체", isDefault: true)
+        modelContext.insert(model)
+        try modelContext.save()
+        return WatchListGroup(id: model.id, name: model.name, createdAt: model.createdAt, isDefault: model.isDefault ?? false)
     }
 }
 

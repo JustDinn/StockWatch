@@ -71,7 +71,7 @@ private extension FavoriteGroupModalStore {
                 state.groups.append(newGroup)
                 state.selectedGroupIds.insert(newGroup.id)
             } catch {
-                // 중복 이름 등 에러 - 무시 (추후 에러 메시지 표시 가능)
+                // 그룹 생성 실패 시 무시
             }
         }
     }
@@ -87,7 +87,7 @@ private extension FavoriteGroupModalStore {
                 )
                 state.isDismissed = true
             } catch {
-                // 에러 처리
+                // 확인 실패 시 무시
             }
         }
     }
