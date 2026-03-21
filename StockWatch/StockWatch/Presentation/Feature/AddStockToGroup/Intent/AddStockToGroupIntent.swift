@@ -11,4 +11,6 @@ enum AddStockToGroupIntent {
     case toggleSelection(SearchResult)
     /// 선택 완료 - 선택된 종목을 콜백으로 전달하고 뷰를 닫는다
     case confirmSelection
+    /// 로고 URL fetch 완료 - State에 저장
+    case logoURLFetched(ticker: String, url: String)
 }

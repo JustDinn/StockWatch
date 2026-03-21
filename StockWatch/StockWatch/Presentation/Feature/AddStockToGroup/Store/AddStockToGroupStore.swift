@@ -13,6 +13,7 @@ final class AddStockToGroupStore: ObservableObject {
 
     @Published private(set) var state: AddStockToGroupState
     private let tickerUseCase: TickerUseCaseProtocol
+    private let fetchLogoUseCase: FetchStockLogoUseCaseProtocol
     private let onConfirm: ([SearchResult]) -> Void
     private var searchTask: Task<Void, Never>?
 
@@ -20,11 +21,13 @@ final class AddStockToGroupStore: ObservableObject {
 
     init(
         tickerUseCase: TickerUseCaseProtocol,
+        fetchLogoUseCase: FetchStockLogoUseCaseProtocol,
         onConfirm: @escaping ([SearchResult]) -> Void,
         state: AddStockToGroupState = AddStockToGroupState()
     ) {
         print("<< [AddStockToGroupStore] init")
         self.tickerUseCase = tickerUseCase
+        self.fetchLogoUseCase = fetchLogoUseCase
         self.onConfirm = onConfirm
         self.state = state
     }
@@ -44,6 +47,8 @@ final class AddStockToGroupStore: ObservableObject {
             }
         case .confirmSelection:
             onConfirm(Array(state.selectedStocks))
+        case .logoURLFetched(let ticker, let url):
+            state.logoURLs[ticker] = url
         }
     }
 }
@@ -80,12 +85,23 @@ private extension AddStockToGroupStore {
                 let results = try await tickerUseCase.search(query: query)
                 print("<< [AddStockToGroupStore] search succeeded - results count: \(results.count)")
                 state.searchResults = results
+                fetchLogos(for: results)
             } catch {
                 print("<< [AddStockToGroupStore] search failed - error type: \(type(of: error)), description: \(error.localizedDescription), error: \(error)")
                 state.errorMessage = error.localizedDescription
                 print("<< [AddStockToGroupStore] state.errorMessage set to: '\(error.localizedDescription)'")
             }
             state.isLoading = false
+        }
+    }
+
+    func fetchLogos(for results: [SearchResult]) {
+        for result in results {
+            Task {
+                guard let url = try? await fetchLogoUseCase.execute(ticker: result.ticker),
+                      !url.isEmpty else { return }
+                action(.logoURLFetched(ticker: result.ticker, url: url))
+            }
         }
     }
 }

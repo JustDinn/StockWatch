@@ -9,4 +9,5 @@ struct AddStockToGroupState {
     var selectedStocks: Set<SearchResult> = []
     var isLoading: Bool = false
     var errorMessage: String? = nil
+    var logoURLs: [String: String] = [:]  // ticker → 로고 URL
 }
