@@ -383,7 +383,7 @@ private struct WatchListStockRow: View {
         VStack(alignment: .trailing, spacing: 2) {
             if let data = quoteData {
                 let positive = data.priceChangePercent >= 0
-                Text(String(format: "%@%.1f%%", positive ? "+" : "", data.priceChangePercent))
+                Text(String(format: "%@%.2f%%", positive ? "+" : "", data.priceChangePercent))
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(positive ? Color(hex: "#ef5350") : Color(hex: "#1976d2"))
                 Text(formattedPrice(data.currentPrice, currency: data.currency))
@@ -398,6 +398,8 @@ private struct WatchListStockRow: View {
         fmt.numberStyle = .currency
         fmt.currencyCode = currency.isEmpty ? "USD" : currency
         fmt.locale = Locale(identifier: "en_US")
+        fmt.maximumFractionDigits = 2
+        fmt.roundingMode = .halfUp
         return fmt.string(from: NSNumber(value: price)) ?? "\(price)"
     }
 }

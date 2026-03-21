@@ -112,16 +112,18 @@ struct StockDetailState: Equatable {
         self.undoInfo = nil
     }
 
-    /// 가격 표시 문자열 (예: "₩193,900", "$150.25", "¥2,500")
+    /// 가격 표시 문자열 (예: "₩193,900", "$150.25", "¥2,500"), 소수점 셋째자리에서 반올림
     var formattedPrice: String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.locale = Locale(identifier: "en_US")
         formatter.currencyCode = currency.isEmpty ? "USD" : currency
+        formatter.maximumFractionDigits = 2
+        formatter.roundingMode = .halfUp
         return formatter.string(from: NSNumber(value: currentPrice)) ?? "\(currentPrice)"
     }
 
-    /// 변동률 표시 문자열 (예: "+1.69%", "-0.53%")
+    /// 변동률 표시 문자열 (예: "+1.69%", "-0.53%"), 소수점 셋째자리에서 반올림
     var formattedChangePercent: String {
         let sign = priceChangePercent >= 0 ? "+" : ""
         return String(format: "\(sign)%.2f%%", priceChangePercent)
