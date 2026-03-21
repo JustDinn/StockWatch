@@ -35,7 +35,8 @@ private struct WatchListContentView: View {
             toggleFavoriteUseCase: ToggleFavoriteUseCase(repository: repository),
             manageGroupUseCase: ManageWatchListGroupUseCase(repository: groupRepository),
             fetchFavoritesByGroupUseCase: FetchFavoritesByGroupUseCase(repository: repository),
-            addFavoriteToGroupUseCase: AddFavoriteToGroupUseCase(repository: repository)
+            addFavoriteToGroupUseCase: AddFavoriteToGroupUseCase(repository: repository),
+            fetchStockQuoteUseCase: FetchStockQuoteUseCase(repository: StockQuoteRepository())
         ))
     }
 
@@ -158,7 +159,7 @@ private struct WatchListContentView: View {
                 ForEach(store.state.favorites, id: \.ticker) { item in
                     WatchListStockRow(
                         item: item,
-                        mockData: store.state.mockPriceData[item.ticker],
+                        quoteData: store.state.priceData[item.ticker],
                         displayName: displayName(for: item),
                         onTap: { store.action(.selectTicker(item.ticker)) }
                     )
@@ -324,7 +325,7 @@ private struct WatchListGroupManageModalView: View {
 
 private struct WatchListStockRow: View {
     let item: FavoriteItem
-    let mockData: WatchListRowMockData?
+    let quoteData: StockQuote?
     let displayName: String
     let onTap: () -> Void
 
@@ -380,7 +381,7 @@ private struct WatchListStockRow: View {
 
     private var priceColumn: some View {
         VStack(alignment: .trailing, spacing: 2) {
-            if let data = mockData {
+            if let data = quoteData {
                 let positive = data.priceChangePercent >= 0
                 Text(String(format: "%@%.1f%%", positive ? "+" : "", data.priceChangePercent))
                     .font(.subheadline.weight(.medium))

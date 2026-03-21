@@ -18,6 +18,7 @@ final class WatchListStore: ObservableObject {
     private let manageGroupUseCase: ManageWatchListGroupUseCaseProtocol
     private let fetchFavoritesByGroupUseCase: FetchFavoritesByGroupUseCaseProtocol
     private let addFavoriteToGroupUseCase: AddFavoriteToGroupUseCaseProtocol
+    private let fetchStockQuoteUseCase: FetchStockQuoteUseCaseProtocol
 
     // MARK: - Init
 
@@ -27,6 +28,7 @@ final class WatchListStore: ObservableObject {
         manageGroupUseCase: ManageWatchListGroupUseCaseProtocol,
         fetchFavoritesByGroupUseCase: FetchFavoritesByGroupUseCaseProtocol,
         addFavoriteToGroupUseCase: AddFavoriteToGroupUseCaseProtocol,
+        fetchStockQuoteUseCase: FetchStockQuoteUseCaseProtocol,
         state: WatchListState = WatchListState()
     ) {
         self.state = state
@@ -35,6 +37,7 @@ final class WatchListStore: ObservableObject {
         self.manageGroupUseCase = manageGroupUseCase
         self.fetchFavoritesByGroupUseCase = fetchFavoritesByGroupUseCase
         self.addFavoriteToGroupUseCase = addFavoriteToGroupUseCase
+        self.fetchStockQuoteUseCase = fetchStockQuoteUseCase
     }
 
     // MARK: - Action
@@ -97,10 +100,8 @@ private extension WatchListStore {
             }
             let groupId = state.dbGroups[index].id
             state.favorites = await fetchFavoritesByGroupUseCase.execute(groupId: groupId)
-            state.mockPriceData = Dictionary(uniqueKeysWithValues:
-                state.favorites.map { ($0.ticker, WatchListState.mockData(for: $0.ticker)) }
-            )
             state.isLoading = false
+            loadPrices(for: state.favorites.map(\.ticker))
         }
     }
 
@@ -179,6 +180,27 @@ private extension WatchListStore {
                 )
             }
             loadFavorites()
+        }
+    }
+
+    func loadPrices(for tickers: [String]) {
+        guard !tickers.isEmpty else { return }
+        state.isPriceLoading = true
+        Task {
+            var result: [String: StockQuote] = [:]
+            await withTaskGroup(of: (String, StockQuote?).self) { group in
+                for ticker in tickers {
+                    group.addTask {
+                        let quote = try? await self.fetchStockQuoteUseCase.execute(ticker: ticker)
+                        return (ticker, quote)
+                    }
+                }
+                for await (ticker, quote) in group {
+                    if let quote { result[ticker] = quote }
+                }
+            }
+            state.priceData = result
+            state.isPriceLoading = false
         }
     }
 

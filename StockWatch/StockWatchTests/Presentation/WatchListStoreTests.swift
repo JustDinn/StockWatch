@@ -31,6 +31,19 @@ final class MockFetchFavoritesByGroupUseCase: FetchFavoritesByGroupUseCaseProtoc
     func execute(groupId: UUID) async -> [FavoriteItem] { stubbedResult }
 }
 
+final class MockAddFavoriteToGroupUseCase: AddFavoriteToGroupUseCaseProtocol {
+    func execute(ticker: String, companyName: String, groupId: UUID) async throws {}
+}
+
+final class MockFetchStockQuoteUseCase: FetchStockQuoteUseCaseProtocol {
+    var stubbedResult: StockQuote = StockQuote(ticker: "", currentPrice: 0, priceChangePercent: 0, currency: "USD")
+    var stubbedError: Error?
+    func execute(ticker: String) async throws -> StockQuote {
+        if let error = stubbedError { throw error }
+        return StockQuote(ticker: ticker, currentPrice: stubbedResult.currentPrice, priceChangePercent: stubbedResult.priceChangePercent, currency: stubbedResult.currency)
+    }
+}
+
 // MARK: - Tests
 
 @MainActor
@@ -41,6 +54,7 @@ final class WatchListStoreTests: XCTestCase {
     private var mockToggleUseCase: MockToggleFavoriteUseCase!
     private var mockManageGroupUseCase: MockManageWatchListGroupUseCase!
     private var mockFetchByGroupUseCase: MockFetchFavoritesByGroupUseCase!
+    private var mockFetchStockQuoteUseCase: MockFetchStockQuoteUseCase!
 
     override func setUp() {
         super.setUp()
@@ -50,6 +64,7 @@ final class WatchListStoreTests: XCTestCase {
         mockToggleUseCase = MockToggleFavoriteUseCase()
         mockManageGroupUseCase = MockManageWatchListGroupUseCase()
         mockFetchByGroupUseCase = MockFetchFavoritesByGroupUseCase()
+        mockFetchStockQuoteUseCase = MockFetchStockQuoteUseCase()
         sut = makeStore()
     }
 
@@ -60,6 +75,7 @@ final class WatchListStoreTests: XCTestCase {
         mockToggleUseCase = nil
         mockManageGroupUseCase = nil
         mockFetchByGroupUseCase = nil
+        mockFetchStockQuoteUseCase = nil
         super.tearDown()
     }
 
@@ -69,6 +85,8 @@ final class WatchListStoreTests: XCTestCase {
             toggleFavoriteUseCase: mockToggleUseCase,
             manageGroupUseCase: mockManageGroupUseCase,
             fetchFavoritesByGroupUseCase: mockFetchByGroupUseCase,
+            addFavoriteToGroupUseCase: MockAddFavoriteToGroupUseCase(),
+            fetchStockQuoteUseCase: mockFetchStockQuoteUseCase,
             state: state
         )
     }
@@ -275,6 +293,46 @@ final class WatchListStoreTests: XCTestCase {
         // Assert
         XCTAssertTrue(sut.state.dbGroups.isEmpty)
         XCTAssertEqual(sut.state.selectedGroupIndex, 0)
+    }
+
+    // MARK: - priceData
+
+    func test_loadGroups_withFavorites_populatesPriceDataAfterLoad() async {
+        // Arrange
+        let group = WatchListGroup(id: UUID(), name: "전체", createdAt: Date())
+        let items = [
+            FavoriteItem(ticker: "AAPL", companyName: "Apple Inc.", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        mockManageGroupUseCase.stubbedGroups = [group]
+        mockFetchByGroupUseCase.stubbedResult = items
+        mockFetchStockQuoteUseCase.stubbedResult = StockQuote(ticker: "AAPL", currentPrice: 150.0, priceChangePercent: 1.5, currency: "USD")
+
+        // Act
+        sut.action(.loadGroups)
+        for _ in 0..<8 { await Task.yield() }
+
+        // Assert
+        XCTAssertFalse(sut.state.priceData.isEmpty)
+        XCTAssertEqual(sut.state.priceData["AAPL"]?.currentPrice, 150.0)
+    }
+
+    func test_loadGroups_whenPriceFetchFails_favoritesStillLoaded() async {
+        // Arrange
+        let group = WatchListGroup(id: UUID(), name: "전체", createdAt: Date())
+        let items = [
+            FavoriteItem(ticker: "AAPL", companyName: "Apple Inc.", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        mockManageGroupUseCase.stubbedGroups = [group]
+        mockFetchByGroupUseCase.stubbedResult = items
+        mockFetchStockQuoteUseCase.stubbedError = NetworkError.serverError
+
+        // Act
+        sut.action(.loadGroups)
+        for _ in 0..<8 { await Task.yield() }
+
+        // Assert — favorites는 정상 로드, priceData만 비어있음
+        XCTAssertEqual(sut.state.favorites.count, 1)
+        XCTAssertTrue(sut.state.priceData.isEmpty)
     }
 
     func test_action_deleteGroup_currentGroupDeleted_selectsFirstRemaining() async {
