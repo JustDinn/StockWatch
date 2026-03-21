@@ -23,6 +23,7 @@ final class AddStockToGroupStore: ObservableObject {
         onConfirm: @escaping ([SearchResult]) -> Void,
         state: AddStockToGroupState = AddStockToGroupState()
     ) {
+        print("<< [AddStockToGroupStore] init")
         self.tickerUseCase = tickerUseCase
         self.onConfirm = onConfirm
         self.state = state
@@ -31,6 +32,7 @@ final class AddStockToGroupStore: ObservableObject {
     // MARK: - Action
 
     func action(_ intent: AddStockToGroupIntent) {
+        print("<< [AddStockToGroupStore] action called - intent: \(intent)")
         switch intent {
         case .search(let query):
             search(query: query)
@@ -51,22 +53,37 @@ final class AddStockToGroupStore: ObservableObject {
 private extension AddStockToGroupStore {
 
     func search(query: String) {
+        print("<< [AddStockToGroupStore] search called - query: '\(query)'")
+        if searchTask != nil {
+            print("<< [AddStockToGroupStore] cancelling existing searchTask")
+        }
         searchTask?.cancel()
         guard !query.isEmpty else {
+            print("<< [AddStockToGroupStore] query is empty, clearing results")
             state.searchResults = []
             state.isLoading = false
             return
         }
+        print("<< [AddStockToGroupStore] starting new searchTask for query: '\(query)'")
         searchTask = Task {
+            print("<< [AddStockToGroupStore] Task started - sleeping 300ms")
             try? await Task.sleep(for: .milliseconds(300))
-            guard !Task.isCancelled else { return }
+            print("<< [AddStockToGroupStore] Task awoke - isCancelled: \(Task.isCancelled)")
+            guard !Task.isCancelled else {
+                print("<< [AddStockToGroupStore] Task was cancelled, returning early")
+                return
+            }
             state.isLoading = true
             state.errorMessage = nil
+            print("<< [AddStockToGroupStore] calling tickerUseCase.search for query: '\(query)'")
             do {
                 let results = try await tickerUseCase.search(query: query)
+                print("<< [AddStockToGroupStore] search succeeded - results count: \(results.count)")
                 state.searchResults = results
             } catch {
+                print("<< [AddStockToGroupStore] search failed - error type: \(type(of: error)), description: \(error.localizedDescription), error: \(error)")
                 state.errorMessage = error.localizedDescription
+                print("<< [AddStockToGroupStore] state.errorMessage set to: '\(error.localizedDescription)'")
             }
             state.isLoading = false
         }
