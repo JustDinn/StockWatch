@@ -14,7 +14,7 @@ final class AddStockToGroupStore: ObservableObject {
     @Published private(set) var state: AddStockToGroupState
     private let tickerUseCase: TickerUseCaseProtocol
     private let fetchLogoUseCase: FetchStockLogoUseCaseProtocol
-    private let onConfirm: ([SearchResult]) -> Void
+    private let onConfirm: ([SearchResult], [String: String]) -> Void
     private var searchTask: Task<Void, Never>?
 
     // MARK: - Init
@@ -22,7 +22,7 @@ final class AddStockToGroupStore: ObservableObject {
     init(
         tickerUseCase: TickerUseCaseProtocol,
         fetchLogoUseCase: FetchStockLogoUseCaseProtocol,
-        onConfirm: @escaping ([SearchResult]) -> Void,
+        onConfirm: @escaping ([SearchResult], [String: String]) -> Void,
         state: AddStockToGroupState = AddStockToGroupState()
     ) {
         print("<< [AddStockToGroupStore] init")
@@ -46,7 +46,7 @@ final class AddStockToGroupStore: ObservableObject {
                 state.selectedStocks.insert(result)
             }
         case .confirmSelection:
-            onConfirm(Array(state.selectedStocks))
+            onConfirm(Array(state.selectedStocks), state.logoURLs)
         case .logoURLFetched(let ticker, let url):
             state.logoURLs[ticker] = url
         }

@@ -70,8 +70,8 @@ private struct WatchListContentView: View {
                     StockDetailView(ticker: ticker)
                 }
                 .navigationDestination(isPresented: $isShowingAddStock) {
-                    AddStockToGroupView(groupName: currentGroupName) { selectedStocks in
-                        store.action(.addStocksToGroup(selectedStocks))
+                    AddStockToGroupView(groupName: currentGroupName) { selectedStocks, logoURLs in
+                        store.action(.addStocksToGroup(selectedStocks, logoURLs))
                         isShowingAddStock = false
                     }
                 }

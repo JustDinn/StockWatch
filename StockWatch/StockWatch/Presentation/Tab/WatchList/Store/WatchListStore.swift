@@ -61,8 +61,8 @@ final class WatchListStore: ObservableObject {
             createGroup(name: name)
         case .deleteGroup(let id):
             deleteGroup(id: id)
-        case .addStocksToGroup(let results):
-            addStocksToGroup(results)
+        case .addStocksToGroup(let results, let logoURLs):
+            addStocksToGroup(results, logoURLs: logoURLs)
         }
     }
 
@@ -168,14 +168,16 @@ private extension WatchListStore {
         state.selectedGroupIndex = index
     }
 
-    func addStocksToGroup(_ results: [SearchResult]) {
+    func addStocksToGroup(_ results: [SearchResult], logoURLs: [String: String]) {
         guard state.selectedGroupIndex < state.dbGroups.count else { return }
         let groupId = state.dbGroups[state.selectedGroupIndex].id
         Task {
             for result in results {
+                let logoURL = logoURLs[result.displayTicker] ?? logoURLs[result.ticker] ?? ""
                 try? await addFavoriteToGroupUseCase.execute(
                     ticker: result.displayTicker,
                     companyName: result.description,
+                    logoURL: logoURL,
                     groupId: groupId
                 )
             }

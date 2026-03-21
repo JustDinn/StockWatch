@@ -14,21 +14,21 @@ final class AddFavoriteToGroupUseCase: AddFavoriteToGroupUseCaseProtocol {
         self.repository = repository
     }
 
-    func execute(ticker: String, companyName: String, groupId: UUID) async throws {
+    func execute(ticker: String, companyName: String, logoURL: String, groupId: UUID) async throws {
         let isFav = await repository.isFavorite(ticker: ticker)
         if isFav {
             let existingGroupIds = await repository.fetchGroupIds(for: ticker)
             guard !existingGroupIds.contains(groupId) else { return }
             try await repository.updateFavoriteGroups(
                 ticker: ticker,
-                logoURL: "",
+                logoURL: logoURL,
                 groupIds: existingGroupIds + [groupId]
             )
         } else {
             try await repository.addFavorite(
                 ticker: ticker,
                 companyName: companyName,
-                logoURL: "",
+                logoURL: logoURL,
                 groupIds: [groupId]
             )
         }

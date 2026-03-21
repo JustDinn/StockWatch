@@ -14,7 +14,7 @@ struct AddStockToGroupView: View {
     @StateObject private var store: AddStockToGroupStore
     @State private var searchText = ""
 
-    init(groupName: String, onConfirm: @escaping ([SearchResult]) -> Void) {
+    init(groupName: String, onConfirm: @escaping ([SearchResult], [String: String]) -> Void) {
         self.groupName = groupName
         print("<< [AddStockToGroupView] init - groupName: \(groupName)")
         _store = StateObject(wrappedValue: AddStockToGroupStore(
@@ -145,6 +145,6 @@ private struct AddStockRow: View {
 
 #Preview {
     NavigationStack {
-        AddStockToGroupView(groupName: "테스트") { _ in }
+        AddStockToGroupView(groupName: "테스트") { _, _ in }
     }
 }

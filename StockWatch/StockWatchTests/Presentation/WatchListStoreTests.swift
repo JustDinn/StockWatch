@@ -32,7 +32,7 @@ final class MockFetchFavoritesByGroupUseCase: FetchFavoritesByGroupUseCaseProtoc
 }
 
 final class MockAddFavoriteToGroupUseCase: AddFavoriteToGroupUseCaseProtocol {
-    func execute(ticker: String, companyName: String, groupId: UUID) async throws {}
+    func execute(ticker: String, companyName: String, logoURL: String, groupId: UUID) async throws {}
 }
 
 final class MockFetchStockQuoteUseCase: FetchStockQuoteUseCaseProtocol {
