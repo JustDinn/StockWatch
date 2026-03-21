@@ -104,7 +104,7 @@ final class CandlestickRepositoryTests: XCTestCase {
         _ = try await capturingSut.fetchCandlesticks(ticker: "AAPL", period: .day)
 
         // Then
-        XCTAssertEqual(mockCapturingService.lastRouterParameters?["range"] as? String, "1mo")
+        XCTAssertEqual(mockCapturingService.lastRouterParameters?["range"] as? String, "6mo")
         XCTAssertEqual(mockCapturingService.lastRouterParameters?["interval"] as? String, "1d")
     }
 
@@ -134,7 +134,7 @@ final class CandlestickRepositoryTests: XCTestCase {
         _ = try await capturingSut.fetchCandlesticks(ticker: "AAPL", period: .week)
 
         // Then
-        XCTAssertEqual(mockCapturingService.lastRouterParameters?["range"] as? String, "5mo")
+        XCTAssertEqual(mockCapturingService.lastRouterParameters?["range"] as? String, "2y")
         XCTAssertEqual(mockCapturingService.lastRouterParameters?["interval"] as? String, "1wk")
     }
 }

@@ -77,15 +77,17 @@ final class WatchListStoreTests: XCTestCase {
 
     func test_action_loadFavorites_updatesFavorites() async {
         // Arrange
+        let group = WatchListGroup(id: UUID(), name: "전체", createdAt: Date())
         let items = [
             FavoriteItem(ticker: "AAPL", companyName: "Apple Inc.", addedAt: Date(), logoURL: "", groupIds: []),
             FavoriteItem(ticker: "TSLA", companyName: "Tesla, Inc.", addedAt: Date(), logoURL: "", groupIds: [])
         ]
-        mockFetchUseCase.stubbedResult = items
+        mockManageGroupUseCase.stubbedGroups = [group]
+        mockFetchByGroupUseCase.stubbedResult = items
 
-        // Act
-        sut.action(.loadFavorites)
-        await Task.yield()
+        // Act — loadGroups가 내부적으로 loadFavorites를 호출함
+        sut.action(.loadGroups)
+        for _ in 0..<4 { await Task.yield() }
 
         // Assert
         XCTAssertEqual(sut.state.favorites.count, 2)
@@ -136,7 +138,7 @@ final class WatchListStoreTests: XCTestCase {
 
         // Act
         sut.action(.removeFavorite(ticker: "AAPL"))
-        await Task.yield()
+        for _ in 0..<4 { await Task.yield() }
 
         // Assert (에러 시 롤백)
         XCTAssertEqual(sut.state.favorites.count, 1)

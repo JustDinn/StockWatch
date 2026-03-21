@@ -83,8 +83,7 @@ final class MyAlertsStoreTests: XCTestCase {
 
         // Act
         sut.action(.loadConditions)
-        await Task.yield()
-        await Task.yield()
+        for _ in 0..<4 { await Task.yield() }
 
         // Assert
         XCTAssertEqual(sut.state.conditions.count, 1)
@@ -104,7 +103,9 @@ final class MyAlertsStoreTests: XCTestCase {
             isActive: true,
             createdAt: Date()
         )
-        sut.state.conditions = [condition]
+        mockFetchUseCase.stubbedConditions = [condition]
+        sut.action(.loadConditions)
+        for _ in 0..<4 { await Task.yield() }
 
         // Act
         sut.action(.toggleNotification(condition: condition))
@@ -127,13 +128,14 @@ final class MyAlertsStoreTests: XCTestCase {
             isActive: true,
             createdAt: Date()
         )
-        sut.state.conditions = [condition]
+        mockFetchUseCase.stubbedConditions = [condition]
+        sut.action(.loadConditions)
+        for _ in 0..<4 { await Task.yield() }
         mockToggleUseCase.stubbedError = NSError(domain: "test", code: -1)
 
         // Act
         sut.action(.toggleNotification(condition: condition))
-        await Task.yield()
-        await Task.yield()
+        for _ in 0..<4 { await Task.yield() }
 
         // Assert (롤백 후 원래 상태 복원, companyName 포함)
         XCTAssertEqual(sut.state.conditions.first?.companyName, "삼성전자")
