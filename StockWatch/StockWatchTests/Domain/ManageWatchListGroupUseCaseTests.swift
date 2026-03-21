@@ -13,8 +13,6 @@ final class MockWatchListGroupRepository: WatchListGroupRepositoryProtocol {
     var stubbedGroups: [WatchListGroup] = []
     var stubbedCreatedGroup: WatchListGroup?
     var stubbedError: Error?
-    var ensureDefaultGroupCallCount = 0
-    var stubbedDefaultGroup: WatchListGroup?
 
     func fetchAllGroups() async -> [WatchListGroup] {
         stubbedGroups
@@ -22,17 +20,12 @@ final class MockWatchListGroupRepository: WatchListGroupRepositoryProtocol {
 
     func createGroup(name: String) async throws -> WatchListGroup {
         if let error = stubbedError { throw error }
-        return stubbedCreatedGroup ?? WatchListGroup(id: UUID(), name: name, createdAt: Date(), isDefault: false)
+        return stubbedCreatedGroup ?? WatchListGroup(id: UUID(), name: name, createdAt: Date())
     }
 
     func deleteGroup(id: UUID) async throws {
         if let error = stubbedError { throw error }
-    }
-
-    func ensureDefaultGroup() async throws -> WatchListGroup {
-        ensureDefaultGroupCallCount += 1
-        if let error = stubbedError { throw error }
-        return stubbedDefaultGroup ?? WatchListGroup(id: UUID(), name: "전체", createdAt: Date(), isDefault: true)
+        stubbedGroups.removeAll { $0.id == id }
     }
 }
 
@@ -56,47 +49,27 @@ final class ManageWatchListGroupUseCaseTests: XCTestCase {
         super.tearDown()
     }
 
-    // MARK: - ensureDefaultGroup
+    // MARK: - fetchGroups
 
     @MainActor
-    func test_ensureDefaultGroup_createsDefaultIfNotExists() async throws {
+    func test_fetchGroups_whenEmpty_returnsEmptyArray() async {
         // Arrange
-        let expectedGroup = WatchListGroup(id: UUID(), name: "전체", createdAt: Date(), isDefault: true)
-        mockRepository.stubbedDefaultGroup = expectedGroup
+        mockRepository.stubbedGroups = []
 
         // Act
-        let result = try await sut.ensureDefaultGroup()
+        let result = await sut.fetchGroups()
 
         // Assert
-        XCTAssertEqual(mockRepository.ensureDefaultGroupCallCount, 1)
-        XCTAssertTrue(result.isDefault)
-        XCTAssertEqual(result.name, "전체")
+        XCTAssertTrue(result.isEmpty)
     }
-
-    @MainActor
-    func test_ensureDefaultGroup_idempotent_whenAlreadyExists() async throws {
-        // Arrange
-        let existingDefault = WatchListGroup(id: UUID(), name: "전체", createdAt: Date(), isDefault: true)
-        mockRepository.stubbedDefaultGroup = existingDefault
-
-        // Act
-        let first = try await sut.ensureDefaultGroup()
-        let second = try await sut.ensureDefaultGroup()
-
-        // Assert — 두 번 호출해도 동일한 그룹(id 동일) 반환
-        XCTAssertEqual(mockRepository.ensureDefaultGroupCallCount, 2)
-        XCTAssertEqual(first.id, second.id)
-        XCTAssertTrue(second.isDefault)
-    }
-
-    // MARK: - fetchGroups
 
     @MainActor
     func test_fetchGroups_returnsAllGroups() async {
         // Arrange
+        let now = Date()
         let groups = [
-            WatchListGroup(id: UUID(), name: "전체", createdAt: Date(), isDefault: true),
-            WatchListGroup(id: UUID(), name: "기술주", createdAt: Date(), isDefault: false)
+            WatchListGroup(id: UUID(), name: "기술주", createdAt: now),
+            WatchListGroup(id: UUID(), name: "배당주", createdAt: now.addingTimeInterval(1))
         ]
         mockRepository.stubbedGroups = groups
 
@@ -105,7 +78,21 @@ final class ManageWatchListGroupUseCaseTests: XCTestCase {
 
         // Assert
         XCTAssertEqual(result.count, 2)
-        XCTAssertTrue(result[0].isDefault)
-        XCTAssertFalse(result[1].isDefault)
+        XCTAssertEqual(result[0].name, "기술주")
+        XCTAssertEqual(result[1].name, "배당주")
+    }
+
+    // MARK: - deleteGroup
+
+    @MainActor
+    func test_deleteGroup_whenLastGroup_succeeds() async throws {
+        // Arrange
+        let group = WatchListGroup(id: UUID(), name: "유일한 그룹", createdAt: Date())
+        mockRepository.stubbedGroups = [group]
+
+        // Act & Assert — 예외 없이 삭제
+        try await sut.deleteGroup(id: group.id)
+        let remaining = await sut.fetchGroups()
+        XCTAssertTrue(remaining.isEmpty)
     }
 }

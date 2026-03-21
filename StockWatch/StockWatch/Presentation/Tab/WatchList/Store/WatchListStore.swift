@@ -47,11 +47,14 @@ final class WatchListStore: ObservableObject {
         case .selectGroup(let index):
             guard index >= 0 && index < state.groups.count else { return }
             state.selectedGroupIndex = index
+            saveLastSelectedGroupId()
             loadFavorites()
         case .loadGroups:
             loadGroups()
         case .createGroup(let name):
             createGroup(name: name)
+        case .deleteGroup(let id):
+            deleteGroup(id: id)
         }
     }
 
@@ -77,18 +80,18 @@ private extension WatchListStore {
         state.isLoading = true
         Task {
             let index = state.selectedGroupIndex
-            let isDefaultSelected = index < state.dbGroups.count && state.dbGroups[index].isDefault
-            if isDefaultSelected || state.dbGroups.isEmpty {
-                state.favorites = await fetchFavoritesUseCase.execute()
-            } else {
-                guard index < state.dbGroups.count else {
-                    state.favorites = []
-                    state.isLoading = false
-                    return
-                }
-                let groupId = state.dbGroups[index].id
-                state.favorites = await fetchFavoritesByGroupUseCase.execute(groupId: groupId)
+            guard !state.dbGroups.isEmpty else {
+                state.favorites = []
+                state.isLoading = false
+                return
             }
+            guard index < state.dbGroups.count else {
+                state.favorites = []
+                state.isLoading = false
+                return
+            }
+            let groupId = state.dbGroups[index].id
+            state.favorites = await fetchFavoritesByGroupUseCase.execute(groupId: groupId)
             state.mockPriceData = Dictionary(uniqueKeysWithValues:
                 state.favorites.map { ($0.ticker, WatchListState.mockData(for: $0.ticker)) }
             )
@@ -98,12 +101,10 @@ private extension WatchListStore {
 
     func loadGroups() {
         Task {
-            do {
-                _ = try await manageGroupUseCase.ensureDefaultGroup()
-            } catch {
-                // 기본 그룹 생성 실패 시 무시
-            }
-            state.dbGroups = await manageGroupUseCase.fetchGroups()
+            let groups = await manageGroupUseCase.fetchGroups()
+            state.dbGroups = groups
+            restoreLastSelectedGroupIndex(from: groups)
+            loadFavorites()
         }
     }
 
@@ -116,6 +117,49 @@ private extension WatchListStore {
             }
             state.dbGroups = await manageGroupUseCase.fetchGroups()
         }
+    }
+
+    func deleteGroup(id: UUID) {
+        Task {
+            do {
+                try await manageGroupUseCase.deleteGroup(id: id)
+            } catch {
+                return
+            }
+            let groups = await manageGroupUseCase.fetchGroups()
+            state.dbGroups = groups
+            if groups.isEmpty {
+                state.selectedGroupIndex = 0
+                state.favorites = []
+                state.isLoading = false
+            } else {
+                if state.selectedGroupIndex >= groups.count {
+                    state.selectedGroupIndex = 0
+                }
+                saveLastSelectedGroupId()
+                loadFavorites()
+            }
+        }
+    }
+
+    func saveLastSelectedGroupId() {
+        guard state.selectedGroupIndex < state.dbGroups.count else { return }
+        let groupId = state.dbGroups[state.selectedGroupIndex].id.uuidString
+        UserDefaults.standard.set(groupId, forKey: "lastSelectedGroupId")
+    }
+
+    func restoreLastSelectedGroupIndex(from groups: [WatchListGroup]) {
+        guard !groups.isEmpty else {
+            state.selectedGroupIndex = 0
+            return
+        }
+        guard let savedId = UserDefaults.standard.string(forKey: "lastSelectedGroupId"),
+              let uuid = UUID(uuidString: savedId),
+              let index = groups.firstIndex(where: { $0.id == uuid }) else {
+            state.selectedGroupIndex = 0
+            return
+        }
+        state.selectedGroupIndex = index
     }
 
     /// 낙관적 UI 업데이트 후 SwiftData에서 제거한다.

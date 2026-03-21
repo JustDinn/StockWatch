@@ -8,6 +8,7 @@ import XCTest
 
 // MARK: - Tests
 
+@MainActor
 final class CheckSavedStrategyUseCaseTests: XCTestCase {
 
     private var sut: CheckSavedStrategyUseCase!

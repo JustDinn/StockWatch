@@ -3,6 +3,8 @@
 //  StockWatch
 //
 
+import Foundation
+
 /// WatchList 화면 사용자 액션 정의
 enum WatchListIntent {
     /// 관심 종목 목록 로드
@@ -17,4 +19,6 @@ enum WatchListIntent {
     case loadGroups
     /// 새 그룹 생성
     case createGroup(String)
+    /// 그룹 삭제
+    case deleteGroup(id: UUID)
 }

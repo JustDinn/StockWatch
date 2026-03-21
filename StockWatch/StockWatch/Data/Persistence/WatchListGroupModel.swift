@@ -14,10 +14,9 @@ final class WatchListGroupModel {
     var isDefault: Bool?
     @Relationship(inverse: \FavoriteStock.groups) var stocks: [FavoriteStock] = []
 
-    init(name: String, isDefault: Bool = false) {
+    init(name: String) {
         self.id = UUID()
         self.name = name
         self.createdAt = .now
-        self.isDefault = isDefault
     }
 }

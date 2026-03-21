@@ -23,8 +23,4 @@ final class ManageWatchListGroupUseCase: ManageWatchListGroupUseCaseProtocol {
     func deleteGroup(id: UUID) async throws {
         try await repository.deleteGroup(id: id)
     }
-
-    func ensureDefaultGroup() async throws -> WatchListGroup {
-        return try await repository.ensureDefaultGroup()
-    }
 }

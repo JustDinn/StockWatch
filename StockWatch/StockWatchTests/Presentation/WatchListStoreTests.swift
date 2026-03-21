@@ -16,17 +16,13 @@ final class MockFetchFavoritesUseCase: FetchFavoritesUseCaseProtocol {
 @MainActor
 final class MockManageWatchListGroupUseCase: ManageWatchListGroupUseCaseProtocol {
     var stubbedGroups: [WatchListGroup] = []
-    var stubbedDefaultGroup: WatchListGroup?
-    var ensureDefaultGroupCallCount = 0
 
     func fetchGroups() async -> [WatchListGroup] { stubbedGroups }
     func createGroup(name: String) async throws -> WatchListGroup {
-        WatchListGroup(id: UUID(), name: name, createdAt: Date(), isDefault: false)
+        WatchListGroup(id: UUID(), name: name, createdAt: Date())
     }
-    func deleteGroup(id: UUID) async throws { }
-    func ensureDefaultGroup() async throws -> WatchListGroup {
-        ensureDefaultGroupCallCount += 1
-        return stubbedDefaultGroup ?? WatchListGroup(id: UUID(), name: "전체", createdAt: Date(), isDefault: true)
+    func deleteGroup(id: UUID) async throws {
+        stubbedGroups.removeAll { $0.id == id }
     }
 }
 
@@ -48,6 +44,8 @@ final class WatchListStoreTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
+        // 테스트 간 UserDefaults 격리
+        UserDefaults.standard.removeObject(forKey: "lastSelectedGroupId")
         mockFetchUseCase = MockFetchFavoritesUseCase()
         mockToggleUseCase = MockToggleFavoriteUseCase()
         mockManageGroupUseCase = MockManageWatchListGroupUseCase()
@@ -56,6 +54,7 @@ final class WatchListStoreTests: XCTestCase {
     }
 
     override func tearDown() {
+        UserDefaults.standard.removeObject(forKey: "lastSelectedGroupId")
         sut = nil
         mockFetchUseCase = nil
         mockToggleUseCase = nil
@@ -92,6 +91,20 @@ final class WatchListStoreTests: XCTestCase {
         XCTAssertEqual(sut.state.favorites.count, 2)
         XCTAssertEqual(sut.state.favorites[0].ticker, "AAPL")
         XCTAssertEqual(sut.state.favorites[1].ticker, "TSLA")
+    }
+
+    func test_action_loadFavorites_whenNoGroups_setsFavoritesEmpty() async {
+        // Arrange
+        mockManageGroupUseCase.stubbedGroups = []
+        sut.action(.loadGroups)
+        await Task.yield()
+
+        // Act
+        sut.action(.loadFavorites)
+        await Task.yield()
+
+        // Assert
+        XCTAssertTrue(sut.state.favorites.isEmpty)
     }
 
     // MARK: - removeFavorite
@@ -161,35 +174,122 @@ final class WatchListStoreTests: XCTestCase {
         XCTAssertNil(sut.selectedTickerBinding.wrappedValue)
     }
 
-    // MARK: - loadGroups (ensureDefaultGroup 보장)
+    // MARK: - loadGroups
 
-    func test_action_loadGroups_ensuresDefaultGroupExists() async {
+    func test_action_loadGroups_whenNoGroups_setsEmptyDbGroups() async {
         // Arrange
-        let defaultGroup = WatchListGroup(id: UUID(), name: "전체", createdAt: Date(), isDefault: true)
-        mockManageGroupUseCase.stubbedDefaultGroup = defaultGroup
-        mockManageGroupUseCase.stubbedGroups = [defaultGroup]
+        mockManageGroupUseCase.stubbedGroups = []
 
         // Act
         sut.action(.loadGroups)
         await Task.yield()
 
-        // Assert — ensureDefaultGroup이 호출되었는지 확인
-        XCTAssertEqual(mockManageGroupUseCase.ensureDefaultGroupCallCount, 1)
+        // Assert
+        XCTAssertTrue(sut.state.dbGroups.isEmpty)
     }
 
-    func test_groups_computedProperty_usesDefaultGroupName() async {
+    func test_action_loadGroups_setsDbGroups() async {
         // Arrange
-        let defaultGroup = WatchListGroup(id: UUID(), name: "전체", createdAt: Date(), isDefault: true)
-        let userGroup = WatchListGroup(id: UUID(), name: "기술주", createdAt: Date(), isDefault: false)
-        mockManageGroupUseCase.stubbedGroups = [defaultGroup, userGroup]
-        mockManageGroupUseCase.stubbedDefaultGroup = defaultGroup
+        let groups = [
+            WatchListGroup(id: UUID(), name: "기술주", createdAt: Date()),
+            WatchListGroup(id: UUID(), name: "배당주", createdAt: Date())
+        ]
+        mockManageGroupUseCase.stubbedGroups = groups
 
         // Act
         sut.action(.loadGroups)
         await Task.yield()
 
-        // Assert — groups는 dbGroups.map(\.name), "전체"가 첫 번째
-        XCTAssertEqual(sut.state.groups, ["전체", "기술주"])
-        XCTAssertEqual(sut.state.groups.first, "전체")
+        // Assert
+        XCTAssertEqual(sut.state.dbGroups.count, 2)
+    }
+
+    func test_action_loadGroups_restoresLastSelectedGroupById_whenGroupExists() async {
+        // Arrange
+        let targetId = UUID()
+        let groups = [
+            WatchListGroup(id: UUID(), name: "기술주", createdAt: Date()),
+            WatchListGroup(id: targetId, name: "배당주", createdAt: Date())
+        ]
+        mockManageGroupUseCase.stubbedGroups = groups
+        UserDefaults.standard.set(targetId.uuidString, forKey: "lastSelectedGroupId")
+
+        // Act
+        sut.action(.loadGroups)
+        await Task.yield()
+
+        // Assert — 저장된 ID의 그룹 인덱스(1)로 복원
+        XCTAssertEqual(sut.state.selectedGroupIndex, 1)
+    }
+
+    func test_action_loadGroups_fallsBackToFirstGroup_whenSavedIdNotFound() async {
+        // Arrange
+        let groups = [WatchListGroup(id: UUID(), name: "기술주", createdAt: Date())]
+        mockManageGroupUseCase.stubbedGroups = groups
+        UserDefaults.standard.set(UUID().uuidString, forKey: "lastSelectedGroupId")  // 존재하지 않는 ID
+
+        // Act
+        sut.action(.loadGroups)
+        await Task.yield()
+
+        // Assert — 폴백: 첫 번째 그룹(index 0)
+        XCTAssertEqual(sut.state.selectedGroupIndex, 0)
+    }
+
+    // MARK: - selectGroup
+
+    func test_action_selectGroup_savesGroupId() async {
+        // Arrange
+        let groupId = UUID()
+        let groups = [
+            WatchListGroup(id: UUID(), name: "기술주", createdAt: Date()),
+            WatchListGroup(id: groupId, name: "배당주", createdAt: Date())
+        ]
+        mockManageGroupUseCase.stubbedGroups = groups
+        sut.action(.loadGroups)
+        await Task.yield()
+
+        // Act
+        sut.action(.selectGroup(index: 1))
+
+        // Assert — UserDefaults에 선택된 그룹 ID 저장
+        let saved = UserDefaults.standard.string(forKey: "lastSelectedGroupId")
+        XCTAssertEqual(saved, groupId.uuidString)
+    }
+
+    // MARK: - deleteGroup
+
+    func test_action_deleteGroup_lastGroupDeleted_setsEmptyGroups() async {
+        // Arrange
+        let group = WatchListGroup(id: UUID(), name: "유일한 그룹", createdAt: Date())
+        mockManageGroupUseCase.stubbedGroups = [group]
+        sut.action(.loadGroups)
+        await Task.yield()
+
+        // Act
+        sut.action(.deleteGroup(id: group.id))
+        await Task.yield()
+
+        // Assert
+        XCTAssertTrue(sut.state.dbGroups.isEmpty)
+        XCTAssertEqual(sut.state.selectedGroupIndex, 0)
+    }
+
+    func test_action_deleteGroup_currentGroupDeleted_selectsFirstRemaining() async {
+        // Arrange
+        let group1 = WatchListGroup(id: UUID(), name: "그룹1", createdAt: Date())
+        let group2 = WatchListGroup(id: UUID(), name: "그룹2", createdAt: Date())
+        mockManageGroupUseCase.stubbedGroups = [group1, group2]
+        sut.action(.loadGroups)
+        await Task.yield()
+        sut.action(.selectGroup(index: 1))
+
+        // Act — 현재 선택된 그룹2 삭제
+        sut.action(.deleteGroup(id: group2.id))
+        await Task.yield()
+
+        // Assert — 남은 첫 번째 그룹으로 이동
+        XCTAssertEqual(sut.state.dbGroups.count, 1)
+        XCTAssertEqual(sut.state.selectedGroupIndex, 0)
     }
 }

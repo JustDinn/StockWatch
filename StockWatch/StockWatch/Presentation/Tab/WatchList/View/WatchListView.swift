@@ -41,20 +41,24 @@ private struct WatchListContentView: View {
         ZStack {
             NavigationStack {
                 VStack(spacing: 0) {
-                    WatchListGroupTabBar(
-                        groups: store.state.groups,
-                        selectedIndex: store.state.selectedGroupIndex,
-                        onSelect: { store.action(.selectGroup(index: $0)) },
-                        onAddGroup: { isShowingGroupManageModal = true }
-                    )
-                    Group {
-                        if store.state.isLoading {
-                            ProgressView()
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        } else if store.state.favorites.isEmpty {
-                            emptyView
-                        } else {
-                            stockList
+                    if store.state.dbGroups.isEmpty {
+                        WatchListGroupOnboardingView(onCreateGroup: { isShowingGroupManageModal = true })
+                    } else {
+                        WatchListGroupTabBar(
+                            groups: store.state.groups,
+                            selectedIndex: store.state.selectedGroupIndex,
+                            onSelect: { store.action(.selectGroup(index: $0)) },
+                            onAddGroup: { isShowingGroupManageModal = true }
+                        )
+                        Group {
+                            if store.state.isLoading {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            } else if store.state.favorites.isEmpty {
+                                emptyView
+                            } else {
+                                stockList
+                            }
                         }
                     }
                 }
@@ -64,7 +68,6 @@ private struct WatchListContentView: View {
                 }
                 .onAppear {
                     store.action(.loadGroups)
-                    store.action(.loadFavorites)
                 }
             }
 
@@ -80,6 +83,9 @@ private struct WatchListContentView: View {
                         onAddGroup: {
                             isShowingGroupManageModal = false
                             isShowingAddGroupAlert = true
+                        },
+                        onDeleteGroup: { id in
+                            store.action(.deleteGroup(id: id))
                         }
                     )
                     .background(Color(.systemBackground))
@@ -151,6 +157,35 @@ private struct WatchListContentView: View {
     }
 }
 
+// MARK: - Group Onboarding View
+
+private struct WatchListGroupOnboardingView: View {
+    let onCreateGroup: () -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "folder.badge.plus")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
+
+            Text("워치리스트 그룹이 없습니다")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+
+            Text("그룹을 만들어 워치리스트를 구성해보세요")
+                .font(.subheadline)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+
+            Button("그룹 만들기", action: onCreateGroup)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.blue)
+                .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
 // MARK: - Group Tab Bar
 
 private struct WatchListGroupTabBar: View {
@@ -202,6 +237,7 @@ private struct WatchListGroupTabBar: View {
 private struct WatchListGroupManageModalView: View {
     let groups: [WatchListGroup]
     let onAddGroup: () -> Void
+    let onDeleteGroup: (UUID) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -224,11 +260,7 @@ private struct WatchListGroupManageModalView: View {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(groups, id: \.id) { group in
-                        if group.isDefault {
-                            defaultGroupRow(group)
-                        } else {
-                            userGroupRow(group)
-                        }
+                        groupRow(group)
                     }
                 }
             }
@@ -236,24 +268,16 @@ private struct WatchListGroupManageModalView: View {
         .frame(maxHeight: 420)
     }
 
-    private func defaultGroupRow(_ group: WatchListGroup) -> some View {
+    private func groupRow(_ group: WatchListGroup) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: "minus.circle.fill")
-                .foregroundStyle(Color(.systemGray3))
-                .font(.title3)
-            Text(group.name)
-                .font(.subheadline)
-            Spacer()
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
-    }
-
-    private func userGroupRow(_ group: WatchListGroup) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: "minus.circle.fill")
-                .foregroundStyle(.red)
-                .font(.title3)
+            Button {
+                onDeleteGroup(group.id)
+            } label: {
+                Image(systemName: "minus.circle.fill")
+                    .foregroundStyle(.red)
+                    .font(.title3)
+            }
+            .buttonStyle(.plain)
             Text(group.name)
                 .font(.subheadline)
             Image(systemName: "pencil")

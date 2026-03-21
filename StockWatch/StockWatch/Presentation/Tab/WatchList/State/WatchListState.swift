@@ -21,7 +21,7 @@ struct WatchListState {
     var dbGroups: [WatchListGroup] = []
     var selectedGroupIndex: Int = 0
 
-    /// DB 그룹명 목록 (default 그룹이 첫 번째로 정렬됨)
+    /// DB 그룹명 목록
     var groups: [String] { dbGroups.map(\.name) }
 
     /// 티커 → Mock 가격 데이터
