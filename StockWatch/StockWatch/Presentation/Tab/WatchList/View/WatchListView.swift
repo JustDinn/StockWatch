@@ -42,7 +42,7 @@ private struct WatchListContentView: View {
             NavigationStack {
                 VStack(spacing: 0) {
                     if store.state.dbGroups.isEmpty {
-                        WatchListGroupOnboardingView(onCreateGroup: { isShowingGroupManageModal = true })
+                        WatchListGroupOnboardingView(onCreateGroup: { isShowingAddGroupAlert = true })
                     } else {
                         WatchListGroupTabBar(
                             groups: store.state.groups,
