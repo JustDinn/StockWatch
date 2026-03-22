@@ -290,6 +290,8 @@ private struct WatchListGroupManageModalView: View {
     let onDeleteGroup: (UUID) -> Void
     let onRenameGroup: (WatchListGroup) -> Void
 
+    @State private var groupToDelete: WatchListGroup? = nil
+
     var body: some View {
         VStack(spacing: 0) {
             Button(action: onAddGroup) {
@@ -317,12 +319,31 @@ private struct WatchListGroupManageModalView: View {
             }
         }
         .frame(maxHeight: 420)
+        .alert(
+            "\(groupToDelete?.name ?? "") 그룹을 삭제할까요?",
+            isPresented: Binding(
+                get: { groupToDelete != nil },
+                set: { if !$0 { groupToDelete = nil } }
+            )
+        ) {
+            Button("취소", role: .cancel) {
+                groupToDelete = nil
+            }
+            Button("삭제하기", role: .destructive) {
+                if let group = groupToDelete {
+                    onDeleteGroup(group.id)
+                }
+                groupToDelete = nil
+            }
+        } message: {
+            Text("그룹 내 종목도 함께 삭제돼요.")
+        }
     }
 
     private func groupRow(_ group: WatchListGroup) -> some View {
         HStack(spacing: 12) {
             Button {
-                onDeleteGroup(group.id)
+                groupToDelete = group
             } label: {
                 Image(systemName: "minus.circle.fill")
                     .foregroundStyle(.red)
