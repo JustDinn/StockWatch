@@ -42,6 +42,15 @@ final class WatchListGroupRepository: WatchListGroupRepositoryProtocol {
         results.forEach { modelContext.delete($0) }
         try modelContext.save()
     }
+
+    func renameGroup(id: UUID, name: String) async throws {
+        let descriptor = FetchDescriptor<WatchListGroupModel>(
+            predicate: #Predicate { $0.id == id }
+        )
+        guard let model = (try? modelContext.fetch(descriptor))?.first else { return }
+        model.name = name
+        try modelContext.save()
+    }
 }
 
 enum WatchListGroupError: LocalizedError {

@@ -23,4 +23,8 @@ final class ManageWatchListGroupUseCase: ManageWatchListGroupUseCaseProtocol {
     func deleteGroup(id: UUID) async throws {
         try await repository.deleteGroup(id: id)
     }
+
+    func renameGroup(id: UUID, name: String) async throws {
+        try await repository.renameGroup(id: id, name: name)
+    }
 }

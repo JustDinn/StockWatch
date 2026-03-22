@@ -17,6 +17,10 @@ struct WatchListState {
     /// DB 그룹명 목록
     var groups: [String] { dbGroups.map(\.name) }
 
+    /// 수정 중인 그룹
+    var groupToRename: WatchListGroup? = nil
+    var renameGroupName: String = ""
+
     /// 티커 → 실제 가격 데이터
     var priceData: [String: StockQuote] = [:]
     var isPriceLoading: Bool = false

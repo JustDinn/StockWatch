@@ -23,9 +23,11 @@ private struct WatchListContentView: View {
 
     @StateObject private var store: WatchListStore
     @State private var isShowingAddGroupAlert = false
+    @State private var isShowingRenameGroupAlert = false
     @State private var isShowingGroupManageModal = false
     @State private var isShowingAddStock = false
     @State private var newGroupName = ""
+    @State private var renameGroupName = ""
 
     init(modelContext: ModelContext) {
         let repository = FavoriteRepository(modelContext: modelContext)
@@ -95,6 +97,12 @@ private struct WatchListContentView: View {
                         },
                         onDeleteGroup: { id in
                             store.action(.deleteGroup(id: id))
+                        },
+                        onRenameGroup: { group in
+                            isShowingGroupManageModal = false
+                            renameGroupName = group.name
+                            store.action(.setGroupToRename(group))
+                            isShowingRenameGroupAlert = true
                         }
                     )
                     .background(Color(.systemBackground))
@@ -121,6 +129,21 @@ private struct WatchListContentView: View {
             }
         } message: {
             Text("새로운 워치리스트 그룹 이름을 입력하세요.")
+        }
+        .alert("그룹 수정", isPresented: $isShowingRenameGroupAlert) {
+            TextField("그룹 이름", text: $renameGroupName)
+            Button("수정") {
+                let name = renameGroupName.trimmingCharacters(in: .whitespaces)
+                if !name.isEmpty, let group = store.state.groupToRename {
+                    store.action(.renameGroup(id: group.id, name: name))
+                }
+                renameGroupName = ""
+            }
+            Button("취소", role: .cancel) {
+                renameGroupName = ""
+            }
+        } message: {
+            Text("수정할 그룹 이름을 입력하세요.")
         }
     }
 
@@ -265,6 +288,7 @@ private struct WatchListGroupManageModalView: View {
     let groups: [WatchListGroup]
     let onAddGroup: () -> Void
     let onDeleteGroup: (UUID) -> Void
+    let onRenameGroup: (WatchListGroup) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -307,9 +331,12 @@ private struct WatchListGroupManageModalView: View {
             .buttonStyle(.plain)
             Text(group.name)
                 .font(.subheadline)
-            Image(systemName: "pencil")
-                .foregroundStyle(.secondary)
-                .font(.subheadline)
+            Button { onRenameGroup(group) } label: {
+                Image(systemName: "pencil")
+                    .foregroundStyle(.secondary)
+                    .font(.subheadline)
+            }
+            .buttonStyle(.plain)
             Spacer()
             Image(systemName: "ellipsis")
                 .rotationEffect(.degrees(90))

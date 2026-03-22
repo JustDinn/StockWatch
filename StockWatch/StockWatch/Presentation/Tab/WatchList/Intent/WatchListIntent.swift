@@ -23,4 +23,8 @@ enum WatchListIntent {
     case deleteGroup(id: UUID)
     /// 선택된 종목들을 현재 그룹에 추가
     case addStocksToGroup([SearchResult], [String: String])
+    /// 수정 대상 그룹 설정
+    case setGroupToRename(WatchListGroup)
+    /// 그룹 이름 수정
+    case renameGroup(id: UUID, name: String)
 }

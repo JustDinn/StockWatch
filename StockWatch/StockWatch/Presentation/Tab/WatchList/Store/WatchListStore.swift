@@ -63,6 +63,11 @@ final class WatchListStore: ObservableObject {
             deleteGroup(id: id)
         case .addStocksToGroup(let results, let logoURLs):
             addStocksToGroup(results, logoURLs: logoURLs)
+        case .setGroupToRename(let group):
+            state.groupToRename = group
+            state.renameGroupName = group.name
+        case .renameGroup(let id, let name):
+            renameGroup(id: id, name: name)
         }
     }
 
@@ -166,6 +171,19 @@ private extension WatchListStore {
             return
         }
         state.selectedGroupIndex = index
+    }
+
+    func renameGroup(id: UUID, name: String) {
+        Task {
+            do {
+                try await manageGroupUseCase.renameGroup(id: id, name: name)
+            } catch {
+                return
+            }
+            state.dbGroups = await manageGroupUseCase.fetchGroups()
+            state.groupToRename = nil
+            state.renameGroupName = ""
+        }
     }
 
     func addStocksToGroup(_ results: [SearchResult], logoURLs: [String: String]) {
