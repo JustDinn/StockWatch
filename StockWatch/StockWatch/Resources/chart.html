@@ -64,9 +64,7 @@
         candleSeries.setData(data);
         chart.timeScale().fitContent();
         setTimeout(function() { isReady = true; }, 600);
-      } catch (e) {
-        console.error('차트 데이터 오류:', e);
-      }
+      } catch (e) {}
     }
 
     function appendOlderData(jsonString) {
@@ -89,10 +87,10 @@
             from: visibleRange.from + addedCount,
             to: visibleRange.to + addedCount
           });
+        } else {
+          chart.timeScale().fitContent();
         }
-      } catch (e) {
-        console.error('과거 데이터 추가 오류:', e);
-      }
+      } catch (e) {}
     }
 
     var edgeDebounceTimer = null;
@@ -110,10 +108,12 @@
     });
 
     window.addEventListener('resize', function() {
-      chart.applyOptions({
-        width: document.getElementById('chart').clientWidth,
-        height: document.getElementById('chart').clientHeight
-      });
+      var w = document.getElementById('chart').clientWidth;
+      var h = document.getElementById('chart').clientHeight;
+      chart.applyOptions({ width: w, height: h });
+      if (candleSeries.data().length > 0) {
+        chart.timeScale().fitContent();
+      }
     });
   </script>
 </body>
