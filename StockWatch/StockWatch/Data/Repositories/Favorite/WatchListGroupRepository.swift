@@ -16,10 +16,10 @@ final class WatchListGroupRepository: WatchListGroupRepositoryProtocol {
 
     func fetchAllGroups() async -> [WatchListGroup] {
         let descriptor = FetchDescriptor<WatchListGroupModel>(
-            sortBy: [SortDescriptor(\.createdAt, order: .forward)]
+            sortBy: [SortDescriptor(\.sortOrder, order: .forward)]
         )
         let results = (try? modelContext.fetch(descriptor)) ?? []
-        return results.map { WatchListGroup(id: $0.id, name: $0.name, createdAt: $0.createdAt) }
+        return results.map { WatchListGroup(id: $0.id, name: $0.name, createdAt: $0.createdAt, sortOrder: $0.sortOrder) }
     }
 
     func createGroup(name: String) async throws -> WatchListGroup {
@@ -29,9 +29,10 @@ final class WatchListGroupRepository: WatchListGroupRepositoryProtocol {
             throw WatchListGroupError.duplicateName
         }
         let model = WatchListGroupModel(name: name)
+        model.sortOrder = maxSortOrder(in: all) + 1
         modelContext.insert(model)
         try modelContext.save()
-        return WatchListGroup(id: model.id, name: model.name, createdAt: model.createdAt)
+        return WatchListGroup(id: model.id, name: model.name, createdAt: model.createdAt, sortOrder: model.sortOrder)
     }
 
     func deleteGroup(id: UUID) async throws {
@@ -50,6 +51,25 @@ final class WatchListGroupRepository: WatchListGroupRepositoryProtocol {
         guard let model = (try? modelContext.fetch(descriptor))?.first else { return }
         model.name = name
         try modelContext.save()
+    }
+
+    func reorderGroups(orderedIds: [UUID]) async throws {
+        let descriptor = FetchDescriptor<WatchListGroupModel>()
+        let all = (try? modelContext.fetch(descriptor)) ?? []
+        let modelById = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
+
+        for (index, id) in orderedIds.enumerated() {
+            if let model = modelById[id] {
+                model.sortOrder = index
+            }
+        }
+        try modelContext.save()
+    }
+
+    // MARK: - Private
+
+    private func maxSortOrder(in models: [WatchListGroupModel]) -> Int {
+        models.map(\.sortOrder).max() ?? -1
     }
 }
 

@@ -3,6 +3,8 @@
 //  StockWatch
 //
 
+import Foundation
+
 /// WatchList 화면 UI 상태
 struct WatchListState {
     var favorites: [FavoriteItem] = []
@@ -24,6 +26,11 @@ struct WatchListState {
     /// 티커 → 실제 가격 데이터
     var priceData: [String: StockQuote] = [:]
     var isPriceLoading: Bool = false
+
+    /// 그룹 탭 드래그 상태
+    var draggedGroupId: UUID? = nil
+    var dragTargetIndex: Int? = nil
+    var isDraggingGroup: Bool { draggedGroupId != nil }
 
     /// 테스트 편의용 이니셜라이저
     init(favorites: [FavoriteItem] = []) {

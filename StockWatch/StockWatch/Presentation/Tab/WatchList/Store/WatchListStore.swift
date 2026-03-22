@@ -68,6 +68,15 @@ final class WatchListStore: ObservableObject {
             state.renameGroupName = group.name
         case .renameGroup(let id, let name):
             renameGroup(id: id, name: name)
+        case .reorderGroups(let orderedIds):
+            reorderGroups(orderedIds: orderedIds)
+        case .beginGroupDrag(let groupId):
+            state.draggedGroupId = groupId
+        case .updateGroupDragTarget(let index):
+            state.dragTargetIndex = index
+        case .endGroupDrag:
+            state.draggedGroupId = nil
+            state.dragTargetIndex = nil
         }
     }
 
@@ -221,6 +230,22 @@ private extension WatchListStore {
             }
             state.priceData = result
             state.isPriceLoading = false
+        }
+    }
+
+    func reorderGroups(orderedIds: [UUID]) {
+        let previous = state.dbGroups
+        state.dbGroups = orderedIds.compactMap { id in
+            state.dbGroups.first { $0.id == id }
+        }
+        state.draggedGroupId = nil
+        state.dragTargetIndex = nil
+        Task {
+            do {
+                try await manageGroupUseCase.reorderGroups(orderedIds: orderedIds)
+            } catch {
+                state.dbGroups = previous
+            }
         }
     }
 

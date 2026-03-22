@@ -16,6 +16,8 @@ final class MockFetchFavoritesUseCase: FetchFavoritesUseCaseProtocol {
 @MainActor
 final class MockManageWatchListGroupUseCase: ManageWatchListGroupUseCaseProtocol {
     var stubbedGroups: [WatchListGroup] = []
+    var stubbedError: Error?
+    var capturedOrderedIds: [UUID]?
 
     func fetchGroups() async -> [WatchListGroup] { stubbedGroups }
     func createGroup(name: String) async throws -> WatchListGroup {
@@ -23,6 +25,11 @@ final class MockManageWatchListGroupUseCase: ManageWatchListGroupUseCaseProtocol
     }
     func deleteGroup(id: UUID) async throws {
         stubbedGroups.removeAll { $0.id == id }
+    }
+    func renameGroup(id: UUID, name: String) async throws {}
+    func reorderGroups(orderedIds: [UUID]) async throws {
+        if let error = stubbedError { throw error }
+        capturedOrderedIds = orderedIds
     }
 }
 
@@ -333,6 +340,99 @@ final class WatchListStoreTests: XCTestCase {
         // Assert — favorites는 정상 로드, priceData만 비어있음
         XCTAssertEqual(sut.state.favorites.count, 1)
         XCTAssertTrue(sut.state.priceData.isEmpty)
+    }
+
+    // MARK: - reorderGroups
+
+    func test_action_reorderGroups_updatesDbGroupsOptimistically() async {
+        // Arrange
+        let g1 = WatchListGroup(id: UUID(), name: "A", createdAt: Date(), sortOrder: 0)
+        let g2 = WatchListGroup(id: UUID(), name: "B", createdAt: Date(), sortOrder: 1)
+        let g3 = WatchListGroup(id: UUID(), name: "C", createdAt: Date(), sortOrder: 2)
+        mockManageGroupUseCase.stubbedGroups = [g1, g2, g3]
+        sut.action(.loadGroups)
+        await Task.yield()
+
+        // Act: C, A, B 순서로 재배치
+        sut.action(.reorderGroups(orderedIds: [g3.id, g1.id, g2.id]))
+
+        // Assert 즉시 (낙관적 업데이트)
+        XCTAssertEqual(sut.state.dbGroups.map(\.name), ["C", "A", "B"])
+    }
+
+    func test_action_reorderGroups_callsUseCaseWithOrderedIds() async {
+        // Arrange
+        let g1 = WatchListGroup(id: UUID(), name: "A", createdAt: Date(), sortOrder: 0)
+        let g2 = WatchListGroup(id: UUID(), name: "B", createdAt: Date(), sortOrder: 1)
+        mockManageGroupUseCase.stubbedGroups = [g1, g2]
+        sut.action(.loadGroups)
+        await Task.yield()
+
+        // Act
+        sut.action(.reorderGroups(orderedIds: [g2.id, g1.id]))
+        for _ in 0..<4 { await Task.yield() }
+
+        // Assert
+        XCTAssertEqual(mockManageGroupUseCase.capturedOrderedIds, [g2.id, g1.id])
+    }
+
+    func test_action_reorderGroups_whenUseCaseThrows_rollsBackDbGroups() async {
+        // Arrange
+        let g1 = WatchListGroup(id: UUID(), name: "A", createdAt: Date(), sortOrder: 0)
+        let g2 = WatchListGroup(id: UUID(), name: "B", createdAt: Date(), sortOrder: 1)
+        mockManageGroupUseCase.stubbedGroups = [g1, g2]
+        sut.action(.loadGroups)
+        await Task.yield()
+        mockManageGroupUseCase.stubbedError = NSError(domain: "TestError", code: 1)
+
+        // Act
+        sut.action(.reorderGroups(orderedIds: [g2.id, g1.id]))
+        for _ in 0..<4 { await Task.yield() }
+
+        // Assert: 에러 시 원래 순서로 롤백
+        XCTAssertEqual(sut.state.dbGroups.map(\.name), ["A", "B"])
+    }
+
+    func test_action_beginGroupDrag_setsDraggedGroupId() {
+        // Arrange
+        let groupId = UUID()
+
+        // Act
+        sut.action(.beginGroupDrag(groupId: groupId))
+
+        // Assert
+        XCTAssertEqual(sut.state.draggedGroupId, groupId)
+        XCTAssertTrue(sut.state.isDraggingGroup)
+    }
+
+    func test_action_endGroupDrag_clearsDragState() {
+        // Arrange
+        let groupId = UUID()
+        sut.action(.beginGroupDrag(groupId: groupId))
+        sut.action(.updateGroupDragTarget(index: 2))
+
+        // Act
+        sut.action(.endGroupDrag)
+
+        // Assert
+        XCTAssertNil(sut.state.draggedGroupId)
+        XCTAssertNil(sut.state.dragTargetIndex)
+        XCTAssertFalse(sut.state.isDraggingGroup)
+    }
+
+    func test_action_reorderGroups_clearsDragState() async {
+        // Arrange
+        let g1 = WatchListGroup(id: UUID(), name: "A", createdAt: Date(), sortOrder: 0)
+        mockManageGroupUseCase.stubbedGroups = [g1]
+        sut.action(.loadGroups)
+        await Task.yield()
+        sut.action(.beginGroupDrag(groupId: g1.id))
+
+        // Act
+        sut.action(.reorderGroups(orderedIds: [g1.id]))
+
+        // Assert: reorder 시 drag 상태 즉시 초기화
+        XCTAssertNil(sut.state.draggedGroupId)
     }
 
     func test_action_deleteGroup_currentGroupDeleted_selectsFirstRemaining() async {

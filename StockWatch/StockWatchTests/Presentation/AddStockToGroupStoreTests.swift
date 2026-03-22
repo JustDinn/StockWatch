@@ -8,7 +8,7 @@ import XCTest
 
 // MARK: - Mocks
 
-final class MockTickerUseCase: TickerUseCaseProtocol {
+final class MockAddStockTickerUseCase: TickerUseCaseProtocol {
     var stubbedResult: [SearchResult] = []
     var stubbedError: Error?
 
@@ -34,17 +34,17 @@ final class MockFetchStockLogoUseCase: FetchStockLogoUseCaseProtocol {
 final class AddStockToGroupStoreTests: XCTestCase {
 
     private var sut: AddStockToGroupStore!
-    private var mockTickerUseCase: MockTickerUseCase!
+    private var mockTickerUseCase: MockAddStockTickerUseCase!
     private var mockLogoUseCase: MockFetchStockLogoUseCase!
 
     override func setUp() {
         super.setUp()
-        mockTickerUseCase = MockTickerUseCase()
+        mockTickerUseCase = MockAddStockTickerUseCase()
         mockLogoUseCase = MockFetchStockLogoUseCase()
         sut = AddStockToGroupStore(
             tickerUseCase: mockTickerUseCase,
             fetchLogoUseCase: mockLogoUseCase,
-            onConfirm: { _ in }
+            onConfirm: { _, _ in }
         )
     }
 
@@ -124,7 +124,7 @@ final class AddStockToGroupStoreTests: XCTestCase {
         sut = AddStockToGroupStore(
             tickerUseCase: mockTickerUseCase,
             fetchLogoUseCase: mockLogoUseCase,
-            onConfirm: { confirmedStocks = $0 }
+            onConfirm: { stocks, _ in confirmedStocks = stocks }
         )
         sut.action(.toggleSelection(stock))
 

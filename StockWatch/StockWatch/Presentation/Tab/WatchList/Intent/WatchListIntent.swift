@@ -27,4 +27,12 @@ enum WatchListIntent {
     case setGroupToRename(WatchListGroup)
     /// 그룹 이름 수정
     case renameGroup(id: UUID, name: String)
+    /// 그룹 순서 변경
+    case reorderGroups(orderedIds: [UUID])
+    /// 그룹 드래그 시작
+    case beginGroupDrag(groupId: UUID)
+    /// 그룹 드래그 목표 인덱스 업데이트
+    case updateGroupDragTarget(index: Int)
+    /// 그룹 드래그 종료
+    case endGroupDrag
 }

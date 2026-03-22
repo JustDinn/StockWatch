@@ -50,10 +50,15 @@ private struct WatchListContentView: View {
                         WatchListGroupOnboardingView(onCreateGroup: { isShowingAddGroupAlert = true })
                     } else {
                         WatchListGroupTabBar(
-                            groups: store.state.groups,
+                            groups: store.state.dbGroups,
                             selectedIndex: store.state.selectedGroupIndex,
+                            draggedGroupId: store.state.draggedGroupId,
+                            dragTargetIndex: store.state.dragTargetIndex,
                             onSelect: { store.action(.selectGroup(index: $0)) },
-                            onAddGroup: { isShowingGroupManageModal = true }
+                            onAddGroup: { isShowingGroupManageModal = true },
+                            onBeginDrag: { store.action(.beginGroupDrag(groupId: $0)) },
+                            onUpdateDragTarget: { store.action(.updateGroupDragTarget(index: $0)) },
+                            onEndDrag: { store.action(.reorderGroups(orderedIds: $0)) }
                         )
                         Group {
                             if store.state.isLoading {
@@ -238,19 +243,33 @@ private struct WatchListGroupOnboardingView: View {
 
 // MARK: - Group Tab Bar
 
+private struct TabFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [UUID: CGRect] = [:]
+    static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
+        value.merge(nextValue()) { _, new in new }
+    }
+}
+
 private struct WatchListGroupTabBar: View {
-    let groups: [String]
+    let groups: [WatchListGroup]
     let selectedIndex: Int
+    let draggedGroupId: UUID?
+    let dragTargetIndex: Int?
     let onSelect: (Int) -> Void
     let onAddGroup: () -> Void
+    let onBeginDrag: (UUID) -> Void
+    let onUpdateDragTarget: (Int) -> Void
+    let onEndDrag: ([UUID]) -> Void
+
+    @State private var tabFrames: [UUID: CGRect] = [:]
+    @State private var dragOffsets: [UUID: CGFloat] = [:]
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(groups.indices, id: \.self) { idx in
-                    groupTab(groups[idx], isSelected: selectedIndex == idx) {
-                        onSelect(idx)
-                    }
+                ForEach(displayGroups, id: \.id) { group in
+                    let idx = displayGroups.firstIndex(where: { $0.id == group.id }) ?? 0
+                    groupTab(group, idx: idx)
                 }
                 Button("그룹관리", action: onAddGroup)
                     .font(.subheadline)
@@ -260,25 +279,116 @@ private struct WatchListGroupTabBar: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
         }
+        .scrollDisabled(draggedGroupId != nil)
+        .coordinateSpace(name: "tabBarScroll")
+        .onPreferenceChange(TabFramePreferenceKey.self) { frames in
+            tabFrames = frames
+        }
+    }
+
+    // 드래그 중 삽입 위치 미리보기를 반영한 순서
+    private var displayGroups: [WatchListGroup] {
+        guard let dragId = draggedGroupId,
+              let targetIdx = dragTargetIndex,
+              let fromIdx = groups.firstIndex(where: { $0.id == dragId }) else {
+            return groups
+        }
+        var reordered = groups
+        let item = reordered.remove(at: fromIdx)
+        let clampedTarget = min(max(targetIdx, 0), reordered.count)
+        reordered.insert(item, at: clampedTarget)
+        return reordered
     }
 
     @ViewBuilder
-    private func groupTab(_ title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.subheadline.weight(isSelected ? .semibold : .regular))
-                .foregroundStyle(isSelected ? Color.primary : Color.secondary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 6)
-                .background {
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color(.systemGray5))
-                    }
+    private func groupTab(_ group: WatchListGroup, idx: Int) -> some View {
+        let isDragged = group.id == draggedGroupId
+        let isSelected = groups.firstIndex(where: { $0.id == group.id }) == selectedIndex
+
+        Text(group.name)
+            .font(.subheadline.weight(isSelected ? .semibold : .regular))
+            .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background {
+                if isSelected && !isDragged {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(.systemGray5))
                 }
+                if isDragged {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(.systemGray4))
+                }
+            }
+            .scaleEffect(isDragged ? 1.08 : 1.0)
+            .shadow(color: isDragged ? .black.opacity(0.18) : .clear, radius: 6, x: 0, y: 3)
+            .zIndex(isDragged ? 1 : 0)
+            .offset(x: dragOffsets[group.id] ?? 0)
+            .background(
+                GeometryReader { geo in
+                    Color.clear.preference(
+                        key: TabFramePreferenceKey.self,
+                        value: [group.id: geo.frame(in: .named("tabBarScroll"))]
+                    )
+                }
+            )
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDragged)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: dragTargetIndex)
+            .onTapGesture {
+                if let originalIndex = groups.firstIndex(where: { $0.id == group.id }) {
+                    onSelect(originalIndex)
+                }
+            }
+            .onLongPressGesture(minimumDuration: 0.4) {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                onBeginDrag(group.id)
+            }
+            .simultaneousGesture(
+                draggedGroupId == group.id ? dragGesture(for: group) : nil
+            )
+    }
+
+    private func dragGesture(for group: WatchListGroup) -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .named("tabBarScroll"))
+            .onChanged { value in
+                dragOffsets[group.id] = value.translation.width
+                let targetIdx = computeTargetIndex(
+                    draggedId: group.id,
+                    translation: value.translation.width,
+                    location: value.location.x
+                )
+                onUpdateDragTarget(targetIdx)
+            }
+            .onEnded { _ in
+                dragOffsets[group.id] = nil
+                onEndDrag(displayGroups.map(\.id))
+            }
+    }
+
+    private func computeTargetIndex(draggedId: UUID, translation: CGFloat, location: CGFloat) -> Int {
+        guard let draggedFrame = tabFrames[draggedId] else {
+            return groups.firstIndex(where: { $0.id == draggedId }) ?? 0
         }
-        .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.15), value: isSelected)
+        let draggedCenter = draggedFrame.midX + translation
+
+        var bestIdx = 0
+        var bestDist = CGFloat.infinity
+        for (idx, group) in groups.enumerated() {
+            guard group.id != draggedId, let frame = tabFrames[group.id] else { continue }
+            let dist = abs(frame.midX - draggedCenter)
+            if dist < bestDist {
+                bestDist = dist
+                // 드래그 방향에 따라 삽입 위치 결정
+                let fromIdx = groups.firstIndex(where: { $0.id == draggedId }) ?? 0
+                bestIdx = (draggedCenter > frame.midX) ? idx : max(0, idx - 1)
+                if draggedCenter > frame.midX && idx > fromIdx {
+                    bestIdx = idx
+                } else if draggedCenter < frame.midX && idx < fromIdx {
+                    bestIdx = idx
+                }
+            }
+        }
+        return bestIdx
     }
 }
 

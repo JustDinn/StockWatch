@@ -10,4 +10,5 @@ protocol ManageWatchListGroupUseCaseProtocol {
     func createGroup(name: String) async throws -> WatchListGroup
     func deleteGroup(id: UUID) async throws
     func renameGroup(id: UUID, name: String) async throws
+    func reorderGroups(orderedIds: [UUID]) async throws
 }

@@ -41,23 +41,76 @@ final class WatchListGroupRepositoryTests: XCTestCase {
     }
 
     @MainActor
-    func test_fetchAllGroups_orderedByCreatedAt_ascending() async throws {
-        // Arrange
-        let older = WatchListGroupModel(name: "오래된 그룹")
-        older.createdAt = Date(timeIntervalSince1970: 1000)
-        let newer = WatchListGroupModel(name: "새 그룹")
-        newer.createdAt = Date(timeIntervalSince1970: 2000)
-        modelContext.insert(older)
-        modelContext.insert(newer)
+    func test_fetchAllGroups_orderedBySortOrder() async throws {
+        // Arrange: sortOrder를 역순으로 삽입
+        let g0 = WatchListGroupModel(name: "두 번째")
+        g0.sortOrder = 1
+        let g1 = WatchListGroupModel(name: "세 번째")
+        g1.sortOrder = 2
+        let g2 = WatchListGroupModel(name: "첫 번째")
+        g2.sortOrder = 0
+        modelContext.insert(g0)
+        modelContext.insert(g1)
+        modelContext.insert(g2)
         try modelContext.save()
 
         // Act
         let result = await sut.fetchAllGroups()
 
+        // Assert: sortOrder 오름차순
+        XCTAssertEqual(result.count, 3)
+        XCTAssertEqual(result[0].name, "첫 번째")
+        XCTAssertEqual(result[1].name, "두 번째")
+        XCTAssertEqual(result[2].name, "세 번째")
+    }
+
+    // MARK: - reorderGroups
+
+    @MainActor
+    func test_reorderGroups_persistsSortOrderCorrectly() async throws {
+        // Arrange
+        let g1 = try await sut.createGroup(name: "그룹A")
+        let g2 = try await sut.createGroup(name: "그룹B")
+        let g3 = try await sut.createGroup(name: "그룹C")
+
+        // Act: C, A, B 순서로 재배치
+        try await sut.reorderGroups(orderedIds: [g3.id, g1.id, g2.id])
+
         // Assert
-        XCTAssertEqual(result.count, 2)
-        XCTAssertEqual(result[0].name, "오래된 그룹")
-        XCTAssertEqual(result[1].name, "새 그룹")
+        let result = await sut.fetchAllGroups()
+        XCTAssertEqual(result.count, 3)
+        XCTAssertEqual(result[0].name, "그룹C")
+        XCTAssertEqual(result[1].name, "그룹A")
+        XCTAssertEqual(result[2].name, "그룹B")
+    }
+
+    @MainActor
+    func test_reorderGroups_sortOrderValuesCorrect() async throws {
+        // Arrange
+        let g1 = try await sut.createGroup(name: "그룹A")
+        let g2 = try await sut.createGroup(name: "그룹B")
+
+        // Act
+        try await sut.reorderGroups(orderedIds: [g2.id, g1.id])
+
+        // Assert: sortOrder 값 자체 검증
+        let result = await sut.fetchAllGroups()
+        XCTAssertEqual(result[0].sortOrder, 0)
+        XCTAssertEqual(result[1].sortOrder, 1)
+    }
+
+    @MainActor
+    func test_reorderGroups_withUnknownId_silentlyIgnores() async throws {
+        // Arrange
+        let g1 = try await sut.createGroup(name: "그룹A")
+
+        // Act: 존재하지 않는 UUID 포함
+        try await sut.reorderGroups(orderedIds: [g1.id, UUID()])
+
+        // Assert: 에러 없이 알려진 그룹만 처리
+        let result = await sut.fetchAllGroups()
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result[0].sortOrder, 0)
     }
 
     // MARK: - createGroup

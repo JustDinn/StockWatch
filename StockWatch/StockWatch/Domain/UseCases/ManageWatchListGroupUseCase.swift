@@ -27,4 +27,8 @@ final class ManageWatchListGroupUseCase: ManageWatchListGroupUseCaseProtocol {
     func renameGroup(id: UUID, name: String) async throws {
         try await repository.renameGroup(id: id, name: name)
     }
+
+    func reorderGroups(orderedIds: [UUID]) async throws {
+        try await repository.reorderGroups(orderedIds: orderedIds)
+    }
 }

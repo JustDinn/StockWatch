@@ -13,6 +13,7 @@ final class MockWatchListGroupRepository: WatchListGroupRepositoryProtocol {
     var stubbedGroups: [WatchListGroup] = []
     var stubbedCreatedGroup: WatchListGroup?
     var stubbedError: Error?
+    var capturedOrderedIds: [UUID]?
 
     func fetchAllGroups() async -> [WatchListGroup] {
         stubbedGroups
@@ -26,6 +27,15 @@ final class MockWatchListGroupRepository: WatchListGroupRepositoryProtocol {
     func deleteGroup(id: UUID) async throws {
         if let error = stubbedError { throw error }
         stubbedGroups.removeAll { $0.id == id }
+    }
+
+    func renameGroup(id: UUID, name: String) async throws {
+        if let error = stubbedError { throw error }
+    }
+
+    func reorderGroups(orderedIds: [UUID]) async throws {
+        if let error = stubbedError { throw error }
+        capturedOrderedIds = orderedIds
     }
 }
 
@@ -80,6 +90,36 @@ final class ManageWatchListGroupUseCaseTests: XCTestCase {
         XCTAssertEqual(result.count, 2)
         XCTAssertEqual(result[0].name, "기술주")
         XCTAssertEqual(result[1].name, "배당주")
+    }
+
+    // MARK: - reorderGroups
+
+    @MainActor
+    func test_reorderGroups_callsRepositoryWithOrderedIds() async throws {
+        // Arrange
+        let id1 = UUID()
+        let id2 = UUID()
+        let id3 = UUID()
+
+        // Act
+        try await sut.reorderGroups(orderedIds: [id3, id1, id2])
+
+        // Assert
+        XCTAssertEqual(mockRepository.capturedOrderedIds, [id3, id1, id2])
+    }
+
+    @MainActor
+    func test_reorderGroups_whenRepositoryThrows_propagatesError() async {
+        // Arrange
+        mockRepository.stubbedError = NSError(domain: "TestError", code: 1)
+
+        // Act & Assert
+        do {
+            try await sut.reorderGroups(orderedIds: [UUID()])
+            XCTFail("에러가 전파되어야 합니다")
+        } catch {
+            XCTAssertNotNil(error)
+        }
     }
 
     // MARK: - deleteGroup
