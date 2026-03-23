@@ -552,10 +552,10 @@ private struct WatchListGroupManageModalView: View {
             }
             .buttonStyle(.plain)
             Spacer()
-            Image(systemName: "ellipsis")
-                .rotationEffect(.degrees(90))
-                .foregroundStyle(Color(.systemGray3))
-                .font(.subheadline)
+//            Image(systemName: "ellipsis")
+//                .rotationEffect(.degrees(90))
+//                .foregroundStyle(Color(.systemGray3))
+//                .font(.subheadline)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
