@@ -27,9 +27,16 @@ struct WatchListState {
     /// DB 그룹명 목록
     var groups: [String] { dbGroups.map(\.name) }
 
-    /// 수정 중인 그룹
+    /// 그룹 추가 모달
+    var isShowingAddGroupModal: Bool = false
+    var addGroupName: String = ""
+    var addGroupNameError: String? = nil
+
+    /// 그룹 수정 모달
+    var isShowingRenameGroupModal: Bool = false
     var groupToRename: WatchListGroup? = nil
     var renameGroupName: String = ""
+    var renameGroupNameError: String? = nil
 
     /// 티커 → 실제 가격 데이터
     var priceData: [String: StockQuote] = [:]

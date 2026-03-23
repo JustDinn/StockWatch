@@ -17,6 +17,7 @@ final class ManageWatchListGroupUseCase: ManageWatchListGroupUseCaseProtocol {
     }
 
     func createGroup(name: String) async throws -> WatchListGroup {
+        try validateName(name)
         return try await repository.createGroup(name: name)
     }
 
@@ -25,7 +26,15 @@ final class ManageWatchListGroupUseCase: ManageWatchListGroupUseCaseProtocol {
     }
 
     func renameGroup(id: UUID, name: String) async throws {
+        try validateName(name)
         try await repository.renameGroup(id: id, name: name)
+    }
+
+    private func validateName(_ name: String) throws {
+        guard name.count <= 20 else { throw WatchListGroupError.tooLong(max: 20) }
+        guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw WatchListGroupError.onlyWhitespace
+        }
     }
 
     func reorderGroups(orderedIds: [UUID]) async throws {

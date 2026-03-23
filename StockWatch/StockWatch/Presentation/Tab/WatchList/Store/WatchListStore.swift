@@ -64,17 +64,38 @@ final class WatchListStore: ObservableObject {
             loadFavorites()
         case .loadGroups:
             loadGroups()
-        case .createGroup(let name):
-            createGroup(name: name)
+        case .showAddGroupModal:
+            state.addGroupName = ""
+            state.addGroupNameError = nil
+            state.isShowingAddGroupModal = true
+        case .hideAddGroupModal:
+            state.isShowingAddGroupModal = false
+            state.addGroupName = ""
+            state.addGroupNameError = nil
+        case .updateAddGroupName(let name):
+            state.addGroupName = name
+            state.addGroupNameError = nil
+        case .createGroup:
+            createGroup()
         case .deleteGroup(let id):
             deleteGroup(id: id)
         case .addStocksToGroup(let results, let logoURLs):
             addStocksToGroup(results, logoURLs: logoURLs)
-        case .setGroupToRename(let group):
+        case .showRenameGroupModal(let group):
             state.groupToRename = group
             state.renameGroupName = group.name
-        case .renameGroup(let id, let name):
-            renameGroup(id: id, name: name)
+            state.renameGroupNameError = nil
+            state.isShowingRenameGroupModal = true
+        case .hideRenameGroupModal:
+            state.isShowingRenameGroupModal = false
+            state.groupToRename = nil
+            state.renameGroupName = ""
+            state.renameGroupNameError = nil
+        case .updateRenameGroupName(let name):
+            state.renameGroupName = name
+            state.renameGroupNameError = nil
+        case .renameGroup:
+            renameGroup()
         case .reorderGroups(let orderedIds):
             reorderGroups(orderedIds: orderedIds)
         case .beginGroupDrag(let groupId):
@@ -139,12 +160,17 @@ private extension WatchListStore {
         }
     }
 
-    func createGroup(name: String) {
+    func createGroup() {
+        let name = state.addGroupName
         Task {
             do {
                 _ = try await manageGroupUseCase.createGroup(name: name)
+                state.isShowingAddGroupModal = false
+                state.addGroupName = ""
+                state.addGroupNameError = nil
             } catch {
-                // 그룹 생성 실패 시 무시
+                state.addGroupNameError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                return
             }
             state.dbGroups = await manageGroupUseCase.fetchGroups()
         }
@@ -193,16 +219,21 @@ private extension WatchListStore {
         state.selectedGroupIndex = index
     }
 
-    func renameGroup(id: UUID, name: String) {
+    func renameGroup() {
+        guard let group = state.groupToRename else { return }
+        let name = state.renameGroupName
         Task {
             do {
-                try await manageGroupUseCase.renameGroup(id: id, name: name)
+                try await manageGroupUseCase.renameGroup(id: group.id, name: name)
+                state.isShowingRenameGroupModal = false
+                state.groupToRename = nil
+                state.renameGroupName = ""
+                state.renameGroupNameError = nil
             } catch {
+                state.renameGroupNameError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
                 return
             }
             state.dbGroups = await manageGroupUseCase.fetchGroups()
-            state.groupToRename = nil
-            state.renameGroupName = ""
         }
     }
 

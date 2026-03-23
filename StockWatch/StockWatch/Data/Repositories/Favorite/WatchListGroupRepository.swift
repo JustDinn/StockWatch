@@ -75,11 +75,17 @@ final class WatchListGroupRepository: WatchListGroupRepositoryProtocol {
 
 enum WatchListGroupError: LocalizedError {
     case duplicateName
+    case tooLong(max: Int)
+    case onlyWhitespace
 
     var errorDescription: String? {
         switch self {
         case .duplicateName:
             return "같은 이름의 그룹이 이미 존재합니다."
+        case .tooLong(let max):
+            return "그룹 이름은 \(max)자 이하로 입력해주세요."
+        case .onlyWhitespace:
+            return "공백만으로는 그룹을 만들 수 없어요."
         }
     }
 }

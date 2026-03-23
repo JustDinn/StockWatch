@@ -22,12 +22,8 @@ struct WatchListView: View {
 private struct WatchListContentView: View {
 
     @StateObject private var store: WatchListStore
-    @State private var isShowingAddGroupAlert = false
-    @State private var isShowingRenameGroupAlert = false
     @State private var isShowingGroupManageModal = false
     @State private var isShowingAddStock = false
-    @State private var newGroupName = ""
-    @State private var renameGroupName = ""
     @State private var isEditingGroups = false
 
     init(modelContext: ModelContext) {
@@ -50,7 +46,7 @@ private struct WatchListContentView: View {
             NavigationStack {
                 VStack(spacing: 0) {
                     if store.state.dbGroups.isEmpty {
-                        WatchListGroupOnboardingView(onCreateGroup: { isShowingAddGroupAlert = true })
+                        WatchListGroupOnboardingView(onCreateGroup: { store.action(.showAddGroupModal) })
                     } else {
                         WatchListGroupTabBar(
                             groups: store.state.dbGroups,
@@ -109,17 +105,67 @@ private struct WatchListContentView: View {
                         groups: store.state.dbGroups,
                         onAddGroup: {
                             isShowingGroupManageModal = false
-                            isShowingAddGroupAlert = true
+                            store.action(.showAddGroupModal)
                         },
                         onDeleteGroup: { id in
                             store.action(.deleteGroup(id: id))
                         },
                         onRenameGroup: { group in
                             isShowingGroupManageModal = false
-                            renameGroupName = group.name
-                            store.action(.setGroupToRename(group))
-                            isShowingRenameGroupAlert = true
+                            store.action(.showRenameGroupModal(group))
                         }
+                    )
+                    .background(Color(.systemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 28))
+                    .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 8)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 12)
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .bottom)))
+            }
+
+            if store.state.isShowingAddGroupModal {
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+                    .onTapGesture { store.action(.hideAddGroupModal) }
+
+                VStack {
+                    Spacer()
+                    GroupNameInputModalView(
+                        title: "새 그룹 추가",
+                        placeholder: "그룹 이름",
+                        confirmLabel: "추가",
+                        name: store.state.addGroupName,
+                        errorMessage: store.state.addGroupNameError,
+                        onNameChange: { store.action(.updateAddGroupName($0)) },
+                        onConfirm: { store.action(.createGroup) },
+                        onCancel: { store.action(.hideAddGroupModal) }
+                    )
+                    .background(Color(.systemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 28))
+                    .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 8)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 12)
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .bottom)))
+            }
+
+            if store.state.isShowingRenameGroupModal {
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+                    .onTapGesture { store.action(.hideRenameGroupModal) }
+
+                VStack {
+                    Spacer()
+                    GroupNameInputModalView(
+                        title: "그룹 수정",
+                        placeholder: "그룹 이름",
+                        confirmLabel: "수정",
+                        name: store.state.renameGroupName,
+                        errorMessage: store.state.renameGroupNameError,
+                        onNameChange: { store.action(.updateRenameGroupName($0)) },
+                        onConfirm: { store.action(.renameGroup) },
+                        onCancel: { store.action(.hideRenameGroupModal) }
                     )
                     .background(Color(.systemBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 28))
@@ -146,37 +192,9 @@ private struct WatchListContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.35), value: isShowingGroupManageModal)
+        .animation(.easeInOut(duration: 0.35), value: store.state.isShowingAddGroupModal)
+        .animation(.easeInOut(duration: 0.35), value: store.state.isShowingRenameGroupModal)
         .animation(.easeInOut(duration: 0.3), value: store.state.isShowingToast)
-        .alert("새 그룹 추가", isPresented: $isShowingAddGroupAlert) {
-            TextField("그룹 이름", text: $newGroupName)
-            Button("추가") {
-                let name = newGroupName.trimmingCharacters(in: .whitespaces)
-                if !name.isEmpty {
-                    store.action(.createGroup(name))
-                }
-                newGroupName = ""
-            }
-            Button("취소", role: .cancel) {
-                newGroupName = ""
-            }
-        } message: {
-            Text("새로운 워치리스트 그룹 이름을 입력하세요.")
-        }
-        .alert("그룹 수정", isPresented: $isShowingRenameGroupAlert) {
-            TextField("그룹 이름", text: $renameGroupName)
-            Button("수정") {
-                let name = renameGroupName.trimmingCharacters(in: .whitespaces)
-                if !name.isEmpty, let group = store.state.groupToRename {
-                    store.action(.renameGroup(id: group.id, name: name))
-                }
-                renameGroupName = ""
-            }
-            Button("취소", role: .cancel) {
-                renameGroupName = ""
-            }
-        } message: {
-            Text("수정할 그룹 이름을 입력하세요.")
-        }
     }
 
     private var emptyView: some View {
@@ -491,6 +509,91 @@ private struct WatchListGroupTabBar: View {
             }
         }
         return fromIdx
+    }
+}
+
+// MARK: - Group Name Input Modal
+
+private struct GroupNameInputModalView: View {
+    let title: String
+    let placeholder: String
+    let confirmLabel: String
+    let name: String
+    let errorMessage: String?
+    let onNameChange: (String) -> Void
+    let onConfirm: () -> Void
+    let onCancel: () -> Void
+
+    private let maxLength = 20
+
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Text(title)
+                .font(.headline)
+                .padding(.top, 24)
+                .padding(.bottom, 20)
+
+            VStack(alignment: .leading, spacing: 6) {
+                TextField(placeholder, text: Binding(
+                    get: { name },
+                    set: { newValue in
+                        if newValue.count <= maxLength {
+                            onNameChange(newValue)
+                        } else {
+                            onNameChange(String(newValue.prefix(maxLength)))
+                        }
+                    }
+                ))
+                .focused($isFocused)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Color(.systemGray6))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                HStack(alignment: .top) {
+                    if name.count >= maxLength {
+                        Text("그룹 이름은 20자 이내로 입력해주세요.")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    } else if let error = errorMessage {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                    Spacer()
+                    Text("\(name.count)/\(maxLength)")
+                        .font(.caption)
+                        .foregroundStyle(name.count >= maxLength ? .red : .secondary)
+                }
+            }
+            .padding(.horizontal, 20)
+
+            HStack(spacing: 12) {
+                Button(action: onCancel) {
+                    Text("취소")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color(.systemGray5))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .foregroundStyle(.primary)
+
+                Button(action: onConfirm) {
+                    Text(confirmLabel)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.blue)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .foregroundStyle(.white)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 24)
+        }
+        .onAppear { isFocused = true }
     }
 }
 
