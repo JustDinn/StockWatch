@@ -28,6 +28,7 @@ private struct WatchListContentView: View {
     @State private var isShowingAddStock = false
     @State private var newGroupName = ""
     @State private var renameGroupName = ""
+    @State private var isEditingGroups = false
 
     init(modelContext: ModelContext) {
         let repository = FavoriteRepository(modelContext: modelContext)
@@ -54,6 +55,7 @@ private struct WatchListContentView: View {
                             selectedIndex: store.state.selectedGroupIndex,
                             draggedGroupId: store.state.draggedGroupId,
                             dragTargetIndex: store.state.dragTargetIndex,
+                            isEditingGroups: $isEditingGroups,
                             onSelect: { store.action(.selectGroup(index: $0)) },
                             onAddGroup: { isShowingGroupManageModal = true },
                             onBeginDrag: { store.action(.beginGroupDrag(groupId: $0)) },
@@ -68,6 +70,12 @@ private struct WatchListContentView: View {
                                 emptyView
                             } else {
                                 stockList
+                            }
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if isEditingGroups {
+                                isEditingGroups = false
                             }
                         }
                     }
@@ -255,6 +263,7 @@ private struct WatchListGroupTabBar: View {
     let selectedIndex: Int
     let draggedGroupId: UUID?
     let dragTargetIndex: Int?
+    @Binding var isEditingGroups: Bool
     let onSelect: (Int) -> Void
     let onAddGroup: () -> Void
     let onBeginDrag: (UUID) -> Void
@@ -287,11 +296,35 @@ private struct WatchListGroupTabBar: View {
             tabFrames = frames
         }
         .onChange(of: longPressedGroupId) {
-            isWiggling = longPressedGroupId != nil
+            print("<< onChange longPressedGroupId: \(String(describing: longPressedGroupId)), isWiggling=\(isWiggling), isEditingGroups=\(isEditingGroups)")
+            if longPressedGroupId != nil {
+                isWiggling = true
+                print("<< → isWiggling=true")
+            } else {
+                withAnimation(.easeOut(duration: 0.15)) {
+                    isWiggling = false
+                }
+                isEditingGroups = false
+                print("<< → isWiggling=false (withAnimation easeOut), isEditingGroups=false")
+            }
         }
         .onChange(of: draggedGroupId) {
+            print("<< onChange draggedGroupId: \(String(describing: draggedGroupId))")
             if draggedGroupId == nil {
+                dragOffsets.removeAll()
+                withAnimation(.easeOut(duration: 0.15)) {
+                    isWiggling = false
+                }
+                isEditingGroups = false
                 longPressedGroupId = nil
+                print("<< → dragEnd cleanup: isWiggling=false, isEditingGroups=false, longPressedGroupId=nil, dragOffsets cleared")
+            }
+        }
+        .onChange(of: isEditingGroups) {
+            print("<< onChange isEditingGroups: \(isEditingGroups)")
+            if !isEditingGroups {
+                longPressedGroupId = nil
+                print("<< → longPressedGroupId=nil (isEditingGroups became false)")
             }
         }
     }
@@ -314,6 +347,8 @@ private struct WatchListGroupTabBar: View {
     private func groupTab(_ group: WatchListGroup, idx: Int) -> some View {
         let isDragged = group.id == draggedGroupId || group.id == longPressedGroupId
         let isSelected = groups.firstIndex(where: { $0.id == group.id }) == selectedIndex
+        let wiggleCondition = !isDragged && longPressedGroupId != nil && isWiggling
+        let _ = print("<< groupTab[\(group.name)] isDragged=\(isDragged), longPressedGroupId=\(String(describing: longPressedGroupId)), isWiggling=\(isWiggling), wiggleCondition=\(wiggleCondition)")
 
         Text(group.name)
             .font(.subheadline.weight(isSelected ? .semibold : .regular))
@@ -333,7 +368,7 @@ private struct WatchListGroupTabBar: View {
             .scaleEffect(isDragged ? 1.15 : 1.0)
             .shadow(color: isDragged ? .black.opacity(0.25) : .clear, radius: 10, x: 0, y: 5)
             .zIndex(isDragged ? 1 : 0)
-            .rotationEffect(.degrees(!isDragged && longPressedGroupId != nil && isWiggling ? 2 : 0))
+            .rotationEffect(.degrees(wiggleCondition ? 2 : 0))
             .offset(x: dragOffsets[group.id] ?? 0)
             .background(
                 GeometryReader { geo in
@@ -346,17 +381,19 @@ private struct WatchListGroupTabBar: View {
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDragged)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: dragTargetIndex)
             .animation(
-                !isDragged && longPressedGroupId != nil && isWiggling
+                wiggleCondition
                     ? .easeInOut(duration: 0.12).repeatForever(autoreverses: true)
-                    : .default,
+                    : .easeOut(duration: 0.15),
                 value: isWiggling
             )
             .onTapGesture {
+                guard longPressedGroupId == nil && draggedGroupId == nil else { return }
                 if let originalIndex = groups.firstIndex(where: { $0.id == group.id }) {
                     onSelect(originalIndex)
                 }
             }
             .gesture(combinedGesture(for: group))
+            .simultaneousGesture(endDragGesture(for: group))
     }
 
     private func combinedGesture(for group: WatchListGroup) -> some Gesture {
@@ -368,11 +405,13 @@ private struct WatchListGroupTabBar: View {
             .onChanged { value in
                 switch value {
                 case .first(true):
+                    print("<< longPress recognized for: \(group.name)")
                     if longPressedGroupId != group.id {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         longPressedGroupId = group.id
                     }
                 case .second(true, let dragValue?):
+                    print("<< drag onChange for: \(group.name)")
                     if draggedGroupId != group.id {
                         onBeginDrag(group.id)
                     }
@@ -388,15 +427,36 @@ private struct WatchListGroupTabBar: View {
                 }
             }
             .onEnded { value in
-                longPressedGroupId = nil
-                if case .second(true, _) = value {
-                    dragOffsets[group.id] = nil
-                    onEndDrag(displayGroups.map(\.id))
-                } else {
-                    dragOffsets[group.id] = nil
-                    onEndDrag(groups.map(\.id))
+                // endDragGesture가 드래그 종료를 처리하므로 여기서는 백업으로만 동작
+                print("<< sequenced onEnded[\(group.name)] (backup)")
+                if case .second(true, _) = value, draggedGroupId != nil {
+                    let orderedIds = displayGroups.map(\.id)
+                    stopWiggle()
+                    onEndDrag(orderedIds)
                 }
             }
+    }
+
+    /// sequenced gesture의 onEnded가 신뢰할 수 없으므로,
+    /// 독립적인 DragGesture로 손가락 올라감을 감지해 정리한다.
+    private func endDragGesture(for group: WatchListGroup) -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .named("tabBarScroll"))
+            .onEnded { _ in
+                guard draggedGroupId != nil else { return }
+                print("<< endDragGesture onEnded[\(group.name)]")
+                let orderedIds = displayGroups.map(\.id)
+                stopWiggle()
+                onEndDrag(orderedIds)
+            }
+    }
+
+    private func stopWiggle() {
+        dragOffsets.removeAll()
+        withAnimation(.easeOut(duration: 0.15)) {
+            isWiggling = false
+        }
+        isEditingGroups = false
+        longPressedGroupId = nil
     }
 
     private func computeTargetIndex(draggedId: UUID, translation: CGFloat, location: CGFloat) -> Int {
