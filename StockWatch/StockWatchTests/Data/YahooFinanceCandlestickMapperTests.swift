@@ -99,10 +99,10 @@ final class YahooFinanceCandlestickMapperTests: XCTestCase {
         XCTAssertEqual(candle.volume, 1_000_000.0)
     }
 
-    // timestamp → Date 변환 검증
-    func test_map_timestampConvertedToDate() {
-        // Given
-        let unixTimestamp: TimeInterval = 1_700_000_000
+    // timestamp → NYSE 자정으로 정규화 검증
+    func test_map_timestampNormalizedToNYSEMidnight() {
+        // Given: 2023-11-14 14:30:00 UTC (NYSE 개장 시각)
+        let unixTimestamp: TimeInterval = 1_700_000_000 // 2023-11-14 22:13:20 UTC
         let dto = makeDTO(
             timestamps: [unixTimestamp],
             opens: [100.0], highs: [110.0], lows: [95.0], closes: [105.0], volumes: [1_000_000.0]
@@ -111,9 +111,37 @@ final class YahooFinanceCandlestickMapperTests: XCTestCase {
         // When
         let result = sut.map(dto: dto, ticker: "AAPL")
 
-        // Then
-        let expectedDate = Date(timeIntervalSince1970: unixTimestamp)
+        // Then: ET 기준 자정으로 정규화됨
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/New_York")!
+        let components = calendar.dateComponents([.year, .month, .day], from: Date(timeIntervalSince1970: unixTimestamp))
+        let expectedDate = calendar.date(from: components)!
         XCTAssertEqual(result.candles[0].timestamp, expectedDate)
+    }
+
+    // 같은 거래일의 서로 다른 timestamp → 중복 제거 후 1개 캔들만 반환, 마지막 값 사용
+    func test_map_sameTradingDayTimestamps_deduplicatedToLastValue() {
+        // Given: 2024-03-20 14:30:00 UTC (시장 개장) vs 2024-03-20 20:00:08 UTC (live 캔들)
+        // 2024-03-20 14:30:00 UTC = 1710941400
+        // 2024-03-20 20:00:08 UTC = 1710961208
+        let marketOpenTimestamp: TimeInterval = 1_710_941_400
+        let liveTimestamp: TimeInterval = 1_710_961_208
+        let dto = makeDTO(
+            timestamps: [marketOpenTimestamp, liveTimestamp],
+            opens: [170.0, 171.0],
+            highs: [175.0, 176.0],
+            lows: [169.0, 170.0],
+            closes: [174.0, 175.0],
+            volumes: [1_000_000.0, 1_100_000.0]
+        )
+
+        // When
+        let result = sut.map(dto: dto, ticker: "AAPL")
+
+        // Then: 중복 제거로 1개 캔들만 반환, 마지막 데이터(live 캔들) 값 사용
+        XCTAssertEqual(result.candles.count, 1)
+        XCTAssertEqual(result.candles[0].close, 175.0)
+        XCTAssertEqual(result.candles[0].volume, 1_100_000.0)
     }
 
     // result가 nil → 빈 캔들 반환

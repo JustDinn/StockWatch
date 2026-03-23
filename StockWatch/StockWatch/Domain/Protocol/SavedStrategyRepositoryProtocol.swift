@@ -5,6 +5,7 @@
 
 /// 저장된 전략 저장소 인터페이스
 /// 구현체는 Data 레이어에 위치하며, Domain은 이 Protocol에만 의존한다.
+@MainActor
 protocol SavedStrategyRepositoryProtocol {
     /// 특정 전략이 저장되어 있는지 확인한다.
     func isSaved(strategyId: String) async -> Bool

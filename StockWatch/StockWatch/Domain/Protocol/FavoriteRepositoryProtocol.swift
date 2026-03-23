@@ -3,15 +3,26 @@
 //  StockWatch
 //
 
+import Foundation
+
 /// 관심 종목 저장소 인터페이스
 /// 구현체는 Data 레이어에 위치하며, Domain은 이 Protocol에만 의존한다.
+@MainActor
 protocol FavoriteRepositoryProtocol {
     /// 특정 ticker가 관심 종목으로 저장되어 있는지 확인한다.
     func isFavorite(ticker: String) async -> Bool
     /// 관심 종목을 추가한다. companyName은 영문 회사명으로 오프라인 표시에 활용된다.
     func addFavorite(ticker: String, companyName: String) async throws
+    /// 관심 종목을 추가한다 (로고 URL, 그룹 포함).
+    func addFavorite(ticker: String, companyName: String, logoURL: String, groupIds: [UUID]) async throws
     /// 관심 종목을 삭제한다.
     func removeFavorite(ticker: String) async throws
     /// 저장된 모든 관심 종목을 addedAt 내림차순으로 반환한다.
     func fetchAllFavorites() async -> [FavoriteItem]
+    /// ticker 종목의 그룹 소속과 logoURL을 업데이트한다.
+    func updateFavoriteGroups(ticker: String, logoURL: String, groupIds: [UUID]) async throws
+    /// 특정 그룹에 속한 관심 종목 목록을 반환한다.
+    func fetchFavorites(in groupId: UUID) async -> [FavoriteItem]
+    /// ticker 종목이 속한 그룹 ID 목록을 반환한다.
+    func fetchGroupIds(for ticker: String) async -> [UUID]
 }

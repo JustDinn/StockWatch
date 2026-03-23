@@ -6,6 +6,7 @@
 import Foundation
 import SwiftData
 
+@MainActor
 final class NotificationHistoryRepository: NotificationHistoryRepositoryProtocol {
 
     private let modelContext: ModelContext

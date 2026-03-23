@@ -13,6 +13,44 @@ final class MockFetchFavoritesUseCase: FetchFavoritesUseCaseProtocol {
     func execute() async -> [FavoriteItem] { stubbedResult }
 }
 
+@MainActor
+final class MockManageWatchListGroupUseCase: ManageWatchListGroupUseCaseProtocol {
+    var stubbedGroups: [WatchListGroup] = []
+    var stubbedError: Error?
+    var capturedOrderedIds: [UUID]?
+
+    func fetchGroups() async -> [WatchListGroup] { stubbedGroups }
+    func createGroup(name: String) async throws -> WatchListGroup {
+        WatchListGroup(id: UUID(), name: name, createdAt: Date())
+    }
+    func deleteGroup(id: UUID) async throws {
+        stubbedGroups.removeAll { $0.id == id }
+    }
+    func renameGroup(id: UUID, name: String) async throws {}
+    func reorderGroups(orderedIds: [UUID]) async throws {
+        if let error = stubbedError { throw error }
+        capturedOrderedIds = orderedIds
+    }
+}
+
+final class MockFetchFavoritesByGroupUseCase: FetchFavoritesByGroupUseCaseProtocol {
+    var stubbedResult: [FavoriteItem] = []
+    func execute(groupId: UUID) async -> [FavoriteItem] { stubbedResult }
+}
+
+final class MockAddFavoriteToGroupUseCase: AddFavoriteToGroupUseCaseProtocol {
+    func execute(ticker: String, companyName: String, logoURL: String, groupId: UUID) async throws {}
+}
+
+final class MockFetchStockQuoteUseCase: FetchStockQuoteUseCaseProtocol {
+    var stubbedResult: StockQuote = StockQuote(ticker: "", currentPrice: 0, priceChangePercent: 0, currency: "USD")
+    var stubbedError: Error?
+    func execute(ticker: String) async throws -> StockQuote {
+        if let error = stubbedError { throw error }
+        return StockQuote(ticker: ticker, currentPrice: stubbedResult.currentPrice, priceChangePercent: stubbedResult.priceChangePercent, currency: stubbedResult.currency)
+    }
+}
+
 // MARK: - Tests
 
 @MainActor
@@ -21,37 +59,60 @@ final class WatchListStoreTests: XCTestCase {
     private var sut: WatchListStore!
     private var mockFetchUseCase: MockFetchFavoritesUseCase!
     private var mockToggleUseCase: MockToggleFavoriteUseCase!
+    private var mockManageGroupUseCase: MockManageWatchListGroupUseCase!
+    private var mockFetchByGroupUseCase: MockFetchFavoritesByGroupUseCase!
+    private var mockFetchStockQuoteUseCase: MockFetchStockQuoteUseCase!
 
     override func setUp() {
         super.setUp()
+        // 테스트 간 UserDefaults 격리
+        UserDefaults.standard.removeObject(forKey: "lastSelectedGroupId")
         mockFetchUseCase = MockFetchFavoritesUseCase()
         mockToggleUseCase = MockToggleFavoriteUseCase()
-        sut = WatchListStore(
-            fetchFavoritesUseCase: mockFetchUseCase,
-            toggleFavoriteUseCase: mockToggleUseCase
-        )
+        mockManageGroupUseCase = MockManageWatchListGroupUseCase()
+        mockFetchByGroupUseCase = MockFetchFavoritesByGroupUseCase()
+        mockFetchStockQuoteUseCase = MockFetchStockQuoteUseCase()
+        sut = makeStore()
     }
 
     override func tearDown() {
+        UserDefaults.standard.removeObject(forKey: "lastSelectedGroupId")
         sut = nil
         mockFetchUseCase = nil
         mockToggleUseCase = nil
+        mockManageGroupUseCase = nil
+        mockFetchByGroupUseCase = nil
+        mockFetchStockQuoteUseCase = nil
         super.tearDown()
+    }
+
+    private func makeStore(state: WatchListState = WatchListState()) -> WatchListStore {
+        WatchListStore(
+            fetchFavoritesUseCase: mockFetchUseCase,
+            toggleFavoriteUseCase: mockToggleUseCase,
+            manageGroupUseCase: mockManageGroupUseCase,
+            fetchFavoritesByGroupUseCase: mockFetchByGroupUseCase,
+            addFavoriteToGroupUseCase: MockAddFavoriteToGroupUseCase(),
+            fetchStockQuoteUseCase: mockFetchStockQuoteUseCase,
+            state: state
+        )
     }
 
     // MARK: - loadFavorites
 
     func test_action_loadFavorites_updatesFavorites() async {
         // Arrange
+        let group = WatchListGroup(id: UUID(), name: "전체", createdAt: Date())
         let items = [
-            FavoriteItem(ticker: "AAPL", companyName: "Apple Inc.", addedAt: Date()),
-            FavoriteItem(ticker: "TSLA", companyName: "Tesla, Inc.", addedAt: Date())
+            FavoriteItem(ticker: "AAPL", companyName: "Apple Inc.", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla, Inc.", addedAt: Date(), logoURL: "", groupIds: [])
         ]
-        mockFetchUseCase.stubbedResult = items
+        mockManageGroupUseCase.stubbedGroups = [group]
+        mockFetchByGroupUseCase.stubbedResult = items
 
-        // Act
-        sut.action(.loadFavorites)
-        await Task.yield()
+        // Act — loadGroups가 내부적으로 loadFavorites를 호출함
+        sut.action(.loadGroups)
+        for _ in 0..<4 { await Task.yield() }
 
         // Assert
         XCTAssertEqual(sut.state.favorites.count, 2)
@@ -59,19 +120,29 @@ final class WatchListStoreTests: XCTestCase {
         XCTAssertEqual(sut.state.favorites[1].ticker, "TSLA")
     }
 
+    func test_action_loadFavorites_whenNoGroups_setsFavoritesEmpty() async {
+        // Arrange
+        mockManageGroupUseCase.stubbedGroups = []
+        sut.action(.loadGroups)
+        await Task.yield()
+
+        // Act
+        sut.action(.loadFavorites)
+        await Task.yield()
+
+        // Assert
+        XCTAssertTrue(sut.state.favorites.isEmpty)
+    }
+
     // MARK: - removeFavorite
 
     func test_action_removeFavorite_removesOptimistically() async {
         // Arrange
         let items = [
-            FavoriteItem(ticker: "AAPL", companyName: "Apple Inc.", addedAt: Date()),
-            FavoriteItem(ticker: "TSLA", companyName: "Tesla, Inc.", addedAt: Date())
+            FavoriteItem(ticker: "AAPL", companyName: "Apple Inc.", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla, Inc.", addedAt: Date(), logoURL: "", groupIds: [])
         ]
-        sut = WatchListStore(
-            fetchFavoritesUseCase: mockFetchUseCase,
-            toggleFavoriteUseCase: mockToggleUseCase,
-            state: WatchListState(favorites: items)
-        )
+        sut = makeStore(state: WatchListState(favorites: items))
         mockToggleUseCase.stubbedResult = false
 
         // Act
@@ -85,18 +156,14 @@ final class WatchListStoreTests: XCTestCase {
     func test_action_removeFavorite_rollsBackOnError() async {
         // Arrange
         let items = [
-            FavoriteItem(ticker: "AAPL", companyName: "Apple Inc.", addedAt: Date())
+            FavoriteItem(ticker: "AAPL", companyName: "Apple Inc.", addedAt: Date(), logoURL: "", groupIds: [])
         ]
-        sut = WatchListStore(
-            fetchFavoritesUseCase: mockFetchUseCase,
-            toggleFavoriteUseCase: mockToggleUseCase,
-            state: WatchListState(favorites: items)
-        )
+        sut = makeStore(state: WatchListState(favorites: items))
         mockToggleUseCase.stubbedError = NSError(domain: "TestError", code: 1)
 
         // Act
         sut.action(.removeFavorite(ticker: "AAPL"))
-        await Task.yield()
+        for _ in 0..<4 { await Task.yield() }
 
         // Assert (에러 시 롤백)
         XCTAssertEqual(sut.state.favorites.count, 1)
@@ -105,18 +172,11 @@ final class WatchListStoreTests: XCTestCase {
     // MARK: - selectTicker
 
     func test_action_selectTicker_updatesSelectedTicker() {
-        // Arrange
-        let ticker = "AAPL"
-
-        // Act
-        sut.action(.selectTicker(ticker))
-
-        // Assert
-        XCTAssertEqual(sut.state.selectedTicker, ticker)
+        sut.action(.selectTicker("AAPL"))
+        XCTAssertEqual(sut.state.selectedTicker, "AAPL")
     }
 
     func test_action_selectTicker_differentTickers_updatesCorrectly() {
-        // Arrange & Act
         sut.action(.selectTicker("AAPL"))
         XCTAssertEqual(sut.state.selectedTicker, "AAPL")
 
@@ -127,30 +187,269 @@ final class WatchListStoreTests: XCTestCase {
     // MARK: - selectedTickerBinding
 
     func test_selectedTickerBinding_get_returnsCurrentSelectedTicker() {
-        // Arrange
         sut.action(.selectTicker("TSLA"))
-
-        // Act
-        let binding = sut.selectedTickerBinding
-
-        // Assert
-        XCTAssertEqual(binding.wrappedValue, "TSLA")
+        XCTAssertEqual(sut.selectedTickerBinding.wrappedValue, "TSLA")
     }
 
     func test_selectedTickerBinding_setNil_resetsSelectedTicker() {
-        // Arrange
         sut.action(.selectTicker("AAPL"))
-        XCTAssertNotNil(sut.state.selectedTicker)
-
-        // Act
         sut.selectedTickerBinding.wrappedValue = nil
-
-        // Assert
         XCTAssertNil(sut.state.selectedTicker)
     }
 
     func test_selectedTickerBinding_initialValue_isNil() {
-        // Assert
         XCTAssertNil(sut.selectedTickerBinding.wrappedValue)
+    }
+
+    // MARK: - loadGroups
+
+    func test_action_loadGroups_whenNoGroups_setsEmptyDbGroups() async {
+        // Arrange
+        mockManageGroupUseCase.stubbedGroups = []
+
+        // Act
+        sut.action(.loadGroups)
+        await Task.yield()
+
+        // Assert
+        XCTAssertTrue(sut.state.dbGroups.isEmpty)
+    }
+
+    func test_action_loadGroups_setsDbGroups() async {
+        // Arrange
+        let groups = [
+            WatchListGroup(id: UUID(), name: "기술주", createdAt: Date()),
+            WatchListGroup(id: UUID(), name: "배당주", createdAt: Date())
+        ]
+        mockManageGroupUseCase.stubbedGroups = groups
+
+        // Act
+        sut.action(.loadGroups)
+        await Task.yield()
+
+        // Assert
+        XCTAssertEqual(sut.state.dbGroups.count, 2)
+    }
+
+    func test_action_loadGroups_restoresLastSelectedGroupById_whenGroupExists() async {
+        // Arrange
+        let targetId = UUID()
+        let groups = [
+            WatchListGroup(id: UUID(), name: "기술주", createdAt: Date()),
+            WatchListGroup(id: targetId, name: "배당주", createdAt: Date())
+        ]
+        mockManageGroupUseCase.stubbedGroups = groups
+        UserDefaults.standard.set(targetId.uuidString, forKey: "lastSelectedGroupId")
+
+        // Act
+        sut.action(.loadGroups)
+        await Task.yield()
+
+        // Assert — 저장된 ID의 그룹 인덱스(1)로 복원
+        XCTAssertEqual(sut.state.selectedGroupIndex, 1)
+    }
+
+    func test_action_loadGroups_fallsBackToFirstGroup_whenSavedIdNotFound() async {
+        // Arrange
+        let groups = [WatchListGroup(id: UUID(), name: "기술주", createdAt: Date())]
+        mockManageGroupUseCase.stubbedGroups = groups
+        UserDefaults.standard.set(UUID().uuidString, forKey: "lastSelectedGroupId")  // 존재하지 않는 ID
+
+        // Act
+        sut.action(.loadGroups)
+        await Task.yield()
+
+        // Assert — 폴백: 첫 번째 그룹(index 0)
+        XCTAssertEqual(sut.state.selectedGroupIndex, 0)
+    }
+
+    // MARK: - selectGroup
+
+    func test_action_selectGroup_savesGroupId() async {
+        // Arrange
+        let groupId = UUID()
+        let groups = [
+            WatchListGroup(id: UUID(), name: "기술주", createdAt: Date()),
+            WatchListGroup(id: groupId, name: "배당주", createdAt: Date())
+        ]
+        mockManageGroupUseCase.stubbedGroups = groups
+        sut.action(.loadGroups)
+        await Task.yield()
+
+        // Act
+        sut.action(.selectGroup(index: 1))
+
+        // Assert — UserDefaults에 선택된 그룹 ID 저장
+        let saved = UserDefaults.standard.string(forKey: "lastSelectedGroupId")
+        XCTAssertEqual(saved, groupId.uuidString)
+    }
+
+    // MARK: - deleteGroup
+
+    func test_action_deleteGroup_lastGroupDeleted_setsEmptyGroups() async {
+        // Arrange
+        let group = WatchListGroup(id: UUID(), name: "유일한 그룹", createdAt: Date())
+        mockManageGroupUseCase.stubbedGroups = [group]
+        sut.action(.loadGroups)
+        await Task.yield()
+
+        // Act
+        sut.action(.deleteGroup(id: group.id))
+        await Task.yield()
+
+        // Assert
+        XCTAssertTrue(sut.state.dbGroups.isEmpty)
+        XCTAssertEqual(sut.state.selectedGroupIndex, 0)
+    }
+
+    // MARK: - priceData
+
+    func test_loadGroups_withFavorites_populatesPriceDataAfterLoad() async {
+        // Arrange
+        let group = WatchListGroup(id: UUID(), name: "전체", createdAt: Date())
+        let items = [
+            FavoriteItem(ticker: "AAPL", companyName: "Apple Inc.", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        mockManageGroupUseCase.stubbedGroups = [group]
+        mockFetchByGroupUseCase.stubbedResult = items
+        mockFetchStockQuoteUseCase.stubbedResult = StockQuote(ticker: "AAPL", currentPrice: 150.0, priceChangePercent: 1.5, currency: "USD")
+
+        // Act
+        sut.action(.loadGroups)
+        for _ in 0..<8 { await Task.yield() }
+
+        // Assert
+        XCTAssertFalse(sut.state.priceData.isEmpty)
+        XCTAssertEqual(sut.state.priceData["AAPL"]?.currentPrice, 150.0)
+    }
+
+    func test_loadGroups_whenPriceFetchFails_favoritesStillLoaded() async {
+        // Arrange
+        let group = WatchListGroup(id: UUID(), name: "전체", createdAt: Date())
+        let items = [
+            FavoriteItem(ticker: "AAPL", companyName: "Apple Inc.", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        mockManageGroupUseCase.stubbedGroups = [group]
+        mockFetchByGroupUseCase.stubbedResult = items
+        mockFetchStockQuoteUseCase.stubbedError = NetworkError.serverError
+
+        // Act
+        sut.action(.loadGroups)
+        for _ in 0..<8 { await Task.yield() }
+
+        // Assert — favorites는 정상 로드, priceData만 비어있음
+        XCTAssertEqual(sut.state.favorites.count, 1)
+        XCTAssertTrue(sut.state.priceData.isEmpty)
+    }
+
+    // MARK: - reorderGroups
+
+    func test_action_reorderGroups_updatesDbGroupsOptimistically() async {
+        // Arrange
+        let g1 = WatchListGroup(id: UUID(), name: "A", createdAt: Date(), sortOrder: 0)
+        let g2 = WatchListGroup(id: UUID(), name: "B", createdAt: Date(), sortOrder: 1)
+        let g3 = WatchListGroup(id: UUID(), name: "C", createdAt: Date(), sortOrder: 2)
+        mockManageGroupUseCase.stubbedGroups = [g1, g2, g3]
+        sut.action(.loadGroups)
+        await Task.yield()
+
+        // Act: C, A, B 순서로 재배치
+        sut.action(.reorderGroups(orderedIds: [g3.id, g1.id, g2.id]))
+
+        // Assert 즉시 (낙관적 업데이트)
+        XCTAssertEqual(sut.state.dbGroups.map(\.name), ["C", "A", "B"])
+    }
+
+    func test_action_reorderGroups_callsUseCaseWithOrderedIds() async {
+        // Arrange
+        let g1 = WatchListGroup(id: UUID(), name: "A", createdAt: Date(), sortOrder: 0)
+        let g2 = WatchListGroup(id: UUID(), name: "B", createdAt: Date(), sortOrder: 1)
+        mockManageGroupUseCase.stubbedGroups = [g1, g2]
+        sut.action(.loadGroups)
+        await Task.yield()
+
+        // Act
+        sut.action(.reorderGroups(orderedIds: [g2.id, g1.id]))
+        for _ in 0..<4 { await Task.yield() }
+
+        // Assert
+        XCTAssertEqual(mockManageGroupUseCase.capturedOrderedIds, [g2.id, g1.id])
+    }
+
+    func test_action_reorderGroups_whenUseCaseThrows_rollsBackDbGroups() async {
+        // Arrange
+        let g1 = WatchListGroup(id: UUID(), name: "A", createdAt: Date(), sortOrder: 0)
+        let g2 = WatchListGroup(id: UUID(), name: "B", createdAt: Date(), sortOrder: 1)
+        mockManageGroupUseCase.stubbedGroups = [g1, g2]
+        sut.action(.loadGroups)
+        await Task.yield()
+        mockManageGroupUseCase.stubbedError = NSError(domain: "TestError", code: 1)
+
+        // Act
+        sut.action(.reorderGroups(orderedIds: [g2.id, g1.id]))
+        for _ in 0..<4 { await Task.yield() }
+
+        // Assert: 에러 시 원래 순서로 롤백
+        XCTAssertEqual(sut.state.dbGroups.map(\.name), ["A", "B"])
+    }
+
+    func test_action_beginGroupDrag_setsDraggedGroupId() {
+        // Arrange
+        let groupId = UUID()
+
+        // Act
+        sut.action(.beginGroupDrag(groupId: groupId))
+
+        // Assert
+        XCTAssertEqual(sut.state.draggedGroupId, groupId)
+        XCTAssertTrue(sut.state.isDraggingGroup)
+    }
+
+    func test_action_endGroupDrag_clearsDragState() {
+        // Arrange
+        let groupId = UUID()
+        sut.action(.beginGroupDrag(groupId: groupId))
+        sut.action(.updateGroupDragTarget(index: 2))
+
+        // Act
+        sut.action(.endGroupDrag)
+
+        // Assert
+        XCTAssertNil(sut.state.draggedGroupId)
+        XCTAssertNil(sut.state.dragTargetIndex)
+        XCTAssertFalse(sut.state.isDraggingGroup)
+    }
+
+    func test_action_reorderGroups_clearsDragState() async {
+        // Arrange
+        let g1 = WatchListGroup(id: UUID(), name: "A", createdAt: Date(), sortOrder: 0)
+        mockManageGroupUseCase.stubbedGroups = [g1]
+        sut.action(.loadGroups)
+        await Task.yield()
+        sut.action(.beginGroupDrag(groupId: g1.id))
+
+        // Act
+        sut.action(.reorderGroups(orderedIds: [g1.id]))
+
+        // Assert: reorder 시 drag 상태 즉시 초기화
+        XCTAssertNil(sut.state.draggedGroupId)
+    }
+
+    func test_action_deleteGroup_currentGroupDeleted_selectsFirstRemaining() async {
+        // Arrange
+        let group1 = WatchListGroup(id: UUID(), name: "그룹1", createdAt: Date())
+        let group2 = WatchListGroup(id: UUID(), name: "그룹2", createdAt: Date())
+        mockManageGroupUseCase.stubbedGroups = [group1, group2]
+        sut.action(.loadGroups)
+        await Task.yield()
+        sut.action(.selectGroup(index: 1))
+
+        // Act — 현재 선택된 그룹2 삭제
+        sut.action(.deleteGroup(id: group2.id))
+        await Task.yield()
+
+        // Assert — 남은 첫 번째 그룹으로 이동
+        XCTAssertEqual(sut.state.dbGroups.count, 1)
+        XCTAssertEqual(sut.state.selectedGroupIndex, 0)
     }
 }

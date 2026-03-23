@@ -9,6 +9,7 @@ import SwiftData
 
 // MARK: - Tests
 
+@MainActor
 final class SavedStrategyRepositoryTests: XCTestCase {
 
     private var sut: SavedStrategyRepository!

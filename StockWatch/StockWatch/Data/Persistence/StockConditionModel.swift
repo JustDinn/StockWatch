@@ -11,7 +11,7 @@ import Foundation
 final class StockConditionModel {
     @Attribute(.unique) var conditionId: String
     var ticker: String
-    var companyName: String
+    var companyName: String?
     var strategyId: String
     /// StrategyParameters를 JSON으로 직렬화하여 저장
     var parametersJSON: String
@@ -23,7 +23,7 @@ final class StockConditionModel {
     init(
         conditionId: String,
         ticker: String,
-        companyName: String = "",
+        companyName: String? = nil,
         strategyId: String,
         parametersJSON: String,
         isNotificationEnabled: Bool,

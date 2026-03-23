@@ -17,7 +17,10 @@ final class StockDetailStore: ObservableObject {
     private let fetchCandlestickUseCase: FetchCandlestickUseCaseProtocol
     private let toggleFavoriteUseCase: ToggleFavoriteUseCaseProtocol
     private let checkFavoriteUseCase: CheckFavoriteUseCaseProtocol
+    private let fetchGroupIdsForTickerUseCase: FetchGroupIdsForTickerUseCaseProtocol
+    private let updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCaseProtocol
     private var chartTask: Task<Void, Never>?
+    private var toastDismissTask: Task<Void, Never>?
 
     // MARK: - Init
 
@@ -30,13 +33,17 @@ final class StockDetailStore: ObservableObject {
             repository: CandlestickRepository()
         ),
         toggleFavoriteUseCase: ToggleFavoriteUseCaseProtocol,
-        checkFavoriteUseCase: CheckFavoriteUseCaseProtocol
+        checkFavoriteUseCase: CheckFavoriteUseCaseProtocol,
+        fetchGroupIdsForTickerUseCase: FetchGroupIdsForTickerUseCaseProtocol,
+        updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCaseProtocol
     ) {
         self.state = StockDetailState(ticker: ticker)
         self.fetchStockDetailUseCase = fetchStockDetailUseCase
         self.fetchCandlestickUseCase = fetchCandlestickUseCase
         self.toggleFavoriteUseCase = toggleFavoriteUseCase
         self.checkFavoriteUseCase = checkFavoriteUseCase
+        self.fetchGroupIdsForTickerUseCase = fetchGroupIdsForTickerUseCase
+        self.updateFavoriteGroupsUseCase = updateFavoriteGroupsUseCase
     }
 
     // MARK: - Action
@@ -47,8 +54,19 @@ final class StockDetailStore: ObservableObject {
             loadDetail()
         case .dismiss:
             break
+        case .showFavoriteModal:
+            state.isShowingFavoriteModal = true
         case .toggleFavorite:
-            persistToggleFavorite()
+            Task { await handleToggleFavorite() }
+        case .reloadFavoriteStatus:
+            reloadFavoriteStatus()
+        case .undoRemoveFavorite:
+            Task { await undoRemoveFavorite() }
+        case .dismissToast:
+            toastDismissTask?.cancel()
+            state.isShowingToast = false
+            state.toastMessage = nil
+            state.undoInfo = nil
         case .navigateToApplyStrategy:
             state.isShowingApplyStrategy = true
         case .selectPeriod(let period):
@@ -70,6 +88,16 @@ final class StockDetailStore: ObservableObject {
         Binding(
             get: { self.state.isShowingApplyStrategy },
             set: { self.state.isShowingApplyStrategy = $0 }
+        )
+    }
+
+    var isFavoriteModalBinding: Binding<Bool> {
+        Binding(
+            get: { self.state.isShowingFavoriteModal },
+            set: { newValue in
+                self.state.isShowingFavoriteModal = newValue
+                if !newValue { self.reloadFavoriteStatus() }
+            }
         )
     }
 }
@@ -186,21 +214,74 @@ extension StockDetailStore {
         }
     }
 
-    /// 낙관적 UI 업데이트 후 SwiftData에 영구 저장
-    /// 저장 실패 시 원래 상태로 롤백한다.
-    private func persistToggleFavorite() {
-        let previousState = state.isFavorite
-        // 낙관적 업데이트: 즉시 UI 반영
-        state.isFavorite.toggle()
-
+    private func reloadFavoriteStatus() {
         Task {
+            state.isFavorite = await checkFavoriteUseCase.execute(ticker: state.ticker)
+        }
+    }
+
+    private func handleToggleFavorite() async {
+        guard state.isFavorite else {
+            state.isShowingFavoriteModal = true
+            return
+        }
+
+        let groupIds = await fetchGroupIdsForTickerUseCase.execute(ticker: state.ticker)
+
+        if groupIds.count == 1 {
+            let groupId = groupIds[0]
             do {
-                let newState = try await toggleFavoriteUseCase.execute(ticker: state.ticker, companyName: state.companyName)
-                state.isFavorite = newState
+                try await updateFavoriteGroupsUseCase.execute(
+                    ticker: state.ticker,
+                    companyName: state.companyName,
+                    logoURL: state.logoURL,
+                    groupIds: []
+                )
+                state.isFavorite = false
+                state.undoInfo = UndoFavoriteInfo(
+                    ticker: state.ticker,
+                    companyName: state.companyName,
+                    logoURL: state.logoURL,
+                    groupId: groupId
+                )
+                state.toastMessage = "워치리스트에서 삭제됐어요."
+                state.isShowingToast = true
+                scheduleToastDismiss()
             } catch {
-                // 실패 시 롤백
-                state.isFavorite = previousState
+                // 삭제 실패 시 무시
             }
+        } else {
+            state.isShowingFavoriteModal = true
+        }
+    }
+
+    private func undoRemoveFavorite() async {
+        guard let info = state.undoInfo else { return }
+        toastDismissTask?.cancel()
+        state.isShowingToast = false
+        state.toastMessage = nil
+        do {
+            try await updateFavoriteGroupsUseCase.execute(
+                ticker: info.ticker,
+                companyName: info.companyName,
+                logoURL: info.logoURL,
+                groupIds: [info.groupId]
+            )
+            state.isFavorite = true
+        } catch {
+            // 복원 실패 시 무시
+        }
+        state.undoInfo = nil
+    }
+
+    private func scheduleToastDismiss() {
+        toastDismissTask?.cancel()
+        toastDismissTask = Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard !Task.isCancelled else { return }
+            state.isShowingToast = false
+            state.toastMessage = nil
+            state.undoInfo = nil
         }
     }
 }

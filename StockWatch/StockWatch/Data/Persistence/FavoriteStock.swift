@@ -12,12 +12,15 @@ import Foundation
 @Model
 final class FavoriteStock {
     @Attribute(.unique) var ticker: String
-    var companyName: String
+    var companyName: String?
     var addedAt: Date
+    var logoURL: String?
+    @Relationship var groups: [WatchListGroupModel] = []
 
-    init(ticker: String, companyName: String = "", addedAt: Date = .now) {
+    init(ticker: String, companyName: String? = nil, addedAt: Date = .now, logoURL: String? = nil) {
         self.ticker = ticker
         self.companyName = companyName
         self.addedAt = addedAt
+        self.logoURL = logoURL
     }
 }

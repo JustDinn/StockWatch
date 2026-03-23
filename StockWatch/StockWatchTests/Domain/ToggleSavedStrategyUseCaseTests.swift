@@ -8,6 +8,7 @@ import XCTest
 
 // MARK: - Mock
 
+@MainActor
 final class MockSavedStrategyRepository: SavedStrategyRepositoryProtocol {
     var stubbedIsSaved: Bool = false
     var stubbedError: Error?
@@ -43,6 +44,7 @@ final class MockSavedStrategyRepository: SavedStrategyRepositoryProtocol {
 
 // MARK: - Tests
 
+@MainActor
 final class ToggleSavedStrategyUseCaseTests: XCTestCase {
 
     private var sut: ToggleSavedStrategyUseCase!
