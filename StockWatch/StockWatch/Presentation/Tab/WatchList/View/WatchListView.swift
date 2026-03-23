@@ -598,7 +598,7 @@ private struct GroupNameInputModalView: View {
                 }
                 .foregroundStyle(.primary)
 
-                let isConfirmDisabled = name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                let isConfirmDisabled = name.count > maxLength || isShowingLimitError || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
                 Button(action: onConfirm) {
                     Text(confirmLabel)
