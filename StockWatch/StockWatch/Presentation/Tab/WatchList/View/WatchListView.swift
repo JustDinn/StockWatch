@@ -39,7 +39,9 @@ private struct WatchListContentView: View {
             manageGroupUseCase: ManageWatchListGroupUseCase(repository: groupRepository),
             fetchFavoritesByGroupUseCase: FetchFavoritesByGroupUseCase(repository: repository),
             addFavoriteToGroupUseCase: AddFavoriteToGroupUseCase(repository: repository),
-            fetchStockQuoteUseCase: FetchStockQuoteUseCase(repository: StockQuoteRepository())
+            fetchStockQuoteUseCase: FetchStockQuoteUseCase(repository: StockQuoteRepository()),
+            fetchGroupIdsForTickerUseCase: FetchGroupIdsForTickerUseCase(repository: repository),
+            updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCase(repository: repository)
         ))
     }
 
@@ -127,8 +129,24 @@ private struct WatchListContentView: View {
                 }
                 .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .bottom)))
             }
+
+            if store.state.isShowingToast, let message = store.state.toastMessage {
+                VStack {
+                    Spacer()
+                    ToastView(
+                        icon: "heart.slash",
+                        message: message,
+                        actionLabel: "되돌리기",
+                        onAction: { store.action(.undoRemoveFavorite) }
+                    )
+                    .padding(.bottom, 40)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(2)
+            }
         }
         .animation(.easeInOut(duration: 0.35), value: isShowingGroupManageModal)
+        .animation(.easeInOut(duration: 0.3), value: store.state.isShowingToast)
         .alert("새 그룹 추가", isPresented: $isShowingAddGroupAlert) {
             TextField("그룹 이름", text: $newGroupName)
             Button("추가") {
@@ -198,7 +216,8 @@ private struct WatchListContentView: View {
                         item: item,
                         quoteData: store.state.priceData[item.ticker],
                         displayName: displayName(for: item),
-                        onTap: { store.action(.selectTicker(item.ticker)) }
+                        onTap: { store.action(.selectTicker(item.ticker)) },
+                        onRemove: { store.action(.removeFavoriteWithUndo(ticker: item.ticker)) }
                     )
                 }
                 WatchListAddStockRow(onTap: { isShowingAddStock = true })
@@ -569,6 +588,7 @@ private struct WatchListStockRow: View {
     let quoteData: StockQuote?
     let displayName: String
     let onTap: () -> Void
+    let onRemove: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
@@ -576,11 +596,23 @@ private struct WatchListStockRow: View {
             nameColumn
             Spacer()
             priceColumn
+            heartButton
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
+    }
+
+    private var heartButton: some View {
+        Button {
+            onRemove()
+        } label: {
+            Image(systemName: "heart.fill")
+                .foregroundStyle(.red)
+                .font(.system(size: 18))
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder

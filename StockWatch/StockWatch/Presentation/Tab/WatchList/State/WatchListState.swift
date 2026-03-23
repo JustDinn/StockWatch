@@ -5,6 +5,14 @@
 
 import Foundation
 
+/// 되돌리기를 위한 삭제 전 즐겨찾기 정보
+struct WatchListUndoFavoriteInfo: Equatable {
+    let ticker: String
+    let companyName: String
+    let logoURL: String
+    let groupId: UUID
+}
+
 /// WatchList 화면 UI 상태
 struct WatchListState {
     var favorites: [FavoriteItem] = []
@@ -31,6 +39,13 @@ struct WatchListState {
     var draggedGroupId: UUID? = nil
     var dragTargetIndex: Int? = nil
     var isDraggingGroup: Bool { draggedGroupId != nil }
+
+    /// 토스트 표시 여부
+    var isShowingToast: Bool = false
+    /// 토스트 메시지
+    var toastMessage: String? = nil
+    /// 되돌리기용 삭제 정보
+    var undoInfo: WatchListUndoFavoriteInfo? = nil
 
     /// 테스트 편의용 이니셜라이저
     init(favorites: [FavoriteItem] = []) {

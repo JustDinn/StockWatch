@@ -35,4 +35,8 @@ enum WatchListIntent {
     case updateGroupDragTarget(index: Int)
     /// 그룹 드래그 종료
     case endGroupDrag
+    /// 하트 버튼 탭 → 현재 그룹에서 제거 + 되돌리기 토스트 표시
+    case removeFavoriteWithUndo(ticker: String)
+    /// 토스트 "되돌리기" 탭 → 관심 목록 복원
+    case undoRemoveFavorite
 }

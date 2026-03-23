@@ -19,6 +19,9 @@ final class WatchListStore: ObservableObject {
     private let fetchFavoritesByGroupUseCase: FetchFavoritesByGroupUseCaseProtocol
     private let addFavoriteToGroupUseCase: AddFavoriteToGroupUseCaseProtocol
     private let fetchStockQuoteUseCase: FetchStockQuoteUseCaseProtocol
+    private let fetchGroupIdsForTickerUseCase: FetchGroupIdsForTickerUseCaseProtocol
+    private let updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCaseProtocol
+    private var toastDismissTask: Task<Void, Never>?
 
     // MARK: - Init
 
@@ -29,6 +32,8 @@ final class WatchListStore: ObservableObject {
         fetchFavoritesByGroupUseCase: FetchFavoritesByGroupUseCaseProtocol,
         addFavoriteToGroupUseCase: AddFavoriteToGroupUseCaseProtocol,
         fetchStockQuoteUseCase: FetchStockQuoteUseCaseProtocol,
+        fetchGroupIdsForTickerUseCase: FetchGroupIdsForTickerUseCaseProtocol,
+        updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCaseProtocol,
         state: WatchListState = WatchListState()
     ) {
         self.state = state
@@ -38,6 +43,8 @@ final class WatchListStore: ObservableObject {
         self.fetchFavoritesByGroupUseCase = fetchFavoritesByGroupUseCase
         self.addFavoriteToGroupUseCase = addFavoriteToGroupUseCase
         self.fetchStockQuoteUseCase = fetchStockQuoteUseCase
+        self.fetchGroupIdsForTickerUseCase = fetchGroupIdsForTickerUseCase
+        self.updateFavoriteGroupsUseCase = updateFavoriteGroupsUseCase
     }
 
     // MARK: - Action
@@ -77,6 +84,10 @@ final class WatchListStore: ObservableObject {
         case .endGroupDrag:
             state.draggedGroupId = nil
             state.dragTargetIndex = nil
+        case .removeFavoriteWithUndo(let ticker):
+            Task { await removeFavoriteWithUndo(ticker: ticker) }
+        case .undoRemoveFavorite:
+            Task { await undoRemoveFavorite() }
         }
     }
 
@@ -274,6 +285,73 @@ private extension WatchListStore {
             } catch {
                 state.favorites = previous
             }
+        }
+    }
+
+    /// 하트 버튼 탭 시 현재 그룹에서만 제거하고 되돌리기 토스트를 표시한다.
+    func removeFavoriteWithUndo(ticker: String) async {
+        guard state.selectedGroupIndex < state.dbGroups.count else { return }
+        guard let item = state.favorites.first(where: { $0.ticker == ticker }) else { return }
+
+        let currentGroupId = state.dbGroups[state.selectedGroupIndex].id
+        let allGroupIds = await fetchGroupIdsForTickerUseCase.execute(ticker: ticker)
+        let remainingGroupIds = allGroupIds.filter { $0 != currentGroupId }
+
+        // 낙관적 UI 업데이트
+        state.favorites.removeAll { $0.ticker == ticker }
+
+        do {
+            try await updateFavoriteGroupsUseCase.execute(
+                ticker: item.ticker,
+                companyName: item.companyName,
+                logoURL: item.logoURL,
+                groupIds: remainingGroupIds
+            )
+            state.undoInfo = WatchListUndoFavoriteInfo(
+                ticker: item.ticker,
+                companyName: item.companyName,
+                logoURL: item.logoURL,
+                groupId: currentGroupId
+            )
+            state.toastMessage = "워치리스트에서 삭제됐어요."
+            state.isShowingToast = true
+            scheduleToastDismiss()
+        } catch {
+            // 실패 시 rollback
+            loadFavorites()
+        }
+    }
+
+    /// 토스트 "되돌리기" 탭 시 삭제된 그룹에 다시 추가한다.
+    func undoRemoveFavorite() async {
+        guard let info = state.undoInfo else { return }
+        toastDismissTask?.cancel()
+        state.isShowingToast = false
+        state.toastMessage = nil
+
+        let allGroupIds = await fetchGroupIdsForTickerUseCase.execute(ticker: info.ticker)
+        do {
+            try await updateFavoriteGroupsUseCase.execute(
+                ticker: info.ticker,
+                companyName: info.companyName,
+                logoURL: info.logoURL,
+                groupIds: allGroupIds + [info.groupId]
+            )
+        } catch {
+            // 복원 실패 시 무시
+        }
+        state.undoInfo = nil
+        loadFavorites()
+    }
+
+    func scheduleToastDismiss() {
+        toastDismissTask?.cancel()
+        toastDismissTask = Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard !Task.isCancelled else { return }
+            state.isShowingToast = false
+            state.toastMessage = nil
+            state.undoInfo = nil
         }
     }
 }
