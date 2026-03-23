@@ -238,9 +238,15 @@ private extension WatchListStore {
         let selectedId = state.selectedGroupIndex < state.dbGroups.count
             ? state.dbGroups[state.selectedGroupIndex].id
             : nil
-        state.dbGroups = orderedIds.compactMap { id in
+        let reordered = orderedIds.compactMap { id in
             state.dbGroups.first { $0.id == id }
         }
+        guard !reordered.isEmpty, reordered.count == state.dbGroups.count else {
+            state.draggedGroupId = nil
+            state.dragTargetIndex = nil
+            return
+        }
+        state.dbGroups = reordered
         if let selectedId,
            let newIndex = state.dbGroups.firstIndex(where: { $0.id == selectedId }) {
             state.selectedGroupIndex = newIndex

@@ -280,30 +280,42 @@ private struct WatchListGroupTabBar: View {
     private var isInEditMode: Bool { longPressedGroupId != nil }
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(displayGroups, id: \.id) { group in
-                    let idx = displayGroups.firstIndex(where: { $0.id == group.id }) ?? 0
-                    groupTab(group, idx: idx)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(displayGroups, id: \.id) { group in
+                        let idx = displayGroups.firstIndex(where: { $0.id == group.id }) ?? 0
+                        groupTab(group, idx: idx)
+                            .id(group.id)
+                    }
+                    Button("그룹관리", action: onAddGroup)
+                        .font(.subheadline)
+                        .foregroundStyle(.blue)
+                        .padding(.horizontal, 4)
                 }
-                Button("그룹관리", action: onAddGroup)
-                    .font(.subheadline)
-                    .foregroundStyle(.blue)
-                    .padding(.horizontal, 4)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-        }
-        .scrollDisabled(draggedGroupId != nil)
-        .coordinateSpace(name: "tabBarScroll")
-        .onPreferenceChange(TabFramePreferenceKey.self) { frames in
-            tabFrames = frames
+            .scrollDisabled(isInEditMode || draggedGroupId != nil)
+            .coordinateSpace(name: "tabBarScroll")
+            .onPreferenceChange(TabFramePreferenceKey.self) { frames in
+                tabFrames = frames
+            }
+            .onChange(of: groups) {
+                guard selectedIndex < groups.count else { return }
+                let targetId = groups[selectedIndex].id
+                withAnimation {
+                    proxy.scrollTo(targetId, anchor: .center)
+                }
+            }
         }
         .onChange(of: isEditingGroups) {
             if !isEditingGroups {
                 longPressedGroupId = nil
                 dragOffsets.removeAll()
-                onCancelDrag()
+                if draggedGroupId != nil {
+                    onCancelDrag()
+                }
             }
         }
     }
@@ -357,7 +369,7 @@ private struct WatchListGroupTabBar: View {
                 }
             )
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDragged)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: dragTargetIndex)
+            .animation(dragTargetIndex != nil ? .spring(response: 0.3, dampingFraction: 0.7) : .default, value: dragTargetIndex)
             .animation(
                 wiggleCondition
                     ? .easeInOut(duration: 0.12).repeatForever(autoreverses: true)
@@ -401,8 +413,13 @@ private struct WatchListGroupTabBar: View {
                     .onEnded { _ in
                         guard longPressedGroupId != nil else { return }
                         let orderedIds = displayGroups.map(\.id)
-                        finishDrag()
-                        onEndDrag(orderedIds)
+                        dragOffsets.removeAll()
+                        isDragging = false
+                        DispatchQueue.main.async {
+                            onEndDrag(orderedIds)
+                            longPressedGroupId = nil
+                            isEditingGroups = false
+                        }
                     }
             )
     }
