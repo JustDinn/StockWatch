@@ -301,9 +301,19 @@ private struct WatchListGroupTabBar: View {
             .onPreferenceChange(TabFramePreferenceKey.self) { frames in
                 tabFrames = frames
             }
-            .onChange(of: groups) {
-                guard selectedIndex < groups.count else { return }
-                let targetId = groups[selectedIndex].id
+            .onChange(of: groups) { oldGroups, newGroups in
+                let oldIds = Set(oldGroups.map(\.id))
+                let newIds = Set(newGroups.map(\.id))
+                guard oldIds != newIds else { return }
+                guard selectedIndex < newGroups.count else { return }
+                let targetId = newGroups[selectedIndex].id
+                withAnimation {
+                    proxy.scrollTo(targetId, anchor: .center)
+                }
+            }
+            .onChange(of: selectedIndex) { _, newIndex in
+                guard newIndex < groups.count else { return }
+                let targetId = groups[newIndex].id
                 withAnimation {
                     proxy.scrollTo(targetId, anchor: .center)
                 }
