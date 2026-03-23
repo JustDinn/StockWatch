@@ -276,6 +276,7 @@ private struct WatchListGroupTabBar: View {
     @State private var dragOffsets: [UUID: CGFloat] = [:]
     @State private var longPressedGroupId: UUID? = nil
     @State private var isDragging = false
+    @State private var lastHapticTargetIndex: Int? = nil
 
     private var isInEditMode: Bool { longPressedGroupId != nil }
 
@@ -418,6 +419,10 @@ private struct WatchListGroupTabBar: View {
                             translation: dragValue.translation.width,
                             location: dragValue.location.x
                         )
+                        if targetIdx != lastHapticTargetIndex {
+                            lastHapticTargetIndex = targetIdx
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        }
                         onUpdateDragTarget(targetIdx)
                     }
                     .onEnded { _ in
@@ -425,6 +430,7 @@ private struct WatchListGroupTabBar: View {
                         let orderedIds = displayGroups.map(\.id)
                         dragOffsets.removeAll()
                         isDragging = false
+                        lastHapticTargetIndex = nil
                         DispatchQueue.main.async {
                             onEndDrag(orderedIds)
                             longPressedGroupId = nil
