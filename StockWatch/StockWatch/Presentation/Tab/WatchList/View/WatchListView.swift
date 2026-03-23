@@ -275,6 +275,7 @@ private struct WatchListGroupTabBar: View {
     @State private var tabFrames: [UUID: CGRect] = [:]
     @State private var dragOffsets: [UUID: CGFloat] = [:]
     @State private var longPressedGroupId: UUID? = nil
+    @State private var isDragging = false
 
     private var isInEditMode: Bool { longPressedGroupId != nil }
 
@@ -372,16 +373,20 @@ private struct WatchListGroupTabBar: View {
                     onSelect(originalIndex)
                 }
             }
-            .onLongPressGesture(minimumDuration: 0.4) {
+            .onLongPressGesture(minimumDuration: 0.4, pressing: { isPressing in
+                if !isPressing && isEditingGroups && !isDragging {
+                    finishDrag()
+                }
+            }) {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 longPressedGroupId = group.id
                 isEditingGroups = true
-                onBeginDrag(group.id)
             }
             .simultaneousGesture(
                 DragGesture(coordinateSpace: .named("tabBarScroll"))
                     .onChanged { dragValue in
                         guard longPressedGroupId != nil else { return }
+                        isDragging = true
                         if draggedGroupId != group.id {
                             onBeginDrag(group.id)
                         }
@@ -403,6 +408,7 @@ private struct WatchListGroupTabBar: View {
     }
 
     private func finishDrag() {
+        isDragging = false
         dragOffsets.removeAll()
         longPressedGroupId = nil
         isEditingGroups = false
