@@ -339,29 +339,43 @@ private struct WatchListGroupTabBar: View {
                     onSelect(originalIndex)
                 }
             }
-            .onLongPressGesture(minimumDuration: 0.4) {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                onBeginDrag(group.id)
-            }
-            .simultaneousGesture(
-                draggedGroupId == group.id ? dragGesture(for: group) : nil
-            )
+            .gesture(combinedGesture(for: group))
     }
 
-    private func dragGesture(for group: WatchListGroup) -> some Gesture {
-        DragGesture(minimumDistance: 0, coordinateSpace: .named("tabBarScroll"))
+    private func combinedGesture(for group: WatchListGroup) -> some Gesture {
+        let longPress = LongPressGesture(minimumDuration: 0.4)
+        let drag = DragGesture(minimumDistance: 0, coordinateSpace: .named("tabBarScroll"))
+
+        return longPress
+            .sequenced(before: drag)
             .onChanged { value in
-                dragOffsets[group.id] = value.translation.width
-                let targetIdx = computeTargetIndex(
-                    draggedId: group.id,
-                    translation: value.translation.width,
-                    location: value.location.x
-                )
-                onUpdateDragTarget(targetIdx)
+                switch value {
+                case .first(true):
+                    break
+                case .second(true, let dragValue?):
+                    if draggedGroupId != group.id {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        onBeginDrag(group.id)
+                    }
+                    dragOffsets[group.id] = dragValue.translation.width
+                    let targetIdx = computeTargetIndex(
+                        draggedId: group.id,
+                        translation: dragValue.translation.width,
+                        location: dragValue.location.x
+                    )
+                    onUpdateDragTarget(targetIdx)
+                default:
+                    break
+                }
             }
-            .onEnded { _ in
-                dragOffsets[group.id] = nil
-                onEndDrag(displayGroups.map(\.id))
+            .onEnded { value in
+                if case .second(true, _) = value {
+                    dragOffsets[group.id] = nil
+                    onEndDrag(displayGroups.map(\.id))
+                } else {
+                    dragOffsets[group.id] = nil
+                    onEndDrag(groups.map(\.id))
+                }
             }
     }
 
