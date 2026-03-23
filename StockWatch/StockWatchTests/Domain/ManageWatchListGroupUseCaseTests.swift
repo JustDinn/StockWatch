@@ -134,5 +134,50 @@ final class ManageWatchListGroupUseCaseTests: XCTestCase {
         try await sut.deleteGroup(id: group.id)
         let remaining = await sut.fetchGroups()
         XCTAssertTrue(remaining.isEmpty)
+    // MARK: - Validation
+
+    @MainActor
+    func test_createGroup_with20Chars_succeeds() async throws {
+        // Arrange
+        let name = String(repeating: "가", count: 20)
+        
+        // Act & Assert — Should not throw
+        _ = try await sut.createGroup(name: name)
+    }
+
+    @MainActor
+    func test_createGroup_with21Chars_throwsTooLongError() async {
+        // Arrange
+        let name = String(repeating: "가", count: 21)
+        
+        // Act & Assert
+        do {
+            _ = try await sut.createGroup(name: name)
+            XCTFail("21자일 때 에러가 발생해야 합니다")
+        } catch let error as WatchListGroupError {
+            if case .tooLong(let max) = error {
+                XCTAssertEqual(max, 20)
+            } else {
+                XCTFail("Wrong error type: \(error)")
+            }
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    @MainActor
+    func test_createGroup_withOnlyWhitespace_throwsOnlyWhitespaceError() async {
+        // Arrange
+        let name = "   \n  "
+        
+        // Act & Assert
+        do {
+            _ = try await sut.createGroup(name: name)
+            XCTFail("공백만 있을 때 에러가 발생해야 합니다")
+        } catch let error as WatchListGroupError {
+            XCTAssertEqual(error.errorDescription, "공백만으로는 그룹을 만들 수 없어요.")
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
     }
 }

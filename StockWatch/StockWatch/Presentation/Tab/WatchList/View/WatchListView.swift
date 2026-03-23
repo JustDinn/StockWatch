@@ -539,11 +539,11 @@ private struct GroupNameInputModalView: View {
                 TextField(placeholder, text: Binding(
                     get: { name },
                     set: { newValue in
-                        if newValue.count <= maxLength {
+                        if newValue.count <= 30 {
+                            if newValue.count > maxLength {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            }
                             onNameChange(newValue)
-                        } else {
-                            UINotificationFeedbackGenerator().notificationOccurred(.warning)
-                            onNameChange(String(newValue.prefix(maxLength)))
                         }
                     }
                 ))
@@ -554,7 +554,7 @@ private struct GroupNameInputModalView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
 
                 HStack(alignment: .top) {
-                    if name.count >= maxLength {
+                    if name.count > maxLength {
                         Text("그룹 이름은 20자 이내로 입력해주세요.")
                             .font(.caption)
                             .foregroundStyle(.red)
@@ -566,7 +566,7 @@ private struct GroupNameInputModalView: View {
                     Spacer()
                     Text("\(name.count)/\(maxLength)")
                         .font(.caption)
-                        .foregroundStyle(name.count >= maxLength ? .red : .secondary)
+                        .foregroundStyle(name.count > maxLength ? .red : .secondary)
                 }
             }
             .padding(.horizontal, 20)
@@ -581,14 +581,17 @@ private struct GroupNameInputModalView: View {
                 }
                 .foregroundStyle(.primary)
 
+                let isConfirmDisabled = name.count > maxLength || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+
                 Button(action: onConfirm) {
                     Text(confirmLabel)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .background(Color.blue)
+                        .background(isConfirmDisabled ? Color.blue.opacity(0.5) : Color.blue)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .foregroundStyle(.white)
+                .disabled(isConfirmDisabled)
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
