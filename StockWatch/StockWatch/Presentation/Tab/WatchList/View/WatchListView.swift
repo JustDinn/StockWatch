@@ -263,6 +263,8 @@ private struct WatchListGroupTabBar: View {
 
     @State private var tabFrames: [UUID: CGRect] = [:]
     @State private var dragOffsets: [UUID: CGFloat] = [:]
+    @State private var isWiggling: Bool = false
+    @State private var longPressedGroupId: UUID? = nil
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -284,6 +286,14 @@ private struct WatchListGroupTabBar: View {
         .onPreferenceChange(TabFramePreferenceKey.self) { frames in
             tabFrames = frames
         }
+        .onChange(of: longPressedGroupId) {
+            isWiggling = longPressedGroupId != nil
+        }
+        .onChange(of: draggedGroupId) {
+            if draggedGroupId == nil {
+                longPressedGroupId = nil
+            }
+        }
     }
 
     // 드래그 중 삽입 위치 미리보기를 반영한 순서
@@ -302,7 +312,7 @@ private struct WatchListGroupTabBar: View {
 
     @ViewBuilder
     private func groupTab(_ group: WatchListGroup, idx: Int) -> some View {
-        let isDragged = group.id == draggedGroupId
+        let isDragged = group.id == draggedGroupId || group.id == longPressedGroupId
         let isSelected = groups.firstIndex(where: { $0.id == group.id }) == selectedIndex
 
         Text(group.name)
@@ -317,12 +327,13 @@ private struct WatchListGroupTabBar: View {
                 }
                 if isDragged {
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(.systemGray4))
+                        .fill(Color(.systemGray5))
                 }
             }
-            .scaleEffect(isDragged ? 1.08 : 1.0)
-            .shadow(color: isDragged ? .black.opacity(0.18) : .clear, radius: 6, x: 0, y: 3)
+            .scaleEffect(isDragged ? 1.15 : 1.0)
+            .shadow(color: isDragged ? .black.opacity(0.25) : .clear, radius: 10, x: 0, y: 5)
             .zIndex(isDragged ? 1 : 0)
+            .rotationEffect(.degrees(!isDragged && longPressedGroupId != nil && isWiggling ? 2 : 0))
             .offset(x: dragOffsets[group.id] ?? 0)
             .background(
                 GeometryReader { geo in
@@ -334,6 +345,12 @@ private struct WatchListGroupTabBar: View {
             )
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDragged)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: dragTargetIndex)
+            .animation(
+                !isDragged && longPressedGroupId != nil && isWiggling
+                    ? .easeInOut(duration: 0.12).repeatForever(autoreverses: true)
+                    : .default,
+                value: isWiggling
+            )
             .onTapGesture {
                 if let originalIndex = groups.firstIndex(where: { $0.id == group.id }) {
                     onSelect(originalIndex)
@@ -351,10 +368,12 @@ private struct WatchListGroupTabBar: View {
             .onChanged { value in
                 switch value {
                 case .first(true):
-                    break
+                    if longPressedGroupId != group.id {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        longPressedGroupId = group.id
+                    }
                 case .second(true, let dragValue?):
                     if draggedGroupId != group.id {
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         onBeginDrag(group.id)
                     }
                     dragOffsets[group.id] = dragValue.translation.width
@@ -369,6 +388,7 @@ private struct WatchListGroupTabBar: View {
                 }
             }
             .onEnded { value in
+                longPressedGroupId = nil
                 if case .second(true, _) = value {
                     dragOffsets[group.id] = nil
                     onEndDrag(displayGroups.map(\.id))
