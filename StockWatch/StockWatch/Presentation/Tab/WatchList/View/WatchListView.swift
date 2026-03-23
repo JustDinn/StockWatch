@@ -60,7 +60,8 @@ private struct WatchListContentView: View {
                             onAddGroup: { isShowingGroupManageModal = true },
                             onBeginDrag: { store.action(.beginGroupDrag(groupId: $0)) },
                             onUpdateDragTarget: { store.action(.updateGroupDragTarget(index: $0)) },
-                            onEndDrag: { store.action(.reorderGroups(orderedIds: $0)) }
+                            onEndDrag: { store.action(.reorderGroups(orderedIds: $0)) },
+                            onCancelDrag: { store.action(.endGroupDrag) }
                         )
                         Group {
                             if store.state.isLoading {
@@ -269,6 +270,7 @@ private struct WatchListGroupTabBar: View {
     let onBeginDrag: (UUID) -> Void
     let onUpdateDragTarget: (Int) -> Void
     let onEndDrag: ([UUID]) -> Void
+    let onCancelDrag: () -> Void
 
     @State private var tabFrames: [UUID: CGRect] = [:]
     @State private var dragOffsets: [UUID: CGFloat] = [:]
@@ -300,6 +302,7 @@ private struct WatchListGroupTabBar: View {
             if !isEditingGroups {
                 longPressedGroupId = nil
                 dragOffsets.removeAll()
+                onCancelDrag()
             }
         }
     }
