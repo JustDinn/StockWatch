@@ -31,7 +31,8 @@ final class YahooFinanceCandlestickMapper {
             else { return nil }
 
             let volume = (i < volumes.count ? volumes[i] : nil) ?? 0.0
-            let timestamp = Date(timeIntervalSince1970: timestamps[i])
+            let rawDate = Date(timeIntervalSince1970: timestamps[i])
+            let timestamp = normalizeToNYSEMidnight(rawDate)
 
             return Candle(
                 timestamp: timestamp,
@@ -43,6 +44,17 @@ final class YahooFinanceCandlestickMapper {
             )
         }
 
-        return CandlestickData(ticker: ticker, candles: candles)
+        let deduplicated = candles.reduce(into: [Date: Candle]()) { dict, candle in
+            dict[candle.timestamp] = candle
+        }
+        let sortedCandles = deduplicated.values.sorted { $0.timestamp < $1.timestamp }
+        return CandlestickData(ticker: ticker, candles: sortedCandles)
+    }
+
+    private func normalizeToNYSEMidnight(_ date: Date) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/New_York")!
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        return calendar.date(from: components) ?? date
     }
 }

@@ -8,6 +8,7 @@ import Foundation
 
 /// 저장된 전략 Repository 구현체
 /// SwiftData의 ModelContext를 통해 SavedStrategy를 CRUD한다.
+@MainActor
 final class SavedStrategyRepository: SavedStrategyRepositoryProtocol {
 
     private let modelContext: ModelContext

@@ -24,6 +24,7 @@ final class MockNotificationHistoryRepository: NotificationHistoryRepositoryProt
 
 // MARK: - Tests
 
+@MainActor
 final class CheckUnreadNotificationUseCaseTests: XCTestCase {
 
     private var sut: CheckUnreadNotificationUseCase!

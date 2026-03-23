@@ -18,6 +18,11 @@ final class MockCandlestickRepository: CandlestickRepositoryProtocol {
         if let error = stubbedError { throw error }
         return stubbedResult ?? CandlestickData(ticker: ticker, candles: [])
     }
+
+    func fetchCandlesticks(ticker: String, interval: String, period1: Int, period2: Int) async throws -> CandlestickData {
+        if let error = stubbedError { throw error }
+        return stubbedResult ?? CandlestickData(ticker: ticker, candles: [])
+    }
 }
 
 // MARK: - Tests

@@ -35,6 +35,14 @@ extension ChartPeriod {
     }
 }
 
+/// 되돌리기를 위한 삭제 전 즐겨찾기 정보
+struct UndoFavoriteInfo: Equatable {
+    let ticker: String
+    let companyName: String
+    let logoURL: String
+    let groupId: UUID
+}
+
 /// StockDetail 화면 UI 상태
 struct StockDetailState: Equatable {
     /// 티커 심볼 (예: "AAPL") - 화면 진입 시 결정, 이후 변경 없음
@@ -57,6 +65,8 @@ struct StockDetailState: Equatable {
     var isFavorite: Bool
     /// 전략 적용 화면 표시 여부
     var isShowingApplyStrategy: Bool
+    /// 관심 종목 그룹 선택 모달 표시 여부
+    var isShowingFavoriteModal: Bool
     /// 캔들스틱 차트 데이터 (nil이면 차트 미표시)
     var candlestickData: CandlestickData?
     /// 차트 로딩 상태
@@ -71,6 +81,12 @@ struct StockDetailState: Equatable {
     var hasMoreOlderCandles: Bool
     /// 차트에 주입할 과거 캔들 (nil이면 전체 갱신, 값이 있으면 prepend)
     var pendingOlderCandles: [Candle]?
+    /// 토스트 표시 여부
+    var isShowingToast: Bool
+    /// 토스트 메시지
+    var toastMessage: String?
+    /// 되돌리기용 삭제 정보
+    var undoInfo: UndoFavoriteInfo?
 
     init(ticker: String) {
         self.ticker = ticker
@@ -83,6 +99,7 @@ struct StockDetailState: Equatable {
         self.errorMessage = nil
         self.isFavorite = false
         self.isShowingApplyStrategy = false
+        self.isShowingFavoriteModal = false
         self.candlestickData = nil
         self.isChartLoading = false
         self.chartErrorMessage = nil
@@ -90,18 +107,23 @@ struct StockDetailState: Equatable {
         self.isLoadingOlderCandles = false
         self.hasMoreOlderCandles = true
         self.pendingOlderCandles = nil
+        self.isShowingToast = false
+        self.toastMessage = nil
+        self.undoInfo = nil
     }
 
-    /// 가격 표시 문자열 (예: "₩193,900", "$150.25", "¥2,500")
+    /// 가격 표시 문자열 (예: "₩193,900", "$150.25", "¥2,500"), 소수점 셋째자리에서 반올림
     var formattedPrice: String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.locale = Locale(identifier: "en_US")
         formatter.currencyCode = currency.isEmpty ? "USD" : currency
+        formatter.maximumFractionDigits = 2
+        formatter.roundingMode = .halfUp
         return formatter.string(from: NSNumber(value: currentPrice)) ?? "\(currentPrice)"
     }
 
-    /// 변동률 표시 문자열 (예: "+1.69%", "-0.53%")
+    /// 변동률 표시 문자열 (예: "+1.69%", "-0.53%"), 소수점 셋째자리에서 반올림
     var formattedChangePercent: String {
         let sign = priceChangePercent >= 0 ? "+" : ""
         return String(format: "\(sign)%.2f%%", priceChangePercent)

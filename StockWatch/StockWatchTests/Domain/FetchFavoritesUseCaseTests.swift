@@ -6,6 +6,7 @@
 import XCTest
 @testable import StockWatch
 
+@MainActor
 final class FetchFavoritesUseCaseTests: XCTestCase {
 
     private var sut: FetchFavoritesUseCase!
@@ -27,8 +28,8 @@ final class FetchFavoritesUseCaseTests: XCTestCase {
     func test_execute_returnsFavoriteItems() async {
         // Given
         let items = [
-            FavoriteItem(ticker: "AAPL", companyName: "Apple Inc.", addedAt: Date()),
-            FavoriteItem(ticker: "TSLA", companyName: "Tesla, Inc.", addedAt: Date())
+            FavoriteItem(ticker: "AAPL", companyName: "Apple Inc.", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla, Inc.", addedAt: Date(), logoURL: "", groupIds: [])
         ]
         mockRepository.stubbedFavorites = items
 

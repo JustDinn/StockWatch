@@ -8,6 +8,7 @@ import XCTest
 
 // MARK: - Mock
 
+@MainActor
 final class MockFavoriteRepository: FavoriteRepositoryProtocol {
     var stubbedIsFavorite: Bool = false
     var stubbedError: Error?
@@ -31,6 +32,13 @@ final class MockFavoriteRepository: FavoriteRepositoryProtocol {
         lastReceivedCompanyName = companyName
     }
 
+    func addFavorite(ticker: String, companyName: String, logoURL: String, groupIds: [UUID]) async throws {
+        if let error = stubbedError { throw error }
+        addFavoriteCallCount += 1
+        lastReceivedTicker = ticker
+        lastReceivedCompanyName = companyName
+    }
+
     func removeFavorite(ticker: String) async throws {
         if let error = stubbedError { throw error }
         removeFavoriteCallCount += 1
@@ -42,10 +50,23 @@ final class MockFavoriteRepository: FavoriteRepositoryProtocol {
     func fetchAllFavorites() async -> [FavoriteItem] {
         return stubbedFavorites
     }
+
+    func updateFavoriteGroups(ticker: String, logoURL: String, groupIds: [UUID]) async throws {
+        if let error = stubbedError { throw error }
+    }
+
+    func fetchFavorites(in groupId: UUID) async -> [FavoriteItem] {
+        return stubbedFavorites
+    }
+
+    func fetchGroupIds(for ticker: String) async -> [UUID] {
+        return []
+    }
 }
 
 // MARK: - Tests
 
+@MainActor
 final class ToggleFavoriteUseCaseTests: XCTestCase {
 
     private var sut: ToggleFavoriteUseCase!

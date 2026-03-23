@@ -25,20 +25,25 @@ struct StockDetailView: View {
 private struct StockDetailContentView: View {
 
     @StateObject private var store: StockDetailStore
+    @AppStorage("candle_body_up_color_hex") private var upColorHex: String = "#ef5350"
+    @AppStorage("candle_body_down_color_hex") private var downColorHex: String = "#1976d2"
 
     init(ticker: String, modelContext: ModelContext) {
         let repository = FavoriteRepository(modelContext: modelContext)
         _store = StateObject(wrappedValue: StockDetailStore(
             ticker: ticker,
             toggleFavoriteUseCase: ToggleFavoriteUseCase(repository: repository),
-            checkFavoriteUseCase: CheckFavoriteUseCase(repository: repository)
+            checkFavoriteUseCase: CheckFavoriteUseCase(repository: repository),
+            fetchGroupIdsForTickerUseCase: FetchGroupIdsForTickerUseCase(repository: repository),
+            updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCase(repository: repository)
         ))
     }
 
     var body: some View {
         let state = store.state
 
-        Group {
+        ZStack {
+         Group {
             if state.isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -77,7 +82,7 @@ private struct StockDetailContentView: View {
 
                                 Text(state.formattedChangePercent)
                                     .font(.subheadline)
-                                    .foregroundStyle(state.isPositiveChange ? .green : .red)
+                                    .foregroundStyle(state.isPositiveChange ? Color(hex: upColorHex) : Color(hex: downColorHex))
                             }
                         }
 
@@ -125,14 +130,60 @@ private struct StockDetailContentView: View {
                 }
                 .padding()
             }
+         }
+         .navigationBarTitleDisplayMode(.inline)
+         .navigationDestination(isPresented: store.isShowingApplyStrategyBinding) {
+             StrategyView(ticker: store.state.ticker)
+         }
+         .task {
+             store.action(.loadDetail)
+         }
+
+         if state.isShowingFavoriteModal {
+             Color.black.opacity(0.4)
+                 .ignoresSafeArea()
+                 .onTapGesture {
+                     store.action(.reloadFavoriteStatus)
+                     store.isFavoriteModalBinding.wrappedValue = false
+                 }
+
+             VStack {
+                 Spacer()
+                 FavoriteGroupModalView(
+                     ticker: store.state.ticker,
+                     companyName: store.state.companyName,
+                     logoURL: store.state.logoURL,
+                     onDismiss: {
+                         store.action(.reloadFavoriteStatus)
+                         store.isFavoriteModalBinding.wrappedValue = false
+                     }
+                 )
+                 .background(Color(.systemBackground))
+                 .clipShape(RoundedRectangle(cornerRadius: 28))
+                 .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 8)
+                 .padding(.horizontal, 20)
+                 .padding(.bottom, 12)
+             }
+             .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .bottom)))
+         }
+
+         if state.isShowingToast, let message = state.toastMessage {
+             VStack {
+                 Spacer()
+                 ToastView(
+                     icon: "heart.slash",
+                     message: message,
+                     actionLabel: "되돌리기",
+                     onAction: { store.action(.undoRemoveFavorite) }
+                 )
+                 .padding(.bottom, 40)
+             }
+             .transition(.move(edge: .bottom).combined(with: .opacity))
+             .zIndex(2)
+         }
         }
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(isPresented: store.isShowingApplyStrategyBinding) {
-            StrategyView(ticker: store.state.ticker)
-        }
-        .task {
-            store.action(.loadDetail)
-        }
+        .animation(.easeInOut(duration: 0.35), value: state.isShowingFavoriteModal)
+        .animation(.easeInOut(duration: 0.4), value: state.isShowingToast)
     }
     
     @ViewBuilder

@@ -220,10 +220,30 @@ private extension AppDelegate {
 @main
 struct StockWatchApp: App {
 
+    static func makeModelContainer() -> ModelContainer {
+        let schema = Schema([
+            FavoriteStock.self,
+            SavedStrategy.self,
+            StockConditionModel.self,
+            NotificationHistoryModel.self,
+            WatchListGroupModel.self
+        ])
+        let config = ModelConfiguration(schema: schema)
+        do {
+            return try ModelContainer(for: schema, migrationPlan: WatchListGroupMigrationPlan.self, configurations: config)
+        } catch {
+            // 마이그레이션 실패 시 로그 기록 후 폴백 (기존 데이터 유실 가능성 있음)
+            print("[SwiftData Migration Error] \(error)")
+            return try! ModelContainer(for: schema, configurations: config)
+        }
+    }
+
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @State private var isAuthReady = false
     @State private var isVersionCheckDone = false
     @StateObject private var forceUpdateStore = ForceUpdateStore()
+
+    private let sharedContainer = Self.makeModelContainer()
 
     var body: some Scene {
         WindowGroup {
@@ -233,6 +253,7 @@ struct StockWatchApp: App {
                 } else {
                     ProgressView()
                         .task {
+                            delegate.modelContainer = sharedContainer
                             if Auth.auth().currentUser == nil {
                                 try? await Auth.auth().signInAnonymously()
                             }
@@ -251,12 +272,6 @@ struct StockWatchApp: App {
                 }
             }
         }
-        .modelContainer(
-            for: [FavoriteStock.self, SavedStrategy.self, StockConditionModel.self, NotificationHistoryModel.self]
-        ) { result in
-            if case .success(let container) = result {
-                delegate.modelContainer = container
-            }
-        }
+        .modelContainer(sharedContainer)
     }
 }

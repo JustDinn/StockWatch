@@ -5,6 +5,7 @@
 
 import Foundation
 
+@MainActor
 protocol NotificationHistoryRepositoryProtocol {
     func fetchAll() throws -> [NotificationItem]
     func save(_ item: NotificationItem) throws
