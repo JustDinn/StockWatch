@@ -272,8 +272,9 @@ private struct WatchListGroupTabBar: View {
 
     @State private var tabFrames: [UUID: CGRect] = [:]
     @State private var dragOffsets: [UUID: CGFloat] = [:]
-    @State private var isWiggling: Bool = false
     @State private var longPressedGroupId: UUID? = nil
+
+    private var isInEditMode: Bool { longPressedGroupId != nil }
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -295,36 +296,10 @@ private struct WatchListGroupTabBar: View {
         .onPreferenceChange(TabFramePreferenceKey.self) { frames in
             tabFrames = frames
         }
-        .onChange(of: longPressedGroupId) {
-            print("<< onChange longPressedGroupId: \(String(describing: longPressedGroupId)), isWiggling=\(isWiggling), isEditingGroups=\(isEditingGroups)")
-            if longPressedGroupId != nil {
-                isWiggling = true
-                print("<< → isWiggling=true")
-            } else {
-                withAnimation(.easeOut(duration: 0.15)) {
-                    isWiggling = false
-                }
-                isEditingGroups = false
-                print("<< → isWiggling=false (withAnimation easeOut), isEditingGroups=false")
-            }
-        }
-        .onChange(of: draggedGroupId) {
-            print("<< onChange draggedGroupId: \(String(describing: draggedGroupId))")
-            if draggedGroupId == nil {
-                dragOffsets.removeAll()
-                withAnimation(.easeOut(duration: 0.15)) {
-                    isWiggling = false
-                }
-                isEditingGroups = false
-                longPressedGroupId = nil
-                print("<< → dragEnd cleanup: isWiggling=false, isEditingGroups=false, longPressedGroupId=nil, dragOffsets cleared")
-            }
-        }
         .onChange(of: isEditingGroups) {
-            print("<< onChange isEditingGroups: \(isEditingGroups)")
             if !isEditingGroups {
                 longPressedGroupId = nil
-                print("<< → longPressedGroupId=nil (isEditingGroups became false)")
+                dragOffsets.removeAll()
             }
         }
     }
@@ -347,8 +322,7 @@ private struct WatchListGroupTabBar: View {
     private func groupTab(_ group: WatchListGroup, idx: Int) -> some View {
         let isDragged = group.id == draggedGroupId || group.id == longPressedGroupId
         let isSelected = groups.firstIndex(where: { $0.id == group.id }) == selectedIndex
-        let wiggleCondition = !isDragged && longPressedGroupId != nil && isWiggling
-        let _ = print("<< groupTab[\(group.name)] isDragged=\(isDragged), longPressedGroupId=\(String(describing: longPressedGroupId)), isWiggling=\(isWiggling), wiggleCondition=\(wiggleCondition)")
+        let wiggleCondition = !isDragged && isInEditMode
 
         Text(group.name)
             .font(.subheadline.weight(isSelected ? .semibold : .regular))
@@ -384,79 +358,51 @@ private struct WatchListGroupTabBar: View {
                 wiggleCondition
                     ? .easeInOut(duration: 0.12).repeatForever(autoreverses: true)
                     : .easeOut(duration: 0.15),
-                value: isWiggling
+                value: longPressedGroupId
             )
             .onTapGesture {
-                guard longPressedGroupId == nil && draggedGroupId == nil else { return }
+                guard longPressedGroupId == nil && draggedGroupId == nil else {
+                    finishDrag()
+                    return
+                }
                 if let originalIndex = groups.firstIndex(where: { $0.id == group.id }) {
                     onSelect(originalIndex)
                 }
             }
-            .gesture(combinedGesture(for: group))
-            .simultaneousGesture(endDragGesture(for: group))
-    }
-
-    private func combinedGesture(for group: WatchListGroup) -> some Gesture {
-        let longPress = LongPressGesture(minimumDuration: 0.4)
-        let drag = DragGesture(minimumDistance: 0, coordinateSpace: .named("tabBarScroll"))
-
-        return longPress
-            .sequenced(before: drag)
-            .onChanged { value in
-                switch value {
-                case .first(true):
-                    print("<< longPress recognized for: \(group.name)")
-                    if longPressedGroupId != group.id {
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                        longPressedGroupId = group.id
+            .onLongPressGesture(minimumDuration: 0.4) {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                longPressedGroupId = group.id
+                isEditingGroups = true
+                onBeginDrag(group.id)
+            }
+            .simultaneousGesture(
+                DragGesture(coordinateSpace: .named("tabBarScroll"))
+                    .onChanged { dragValue in
+                        guard longPressedGroupId != nil else { return }
+                        if draggedGroupId != group.id {
+                            onBeginDrag(group.id)
+                        }
+                        dragOffsets[group.id] = dragValue.translation.width
+                        let targetIdx = computeTargetIndex(
+                            draggedId: group.id,
+                            translation: dragValue.translation.width,
+                            location: dragValue.location.x
+                        )
+                        onUpdateDragTarget(targetIdx)
                     }
-                case .second(true, let dragValue?):
-                    print("<< drag onChange for: \(group.name)")
-                    if draggedGroupId != group.id {
-                        onBeginDrag(group.id)
+                    .onEnded { _ in
+                        guard longPressedGroupId != nil else { return }
+                        let orderedIds = displayGroups.map(\.id)
+                        finishDrag()
+                        onEndDrag(orderedIds)
                     }
-                    dragOffsets[group.id] = dragValue.translation.width
-                    let targetIdx = computeTargetIndex(
-                        draggedId: group.id,
-                        translation: dragValue.translation.width,
-                        location: dragValue.location.x
-                    )
-                    onUpdateDragTarget(targetIdx)
-                default:
-                    break
-                }
-            }
-            .onEnded { value in
-                // endDragGesture가 드래그 종료를 처리하므로 여기서는 백업으로만 동작
-                print("<< sequenced onEnded[\(group.name)] (backup)")
-                if case .second(true, _) = value, draggedGroupId != nil {
-                    let orderedIds = displayGroups.map(\.id)
-                    stopWiggle()
-                    onEndDrag(orderedIds)
-                }
-            }
+            )
     }
 
-    /// sequenced gesture의 onEnded가 신뢰할 수 없으므로,
-    /// 독립적인 DragGesture로 손가락 올라감을 감지해 정리한다.
-    private func endDragGesture(for group: WatchListGroup) -> some Gesture {
-        DragGesture(minimumDistance: 0, coordinateSpace: .named("tabBarScroll"))
-            .onEnded { _ in
-                guard draggedGroupId != nil else { return }
-                print("<< endDragGesture onEnded[\(group.name)]")
-                let orderedIds = displayGroups.map(\.id)
-                stopWiggle()
-                onEndDrag(orderedIds)
-            }
-    }
-
-    private func stopWiggle() {
+    private func finishDrag() {
         dragOffsets.removeAll()
-        withAnimation(.easeOut(duration: 0.15)) {
-            isWiggling = false
-        }
-        isEditingGroups = false
         longPressedGroupId = nil
+        isEditingGroups = false
     }
 
     private func computeTargetIndex(draggedId: UUID, translation: CGFloat, location: CGFloat) -> Int {
