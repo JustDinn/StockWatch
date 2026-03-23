@@ -542,6 +542,7 @@ private struct GroupNameInputModalView: View {
                         if newValue.count <= maxLength {
                             onNameChange(newValue)
                         } else {
+                            UINotificationFeedbackGenerator().notificationOccurred(.warning)
                             onNameChange(String(newValue.prefix(maxLength)))
                         }
                     }
