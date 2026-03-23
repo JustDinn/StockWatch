@@ -436,25 +436,26 @@ private struct WatchListGroupTabBar: View {
             return groups.firstIndex(where: { $0.id == draggedId }) ?? 0
         }
         let draggedCenter = draggedFrame.midX + translation
+        let fromIdx = groups.firstIndex(where: { $0.id == draggedId }) ?? 0
 
-        var bestIdx = 0
-        var bestDist = CGFloat.infinity
-        for (idx, group) in groups.enumerated() {
-            guard group.id != draggedId, let frame = tabFrames[group.id] else { continue }
-            let dist = abs(frame.midX - draggedCenter)
-            if dist < bestDist {
-                bestDist = dist
-                // 드래그 방향에 따라 삽입 위치 결정
-                let fromIdx = groups.firstIndex(where: { $0.id == draggedId }) ?? 0
-                bestIdx = (draggedCenter > frame.midX) ? idx : max(0, idx - 1)
-                if draggedCenter > frame.midX && idx > fromIdx {
-                    bestIdx = idx
-                } else if draggedCenter < frame.midX && idx < fromIdx {
-                    bestIdx = idx
-                }
+        if translation > 0 {
+            // 오른쪽으로 이동: 바로 다음 탭(fromIdx+1)만 체크
+            let nextIdx = fromIdx + 1
+            guard nextIdx < groups.count,
+                  let frame = tabFrames[groups[nextIdx].id] else { return fromIdx }
+            if draggedCenter > frame.midX - frame.width * 0.5 {
+                return nextIdx
+            }
+        } else if translation < 0 {
+            // 왼쪽으로 이동: 바로 이전 탭(fromIdx-1)만 체크
+            let prevIdx = fromIdx - 1
+            guard prevIdx >= 0,
+                  let frame = tabFrames[groups[prevIdx].id] else { return fromIdx }
+            if draggedCenter < frame.midX + frame.width * 0.5 {
+                return prevIdx
             }
         }
-        return bestIdx
+        return fromIdx
     }
 }
 
