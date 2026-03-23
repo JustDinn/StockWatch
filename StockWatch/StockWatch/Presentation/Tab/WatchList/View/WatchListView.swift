@@ -527,6 +527,8 @@ private struct GroupNameInputModalView: View {
     private let maxLength = 20
 
     @FocusState private var isFocused: Bool
+    @State private var isShowingLimitError = false
+    @State private var errorTimer: Task<Void, Never>? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -539,11 +541,26 @@ private struct GroupNameInputModalView: View {
                 TextField(placeholder, text: Binding(
                     get: { name },
                     set: { newValue in
-                        if newValue.count <= 30 {
-                            if newValue.count > maxLength {
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            }
+                        if newValue.count <= maxLength {
                             onNameChange(newValue)
+                        } else {
+                            // 20자 초과 시도 시 피드백
+                            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                isShowingLimitError = true
+                            }
+                            // 기존 타이머 취소 후 새 타이머 시작 (Debounce)
+                            errorTimer?.cancel()
+                            errorTimer = Task {
+                                try? await Task.sleep(nanoseconds: 500_000_000)
+                                if !Task.isCancelled {
+                                    withAnimation(.easeInOut(duration: 0.25)) {
+                                        isShowingLimitError = false
+                                    }
+                                }
+                            }
+                            // 실제 값은 20자로 유지
+                            onNameChange(String(newValue.prefix(maxLength)))
                         }
                     }
                 ))
@@ -554,7 +571,7 @@ private struct GroupNameInputModalView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
 
                 HStack(alignment: .top) {
-                    if name.count > maxLength {
+                    if isShowingLimitError {
                         Text("그룹 이름은 20자 이내로 입력해주세요.")
                             .font(.caption)
                             .foregroundStyle(.red)
@@ -566,7 +583,7 @@ private struct GroupNameInputModalView: View {
                     Spacer()
                     Text("\(name.count)/\(maxLength)")
                         .font(.caption)
-                        .foregroundStyle(name.count > maxLength ? .red : .secondary)
+                        .foregroundStyle(isShowingLimitError ? .red : .secondary)
                 }
             }
             .padding(.horizontal, 20)
@@ -581,7 +598,7 @@ private struct GroupNameInputModalView: View {
                 }
                 .foregroundStyle(.primary)
 
-                let isConfirmDisabled = name.count > maxLength || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                let isConfirmDisabled = name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
                 Button(action: onConfirm) {
                     Text(confirmLabel)
