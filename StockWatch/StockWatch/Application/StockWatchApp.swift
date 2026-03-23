@@ -229,8 +229,13 @@ struct StockWatchApp: App {
             WatchListGroupModel.self
         ])
         let config = ModelConfiguration(schema: schema)
-        return (try? ModelContainer(for: schema, migrationPlan: WatchListGroupMigrationPlan.self, configurations: config))
-            ?? (try! ModelContainer(for: schema, configurations: config))
+        do {
+            return try ModelContainer(for: schema, migrationPlan: WatchListGroupMigrationPlan.self, configurations: config)
+        } catch {
+            // 마이그레이션 실패 시 로그 기록 후 폴백 (기존 데이터 유실 가능성 있음)
+            print("[SwiftData Migration Error] \(error)")
+            return try! ModelContainer(for: schema, configurations: config)
+        }
     }
 
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
