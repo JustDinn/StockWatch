@@ -1,5 +1,5 @@
 {
-  "originHash" : "da8aba19ad30308e583600028276adf7800e14421ab5ada124b1c0b89b38f96a",
+  "originHash" : "4644af6f187a3bcf79c2b9de6478d33bf5391b905dbbff465861ddfa0becac38",
   "pins" : [
     {
       "identity" : "abseil-cpp-binary",
@@ -125,6 +125,15 @@
       "state" : {
         "revision" : "b7e1104502eca3a213b46303391ca4d3bc8ddec1",
         "version" : "2.30910.0"
+      }
+    },
+    {
+      "identity" : "pretendardkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/wookeon/PretendardKit",
+      "state" : {
+        "revision" : "d8362d8ecee86c297f2784fa453037136914bc2c",
+        "version" : "1.0.0"
       }
     },
     {
