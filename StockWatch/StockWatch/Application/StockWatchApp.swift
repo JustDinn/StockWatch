@@ -11,6 +11,7 @@ import FirebaseAuth
 import FirebaseCore
 import FirebaseMessaging
 import UserNotifications
+import PretendardKit
 
 // MARK: - AppDelegate
 
@@ -32,6 +33,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         FirebaseApp.configure()
+        PretendardKit.register()
 
         Messaging.messaging().delegate = self
         UNUserNotificationCenter.current().delegate = self
