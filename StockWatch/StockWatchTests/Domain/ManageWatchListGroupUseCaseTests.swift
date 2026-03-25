@@ -134,6 +134,8 @@ final class ManageWatchListGroupUseCaseTests: XCTestCase {
         try await sut.deleteGroup(id: group.id)
         let remaining = await sut.fetchGroups()
         XCTAssertTrue(remaining.isEmpty)
+    }
+
     // MARK: - Validation
 
     @MainActor

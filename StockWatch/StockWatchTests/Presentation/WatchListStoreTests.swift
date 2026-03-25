@@ -42,6 +42,15 @@ final class MockAddFavoriteToGroupUseCase: AddFavoriteToGroupUseCaseProtocol {
     func execute(ticker: String, companyName: String, logoURL: String, groupId: UUID) async throws {}
 }
 
+final class MockFetchSparklineUseCase: FetchSparklineUseCaseProtocol {
+    var stubbedResult: SparklineData?
+    var stubbedError: Error?
+    func execute(ticker: String) async throws -> SparklineData {
+        if let error = stubbedError { throw error }
+        return stubbedResult ?? SparklineData(ticker: ticker, closePrices: [])
+    }
+}
+
 final class MockFetchStockQuoteUseCase: FetchStockQuoteUseCaseProtocol {
     var stubbedResult: StockQuote = StockQuote(ticker: "", currentPrice: 0, priceChangePercent: 0, currency: "USD")
     var stubbedError: Error?
@@ -94,6 +103,9 @@ final class WatchListStoreTests: XCTestCase {
             fetchFavoritesByGroupUseCase: mockFetchByGroupUseCase,
             addFavoriteToGroupUseCase: MockAddFavoriteToGroupUseCase(),
             fetchStockQuoteUseCase: mockFetchStockQuoteUseCase,
+            fetchGroupIdsForTickerUseCase: MockFetchGroupIdsForTickerUseCase(),
+            updateFavoriteGroupsUseCase: MockUpdateFavoriteGroupsUseCase(),
+            fetchSparklineUseCase: MockFetchSparklineUseCase(),
             state: state
         )
     }

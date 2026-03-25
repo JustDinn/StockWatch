@@ -42,6 +42,9 @@ struct WatchListState {
     var priceData: [String: StockQuote] = [:]
     var isPriceLoading: Bool = false
 
+    /// 티커 → 스파크라인 데이터
+    var sparklineData: [String: SparklineData] = [:]
+
     /// 그룹 탭 드래그 상태
     var draggedGroupId: UUID? = nil
     var dragTargetIndex: Int? = nil

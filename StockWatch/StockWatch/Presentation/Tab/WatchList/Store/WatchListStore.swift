@@ -21,6 +21,7 @@ final class WatchListStore: ObservableObject {
     private let fetchStockQuoteUseCase: FetchStockQuoteUseCaseProtocol
     private let fetchGroupIdsForTickerUseCase: FetchGroupIdsForTickerUseCaseProtocol
     private let updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCaseProtocol
+    private let fetchSparklineUseCase: FetchSparklineUseCaseProtocol
     private var toastDismissTask: Task<Void, Never>?
 
     // MARK: - Init
@@ -34,6 +35,7 @@ final class WatchListStore: ObservableObject {
         fetchStockQuoteUseCase: FetchStockQuoteUseCaseProtocol,
         fetchGroupIdsForTickerUseCase: FetchGroupIdsForTickerUseCaseProtocol,
         updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCaseProtocol,
+        fetchSparklineUseCase: FetchSparklineUseCaseProtocol,
         state: WatchListState = WatchListState()
     ) {
         self.state = state
@@ -45,6 +47,7 @@ final class WatchListStore: ObservableObject {
         self.fetchStockQuoteUseCase = fetchStockQuoteUseCase
         self.fetchGroupIdsForTickerUseCase = fetchGroupIdsForTickerUseCase
         self.updateFavoriteGroupsUseCase = updateFavoriteGroupsUseCase
+        self.fetchSparklineUseCase = fetchSparklineUseCase
     }
 
     // MARK: - Action
@@ -147,7 +150,9 @@ private extension WatchListStore {
             let groupId = state.dbGroups[index].id
             state.favorites = await fetchFavoritesByGroupUseCase.execute(groupId: groupId)
             state.isLoading = false
-            loadPrices(for: state.favorites.map(\.ticker))
+            let tickers = state.favorites.map(\.ticker)
+            loadPrices(for: tickers)
+            loadSparklines(for: tickers)
         }
     }
 
@@ -272,6 +277,25 @@ private extension WatchListStore {
             }
             state.priceData = result
             state.isPriceLoading = false
+        }
+    }
+
+    func loadSparklines(for tickers: [String]) {
+        guard !tickers.isEmpty else { return }
+        Task {
+            var result: [String: SparklineData] = [:]
+            await withTaskGroup(of: (String, SparklineData?).self) { group in
+                for ticker in tickers {
+                    group.addTask {
+                        let data = try? await self.fetchSparklineUseCase.execute(ticker: ticker)
+                        return (ticker, data)
+                    }
+                }
+                for await (ticker, data) in group {
+                    if let data { result[ticker] = data }
+                }
+            }
+            state.sparklineData = result
         }
     }
 

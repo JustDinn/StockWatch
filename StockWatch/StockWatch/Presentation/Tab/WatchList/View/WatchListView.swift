@@ -37,7 +37,8 @@ private struct WatchListContentView: View {
             addFavoriteToGroupUseCase: AddFavoriteToGroupUseCase(repository: repository),
             fetchStockQuoteUseCase: FetchStockQuoteUseCase(repository: StockQuoteRepository()),
             fetchGroupIdsForTickerUseCase: FetchGroupIdsForTickerUseCase(repository: repository),
-            updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCase(repository: repository)
+            updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCase(repository: repository),
+            fetchSparklineUseCase: FetchSparklineUseCase(repository: CandlestickRepository())
         ))
     }
 
@@ -233,6 +234,7 @@ private struct WatchListContentView: View {
                     WatchListStockRow(
                         item: item,
                         quoteData: store.state.priceData[item.ticker],
+                        sparklineData: store.state.sparklineData[item.ticker],
                         displayName: displayName(for: item),
                         onTap: { store.action(.selectTicker(item.ticker)) },
                         onRemove: { store.action(.removeFavoriteWithUndo(ticker: item.ticker)) }
@@ -710,6 +712,7 @@ private struct WatchListGroupManageModalView: View {
 private struct WatchListStockRow: View {
     let item: FavoriteItem
     let quoteData: StockQuote?
+    let sparklineData: SparklineData?
     let displayName: String
     let onTap: () -> Void
     let onRemove: () -> Void
@@ -718,6 +721,8 @@ private struct WatchListStockRow: View {
         HStack(spacing: 12) {
             logoView
             nameColumn
+            Spacer()
+            sparklineColumn
             Spacer()
             priceColumn
             heartButton
@@ -773,6 +778,17 @@ private struct WatchListStockRow: View {
             Text(item.ticker)
                 .font(.pretendardCaption)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var sparklineColumn: some View {
+        if let sparkline = sparklineData, sparkline.closePrices.count >= 2 {
+            SparklineView(
+                closePrices: sparkline.closePrices,
+                isPositive: (quoteData?.priceChangePercent ?? 0) >= 0
+            )
+            .frame(width: 60, height: 32)
         }
     }
 
