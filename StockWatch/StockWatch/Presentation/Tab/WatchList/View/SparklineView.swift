@@ -9,6 +9,7 @@ import SwiftUI
 struct SparklineView: View {
     let closePrices: [Double]
     let isPositive: Bool
+    var currentPrice: Double? = nil
 
     private var lineColor: Color {
         isPositive ? Color(hex: "#ef5350") : Color(hex: "#1976d2")
@@ -28,6 +29,15 @@ struct SparklineView: View {
                                 endPoint: .bottom
                             )
                         )
+                    // 현재가 수평 점선
+                    if let price = currentPrice {
+                        let y = currentPriceY(price: price, height: geo.size.height)
+                        Path { path in
+                            path.move(to: CGPoint(x: 0, y: y))
+                            path.addLine(to: CGPoint(x: geo.size.width, y: y))
+                        }
+                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+                    }
                     // 선
                     linePath(points: points)
                         .stroke(lineColor, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
@@ -49,6 +59,16 @@ struct SparklineView: View {
             let y = size.height - (CGFloat((price - minVal) / safeRange) * size.height)
             return CGPoint(x: x, y: y)
         }
+    }
+
+    private func currentPriceY(price: Double, height: CGFloat) -> CGFloat {
+        let minVal = closePrices.min() ?? 0
+        let maxVal = closePrices.max() ?? 1
+        let range = maxVal - minVal
+        let safeRange = range == 0 ? 1.0 : range
+        let normalized = (price - minVal) / safeRange
+        let y = height - CGFloat(normalized) * height
+        return min(max(y, 0), height)
     }
 
     private func linePath(points: [CGPoint]) -> Path {

@@ -786,7 +786,8 @@ private struct WatchListStockRow: View {
         if let sparkline = sparklineData, sparkline.closePrices.count >= 2 {
             SparklineView(
                 closePrices: sparkline.closePrices,
-                isPositive: (quoteData?.priceChangePercent ?? 0) >= 0
+                isPositive: (quoteData?.priceChangePercent ?? 0) >= 0,
+                currentPrice: quoteData?.currentPrice
             )
             .frame(width: 60, height: 32)
         }
