@@ -133,12 +133,12 @@ private struct StrategyRow: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(strategy.name)
-                    .font(.headline)
+                    .font(.pretendardHeadline)
 
                 Spacer()
 
                 Text(strategy.category.rawValue)
-                    .font(.caption)
+                    .font(.pretendardCaption)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 2)
                     .background(Color.blue.opacity(0.1))
@@ -154,7 +154,7 @@ private struct StrategyRow: View {
             }
 
             Text(strategy.shortName)
-                .font(.subheadline)
+                .font(.pretendardSubheadline)
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)

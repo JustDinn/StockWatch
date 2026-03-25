@@ -109,15 +109,15 @@ private struct MyAlertsContentView: View {
     private var emptyView: some View {
         VStack(spacing: 16) {
             Image(systemName: "bell.slash")
-                .font(.system(size: 48))
+                .font(.pretendard(size: 48))
                 .foregroundStyle(.secondary)
 
             Text("등록된 알림이 없습니다")
-                .font(.headline)
+                .font(.pretendardHeadline)
                 .foregroundStyle(.secondary)
 
             Text("종목 상세 화면에서\n전략을 적용하고 알림을 등록해보세요")
-                .font(.subheadline)
+                .font(.pretendardSubheadline)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
         }
@@ -140,7 +140,7 @@ private struct MyAlertsContentView: View {
             } label: {
                 HStack(spacing: 12) {
                     Text(strategyShortName(condition.strategyId))
-                        .font(.caption.bold())
+                        .font(.pretendardBold(size: 12))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
@@ -149,16 +149,16 @@ private struct MyAlertsContentView: View {
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(condition.companyName.isEmpty ? condition.ticker : condition.companyName)
-                            .font(.headline)
+                            .font(.pretendardHeadline)
                             .foregroundStyle(.primary)
 
                         Text(parametersDescription(condition.parameters))
-                            .font(.caption)
+                            .font(.pretendardCaption)
                             .foregroundStyle(.secondary)
 
                         if condition.isNotificationEnabled {
                             Text(formattedTime(condition.notificationTime))
-                                .font(.caption2)
+                                .font(.pretendardCaption2)
                                 .foregroundStyle(.blue)
                         }
                     }

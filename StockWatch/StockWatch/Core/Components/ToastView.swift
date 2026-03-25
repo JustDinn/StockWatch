@@ -17,10 +17,10 @@ struct ToastView: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .foregroundStyle(.white)
-                .font(.body)
+                .font(.pretendardBody)
 
             Text(message)
-                .font(.subheadline)
+                .font(.pretendardSubheadline)
                 .foregroundStyle(.white)
 
             Spacer()
@@ -28,7 +28,7 @@ struct ToastView: View {
             if let actionLabel, let onAction {
                 Button(action: onAction) {
                     Text(actionLabel)
-                        .font(.subheadline.bold())
+                        .font(.pretendardBold(size: 15))
                         .foregroundStyle(.white)
                 }
             }

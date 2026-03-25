@@ -61,10 +61,10 @@ private struct StockDetailContentView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 6) {
                                 Text(state.companyName)
-                                    .font(.subheadline.bold())
+                                    .font(.pretendardBold(size: 15))
 
                                 Text(state.ticker)
-                                    .font(.subheadline.bold())
+                                    .font(.pretendardBold(size: 15))
                                     .foregroundStyle(.secondary)
 
                                 Button {
@@ -78,10 +78,10 @@ private struct StockDetailContentView: View {
                             // 가격 정보
                             HStack(spacing: 8) {
                                 Text(state.formattedPrice)
-                                    .font(.title2.bold())
+                                    .font(.pretendardTitle2)
 
                                 Text(state.formattedChangePercent)
-                                    .font(.subheadline)
+                                    .font(.pretendardSubheadline)
                                     .foregroundStyle(state.isPositiveChange ? Color(hex: upColorHex) : Color(hex: downColorHex))
                             }
                         }
@@ -194,9 +194,7 @@ private struct StockDetailContentView: View {
                     store.action(.selectPeriod(period))
                 } label: {
                     Text(period.rawValue)
-                        .font(.footnote.weight(
-                            state.selectedPeriod == period ? .bold : .regular
-                        ))
+                        .font(state.selectedPeriod == period ? .pretendardBold(size: 13) : .pretendardFootnote)
                         .foregroundStyle(
                             state.selectedPeriod == period
                                 ? Color.primary
@@ -244,7 +242,7 @@ private struct StockDetailContentView: View {
             .frame(width: 48, height: 48)
             .overlay(
                 Text(state.initials)
-                    .font(.title2.bold())
+                    .font(.pretendardTitle2)
                     .foregroundStyle(.blue)
             )
     }

@@ -70,13 +70,13 @@ private struct StrategyDetailContentView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text(state.strategy.shortName)
-                            .font(.title2.bold())
+                            .font(.pretendardTitle2)
                             .foregroundStyle(.blue)
 
                         Spacer()
 
                         Text(state.strategy.category.rawValue)
-                            .font(.caption)
+                            .font(.pretendardCaption)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
                             .background(Color.blue.opacity(0.1))
@@ -84,14 +84,14 @@ private struct StrategyDetailContentView: View {
                     }
 
                     Text(state.strategy.name)
-                        .font(.headline)
+                        .font(.pretendardHeadline)
                 }
 
                 Divider()
 
                 // 설명
                 Text(state.strategy.description)
-                    .font(.body)
+                    .font(.pretendardBody)
                     .lineSpacing(6)
 
                 Spacer(minLength: 20)

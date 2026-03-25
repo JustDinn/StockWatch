@@ -69,10 +69,10 @@ private struct FavoriteGroupModalContentView: View {
             HStack(spacing: 12) {
                 Image(systemName: "plus.circle.fill")
                     .foregroundStyle(.blue)
-                    .font(.title3)
+                    .font(.pretendardTitle3)
                 Text("새 그룹 추가")
                     .foregroundStyle(.blue)
-                    .font(.subheadline)
+                    .font(.pretendardSubheadline)
                 Spacer()
             }
             .padding(.horizontal, 20)
@@ -88,7 +88,7 @@ private struct FavoriteGroupModalContentView: View {
                 .textFieldStyle(.roundedBorder)
                 .onSubmit { submitNewGroup() }
             Button("추가") { submitNewGroup() }
-                .font(.subheadline.weight(.medium))
+                .font(.pretendardMedium(size: 15))
                 .foregroundStyle(.blue)
         }
         .padding(.horizontal, 20)
@@ -123,13 +123,13 @@ private struct FavoriteGroupModalContentView: View {
         HStack(spacing: 12) {
             Image(systemName: "folder.fill")
                 .foregroundStyle(.secondary)
-                .font(.title3)
+                .font(.pretendardTitle3)
             Text(group.name)
-                .font(.subheadline)
+                .font(.pretendardSubheadline)
             Spacer()
             Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                 .foregroundStyle(isSelected ? .blue : Color(.systemGray3))
-                .font(.title3)
+                .font(.pretendardTitle3)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
@@ -153,7 +153,7 @@ private struct FavoriteGroupModalContentView: View {
                 .foregroundStyle(.white)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
         }
-        .font(.subheadline.weight(.semibold))
+        .font(.pretendardSemibold(size: 15))
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
     }
@@ -179,7 +179,7 @@ private struct FavoriteGroupModalContentView: View {
             .frame(width: size, height: size)
             .overlay(
                 Text(String(store.state.ticker.prefix(2)).uppercased())
-                    .font(.subheadline.bold())
+                    .font(.pretendardBold(size: 15))
                     .foregroundStyle(.blue)
             )
     }

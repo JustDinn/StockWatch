@@ -46,7 +46,7 @@ struct AddStockToGroupView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let error = store.state.errorMessage {
             Text(error)
-                .font(.subheadline)
+                .font(.pretendardSubheadline)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -69,7 +69,7 @@ struct AddStockToGroupView: View {
     private var selectButton: some View {
         Button(action: { store.action(.confirmSelection) }) {
             Text("\(store.state.selectedStocks.count)개 선택")
-                .font(.headline)
+                .font(.pretendardHeadline)
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
@@ -97,11 +97,11 @@ private struct AddStockRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(result.description)
-                    .font(.subheadline.weight(.medium))
+                    .font(.pretendardMedium(size: 15))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 Text(result.displayTicker)
-                    .font(.caption)
+                    .font(.pretendardCaption)
                     .foregroundStyle(.blue)
             }
 
@@ -109,7 +109,7 @@ private struct AddStockRow: View {
 
             Image(systemName: isSelected ? "heart.fill" : "heart")
                 .foregroundStyle(isSelected ? .red : Color(.systemGray3))
-                .font(.title3)
+                .font(.pretendardTitle3)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -137,7 +137,7 @@ private struct AddStockRow: View {
             .frame(width: 44, height: 44)
             .overlay(
                 Text(String(result.description.prefix(1)))
-                    .font(.headline.bold())
+                    .font(.pretendardBold(size: 17))
                     .foregroundStyle(.blue)
             )
     }
