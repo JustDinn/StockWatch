@@ -22,6 +22,7 @@ struct SearchBar: View {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.gray)
             TextField(placeholder, text: $keyword)
+                .font(.pretendardSubheadline)
                 .autocorrectionDisabled(true)
                 .textInputAutocapitalization(.characters)
                 .onSubmit {
