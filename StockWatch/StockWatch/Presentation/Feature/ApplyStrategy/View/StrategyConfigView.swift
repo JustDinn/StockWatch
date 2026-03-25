@@ -56,18 +56,18 @@ struct StrategyConfigView: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
                 Text(strategy.shortName)
-                    .font(.title2.bold())
+                    .font(.pretendardTitle2)
                     .foregroundStyle(.blue)
 
                 Text(strategy.category.rawValue)
-                    .font(.caption)
+                    .font(.pretendardCaption)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
                     .background(Color.blue.opacity(0.1))
                     .clipShape(Capsule())
             }
             Text(strategy.name)
-                .font(.subheadline)
+                .font(.pretendardSubheadline)
                 .foregroundStyle(.secondary)
         }
     }
@@ -78,7 +78,7 @@ struct StrategyConfigView: View {
     private var parameterSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("파라미터 설정")
-                .font(.headline)
+                .font(.pretendardHeadline)
 
             switch strategy.id {
             case "sma_cross", "ema_cross":
@@ -157,7 +157,7 @@ struct StrategyConfigView: View {
                 }
                 if shortPeriodError {
                     Text("1~1,000까지 입력해주세요.")
-                        .font(.caption)
+                        .font(.pretendardCaption)
                         .foregroundStyle(.red)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
@@ -192,7 +192,7 @@ struct StrategyConfigView: View {
                 }
                 if longPeriodError {
                     Text("1~1,000까지 입력해주세요.")
-                        .font(.caption)
+                        .font(.pretendardCaption)
                         .foregroundStyle(.red)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
@@ -200,7 +200,7 @@ struct StrategyConfigView: View {
 
             if crossOrderError {
                 Text("단기 기간은 장기 기간보다 작아야 합니다")
-                    .font(.caption)
+                    .font(.pretendardCaption)
                     .foregroundStyle(.red)
             }
         }
@@ -241,7 +241,7 @@ struct StrategyConfigView: View {
                 }
                 if rsiPeriodError {
                     Text("1~250까지 입력해주세요.")
-                        .font(.caption)
+                        .font(.pretendardCaption)
                         .foregroundStyle(.red)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
@@ -274,7 +274,7 @@ struct StrategyConfigView: View {
                 }
                 if oversoldError {
                     Text("1~99까지 입력해주세요.")
-                        .font(.caption)
+                        .font(.pretendardCaption)
                         .foregroundStyle(.red)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
@@ -307,7 +307,7 @@ struct StrategyConfigView: View {
                 }
                 if overboughtError {
                     Text("1~99까지 입력해주세요.")
-                        .font(.caption)
+                        .font(.pretendardCaption)
                         .foregroundStyle(.red)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
@@ -325,7 +325,7 @@ struct StrategyConfigView: View {
     private var evaluationSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("현재 상태 확인")
-                .font(.headline)
+                .font(.pretendardHeadline)
 
             if store.state.isEvaluating {
                 HStack {
@@ -333,7 +333,7 @@ struct StrategyConfigView: View {
                         .scaleEffect(0.8)
                     Text("평가 중...")
                         .foregroundStyle(.secondary)
-                        .font(.subheadline)
+                        .font(.pretendardSubheadline)
                 }
             } else if let signal = store.state.signal {
                 signalCard(signal: signal)
@@ -352,7 +352,7 @@ struct StrategyConfigView: View {
 
             if let errorMessage = store.state.errorMessage {
                 Text(errorMessage)
-                    .font(.caption)
+                    .font(.pretendardCaption)
                     .foregroundStyle(.red)
             }
         }
@@ -367,14 +367,14 @@ struct StrategyConfigView: View {
                     store.action(.evaluate)
                 } label: {
                     Image(systemName: "arrow.clockwise")
-                        .font(.caption)
+                        .font(.pretendardCaption)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
             }
 
             Text(signal.description)
-                .font(.subheadline)
+                .font(.pretendardSubheadline)
                 .foregroundStyle(.secondary)
         }
         .padding(12)
@@ -384,7 +384,7 @@ struct StrategyConfigView: View {
 
     private func signalBadge(_ type: SignalType) -> some View {
         Text(type.rawValue)
-            .font(.subheadline.bold())
+            .font(.pretendardBold(size: 15))
             .foregroundStyle(.white)
             .padding(.horizontal, 12)
             .padding(.vertical, 4)
@@ -405,7 +405,7 @@ struct StrategyConfigView: View {
     private var notificationSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("알림 설정")
-                .font(.headline)
+                .font(.pretendardHeadline)
 
             Toggle(isOn: Binding(
                 get: { store.state.isNotificationEnabled },
@@ -414,7 +414,7 @@ struct StrategyConfigView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("조건 충족 시 알림")
                     Text("조건이 충족되면 푸시 알림을 받습니다")
-                        .font(.caption)
+                        .font(.pretendardCaption)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -446,7 +446,7 @@ struct StrategyConfigView: View {
                 }
 
                 Text("매일 설정한 시간에 전략 조건을 확인합니다")
-                    .font(.caption)
+                    .font(.pretendardCaption)
                     .foregroundStyle(.secondary)
             }
         }

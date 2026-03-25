@@ -14,6 +14,7 @@
 		3F5B8A852F5D8F7D00B73065 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 3F5B8A842F5D8F7D00B73065 /* FirebaseFunctions */; };
 		3F88A7DC2F5C740000A6A4A9 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 3F88A7DB2F5C740000A6A4A9 /* FirebaseAuth */; };
 		3FC2468C2F4B41F000AD955A /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = 3FC2468B2F4B41F000AD955A /* Alamofire */; };
+		3FC3F0C12F72D75F00B1EF37 /* PretendardKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3FC3F0C02F72D75F00B1EF37 /* PretendardKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,6 +82,7 @@
 				3F13A2EE2F6D3F80000D8119 /* FirebaseRemoteConfig in Frameworks */,
 				3F5B8A852F5D8F7D00B73065 /* FirebaseFunctions in Frameworks */,
 				3FC2468C2F4B41F000AD955A /* Alamofire in Frameworks */,
+				3FC3F0C12F72D75F00B1EF37 /* PretendardKit in Frameworks */,
 				3F5468882F5AC84600DC5AEB /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -149,6 +151,7 @@
 				3F88A7DB2F5C740000A6A4A9 /* FirebaseAuth */,
 				3F5B8A842F5D8F7D00B73065 /* FirebaseFunctions */,
 				3F13A2ED2F6D3F80000D8119 /* FirebaseRemoteConfig */,
+				3FC3F0C02F72D75F00B1EF37 /* PretendardKit */,
 			);
 			productName = StockWatch;
 			productReference = 3F915FA52F4B3E0D00EC99A0 /* StockWatch.app */;
@@ -237,6 +240,7 @@
 				3FC2468A2F4B41F000AD955A /* XCRemoteSwiftPackageReference "Alamofire" */,
 				3F5468862F5AC84600DC5AEB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				3F54688B2F5AD01600DC5AEB /* XCRemoteSwiftPackageReference "Kingfisher" */,
+				3FC3F0BF2F72D75F00B1EF37 /* XCRemoteSwiftPackageReference "PretendardKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3F915FA62F4B3E0D00EC99A0 /* Products */;
@@ -461,7 +465,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
-				MARKETING_VERSION = 2.0.0;
+				MARKETING_VERSION = 2.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.JustDin.StockWatch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -508,7 +512,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
-				MARKETING_VERSION = 2.0.0;
+				MARKETING_VERSION = 2.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.JustDin.StockWatch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -682,6 +686,14 @@
 				minimumVersion = 5.11.1;
 			};
 		};
+		3FC3F0BF2F72D75F00B1EF37 /* XCRemoteSwiftPackageReference "PretendardKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/wookeon/PretendardKit";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -719,6 +731,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3FC2468A2F4B41F000AD955A /* XCRemoteSwiftPackageReference "Alamofire" */;
 			productName = Alamofire;
+		};
+		3FC3F0C02F72D75F00B1EF37 /* PretendardKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3FC3F0BF2F72D75F00B1EF37 /* XCRemoteSwiftPackageReference "PretendardKit" */;
+			productName = PretendardKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
