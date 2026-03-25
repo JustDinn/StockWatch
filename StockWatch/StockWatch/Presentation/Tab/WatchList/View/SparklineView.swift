@@ -36,7 +36,7 @@ struct SparklineView: View {
                             path.move(to: CGPoint(x: 0, y: y))
                             path.addLine(to: CGPoint(x: geo.size.width, y: y))
                         }
-                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+                        .stroke(Color(.systemGray3), style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
                     }
                     // 선
                     linePath(points: points)
