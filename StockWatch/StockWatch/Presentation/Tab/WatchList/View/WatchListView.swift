@@ -200,21 +200,21 @@ private struct WatchListContentView: View {
     private var emptyView: some View {
         VStack(spacing: 16) {
             Image(systemName: "heart.slash")
-                .font(.system(size: 48))
+                .font(.pretendard(size: 48))
                 .foregroundStyle(.secondary)
 
             Text("관심 종목이 없습니다")
-                .font(.headline)
+                .font(.pretendardHeadline)
                 .foregroundStyle(.secondary)
 
             Text("종목 상세 화면에서\n하트를 눌러 관심 종목을 추가해보세요")
-                .font(.subheadline)
+                .font(.pretendardSubheadline)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
 
             Button(action: { isShowingAddStock = true }) {
                 Label("추가하기", systemImage: "plus")
-                    .font(.subheadline.weight(.medium))
+                    .font(.pretendardMedium(size: 15))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
@@ -266,20 +266,20 @@ private struct WatchListGroupOnboardingView: View {
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "folder.badge.plus")
-                .font(.system(size: 48))
+                .font(.pretendard(size: 48))
                 .foregroundStyle(.secondary)
 
             Text("워치리스트 그룹이 없습니다")
-                .font(.headline)
+                .font(.pretendardHeadline)
                 .foregroundStyle(.secondary)
 
             Text("그룹을 만들어 워치리스트를 구성해보세요")
-                .font(.subheadline)
+                .font(.pretendardSubheadline)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
 
             Button("그룹 만들기", action: onCreateGroup)
-                .font(.subheadline.weight(.medium))
+                .font(.pretendardMedium(size: 15))
                 .foregroundStyle(.blue)
                 .padding(.top, 4)
         }
@@ -327,7 +327,7 @@ private struct WatchListGroupTabBar: View {
                             .id(group.id)
                     }
                     Button("그룹관리", action: onAddGroup)
-                        .font(.subheadline)
+                        .font(.pretendardSubheadline)
                         .foregroundStyle(.blue)
                         .padding(.horizontal, 4)
                 }
@@ -389,7 +389,7 @@ private struct WatchListGroupTabBar: View {
         let wiggleCondition = !isDragged && isInEditMode
 
         Text(group.name)
-            .font(.subheadline.weight(isSelected ? .semibold : .regular))
+            .font(isSelected ? .pretendardSemibold(size: 15) : .pretendardSubheadline)
             .foregroundStyle(isSelected ? Color.primary : Color.secondary)
             .padding(.horizontal, 14)
             .padding(.vertical, 6)
@@ -533,7 +533,7 @@ private struct GroupNameInputModalView: View {
     var body: some View {
         VStack(spacing: 0) {
             Text(title)
-                .font(.headline)
+                .font(.pretendardHeadline)
                 .padding(.top, 24)
                 .padding(.bottom, 20)
 
@@ -573,16 +573,16 @@ private struct GroupNameInputModalView: View {
                 HStack(alignment: .top) {
                     if isShowingLimitError {
                         Text("그룹 이름은 20자 이내로 입력해주세요.")
-                            .font(.caption)
+                            .font(.pretendardCaption)
                             .foregroundStyle(.red)
                     } else if let error = errorMessage {
                         Text(error)
-                            .font(.caption)
+                            .font(.pretendardCaption)
                             .foregroundStyle(.red)
                     }
                     Spacer()
                     Text("\(name.count)/\(maxLength)")
-                        .font(.caption)
+                        .font(.pretendardCaption)
                         .foregroundStyle(isShowingLimitError ? .red : .secondary)
                 }
             }
@@ -634,10 +634,10 @@ private struct WatchListGroupManageModalView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "plus.circle.fill")
                         .foregroundStyle(.blue)
-                        .font(.title3)
+                        .font(.pretendardTitle3)
                     Text("새 그룹 추가")
                         .foregroundStyle(.blue)
-                        .font(.subheadline)
+                        .font(.pretendardSubheadline)
                     Spacer()
                 }
                 .padding(.horizontal, 20)
@@ -683,15 +683,15 @@ private struct WatchListGroupManageModalView: View {
             } label: {
                 Image(systemName: "minus.circle.fill")
                     .foregroundStyle(.red)
-                    .font(.title3)
+                    .font(.pretendardTitle3)
             }
             .buttonStyle(.plain)
             Text(group.name)
-                .font(.subheadline)
+                .font(.pretendardSubheadline)
             Button { onRenameGroup(group) } label: {
                 Image(systemName: "pencil")
                     .foregroundStyle(.secondary)
-                    .font(.subheadline)
+                    .font(.pretendardSubheadline)
             }
             .buttonStyle(.plain)
             Spacer()
@@ -734,7 +734,7 @@ private struct WatchListStockRow: View {
         } label: {
             Image(systemName: "heart.fill")
                 .foregroundStyle(.red)
-                .font(.system(size: 18))
+                .font(.pretendard(size: 18))
         }
         .buttonStyle(.plain)
     }
@@ -760,7 +760,7 @@ private struct WatchListStockRow: View {
             .frame(width: size, height: size)
             .overlay(
                 Text(String(item.ticker.prefix(2)).uppercased())
-                    .font(.subheadline.bold())
+                    .font(.pretendardBold(size: 15))
                     .foregroundStyle(.blue)
             )
     }
@@ -768,10 +768,10 @@ private struct WatchListStockRow: View {
     private var nameColumn: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(displayName)
-                .font(.subheadline.weight(.medium))
+                .font(.pretendardMedium(size: 15))
                 .lineLimit(1)
             Text(item.ticker)
-                .font(.caption)
+                .font(.pretendardCaption)
                 .foregroundStyle(.secondary)
         }
     }
@@ -781,10 +781,10 @@ private struct WatchListStockRow: View {
             if let data = quoteData {
                 let positive = data.priceChangePercent >= 0
                 Text(String(format: "%@%.2f%%", positive ? "+" : "", data.priceChangePercent))
-                    .font(.subheadline.weight(.medium))
+                    .font(.pretendardMedium(size: 15))
                     .foregroundStyle(positive ? Color(hex: "#ef5350") : Color(hex: "#1976d2"))
                 Text(formattedPrice(data.currentPrice, currency: data.currency))
-                    .font(.caption)
+                    .font(.pretendardCaption)
                     .foregroundStyle(.secondary)
             }
         }
@@ -813,11 +813,11 @@ private struct WatchListAddStockRow: View {
                 .frame(width: 44, height: 44)
                 .overlay(
                     Image(systemName: "plus")
-                        .font(.title3.weight(.medium))
+                        .font(.pretendardMedium(size: 20))
                         .foregroundStyle(.secondary)
                 )
             Text("종목 추가하기")
-                .font(.subheadline)
+                .font(.pretendardSubheadline)
                 .foregroundStyle(.secondary)
             Spacer()
         }

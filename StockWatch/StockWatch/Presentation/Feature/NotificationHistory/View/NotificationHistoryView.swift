@@ -56,11 +56,11 @@ private struct NotificationHistoryContentView: View {
     private var emptyView: some View {
         VStack(spacing: 16) {
             Image(systemName: "bell.slash")
-                .font(.system(size: 48))
+                .font(.pretendard(size: 48))
                 .foregroundStyle(.secondary)
 
             Text("받은 알림이 없습니다")
-                .font(.headline)
+                .font(.pretendardHeadline)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -97,7 +97,7 @@ private struct NotificationHistoryContentView: View {
             // 하단 안내 문구
             Section {
                 Text("받은 소식은 30일 동안 보관됩니다.")
-                    .font(.caption)
+                    .font(.pretendardCaption)
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .listRowBackground(Color.clear)
@@ -125,18 +125,18 @@ private struct NotificationHistoryContentView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(item.strategyName)
-                            .font(.subheadline.bold())
+                            .font(.pretendardBold(size: 15))
                             .foregroundStyle(.primary)
 
                         Spacer()
 
                         Text(relativeTime(item.receivedAt))
-                            .font(.caption)
+                            .font(.pretendardCaption)
                             .foregroundStyle(.secondary)
                     }
 
                     Text("\(item.ticker) · \(item.body)")
-                        .font(.subheadline)
+                        .font(.pretendardSubheadline)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -168,7 +168,7 @@ private struct NotificationHistoryContentView: View {
             .frame(width: 44, height: 44)
             .overlay(
                 Text(initials)
-                    .font(.caption.bold())
+                    .font(.pretendardBold(size: 12))
                     .foregroundStyle(.blue)
             )
     }
