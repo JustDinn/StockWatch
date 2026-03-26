@@ -5,6 +5,19 @@
 
 import Foundation
 
+/// 정렬 기준
+enum WatchListSortCriteria: Equatable {
+    case name
+    case price
+    case changePercent
+}
+
+/// 정렬 방향
+enum WatchListSortDirection: Equatable {
+    case ascending
+    case descending
+}
+
 /// 되돌리기를 위한 삭제 전 즐겨찾기 정보
 struct WatchListUndoFavoriteInfo: Equatable {
     let ticker: String
@@ -56,6 +69,11 @@ struct WatchListState {
     var toastMessage: String? = nil
     /// 되돌리기용 삭제 정보
     var undoInfo: WatchListUndoFavoriteInfo? = nil
+
+    /// 정렬 기준 (nil이면 정렬 없음 = 추가순)
+    var sortCriteria: WatchListSortCriteria? = nil
+    /// 정렬 방향 (기본 오름차순)
+    var sortDirection: WatchListSortDirection = .ascending
 
     /// 테스트 편의용 이니셜라이저
     init(favorites: [FavoriteItem] = []) {

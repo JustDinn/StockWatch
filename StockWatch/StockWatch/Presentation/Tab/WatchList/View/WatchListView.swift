@@ -230,7 +230,12 @@ private struct WatchListContentView: View {
     private var stockList: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                ForEach(store.state.favorites, id: \.ticker) { item in
+                WatchListSortHeaderView(
+                    sortCriteria: store.state.sortCriteria,
+                    sortDirection: store.state.sortDirection,
+                    onToggle: { store.action(.toggleSort($0)) }
+                )
+                ForEach(store.sortedFavorites, id: \.ticker) { item in
                     WatchListStockRow(
                         item: item,
                         quoteData: store.state.priceData[item.ticker],
@@ -704,6 +709,52 @@ private struct WatchListGroupManageModalView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
+    }
+}
+
+// MARK: - Sort Header
+
+private struct WatchListSortHeaderView: View {
+    let sortCriteria: WatchListSortCriteria?
+    let sortDirection: WatchListSortDirection
+    let onToggle: (WatchListSortCriteria) -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            sortButton(label: "종목", criteria: .name)
+            Spacer()
+            sortButton(label: "현재가", criteria: .price)
+            Spacer()
+            sortButton(label: "등락", criteria: .changePercent)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+    }
+
+    private func sortButton(label: String, criteria: WatchListSortCriteria) -> some View {
+        let isActive = sortCriteria == criteria
+        return Button {
+            onToggle(criteria)
+        } label: {
+            HStack(spacing: 4) {
+                Text(label)
+                    .font(.pretendardMedium(size: 13))
+                sortIcon(isActive: isActive)
+            }
+            .foregroundStyle(isActive ? .blue : .secondary)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func sortIcon(isActive: Bool) -> some View {
+        Group {
+            if isActive {
+                Image(systemName: sortDirection == .ascending ? "arrow.up" : "arrow.down")
+            } else {
+                Image(systemName: "chevron.up.chevron.down")
+            }
+        }
+        .font(.system(size: 11, weight: .medium))
     }
 }
 

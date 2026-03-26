@@ -447,6 +447,139 @@ final class WatchListStoreTests: XCTestCase {
         XCTAssertNil(sut.state.draggedGroupId)
     }
 
+    // MARK: - toggleSort
+
+    func test_action_toggleSort_name_cyclesNoneAscDescNone() {
+        // 초기: 정렬 없음
+        XCTAssertNil(sut.state.sortCriteria)
+
+        // 1탭: 오름차순
+        sut.action(.toggleSort(.name))
+        XCTAssertEqual(sut.state.sortCriteria, .name)
+        XCTAssertEqual(sut.state.sortDirection, .ascending)
+
+        // 2탭: 내림차순
+        sut.action(.toggleSort(.name))
+        XCTAssertEqual(sut.state.sortCriteria, .name)
+        XCTAssertEqual(sut.state.sortDirection, .descending)
+
+        // 3탭: 해제
+        sut.action(.toggleSort(.name))
+        XCTAssertNil(sut.state.sortCriteria)
+        XCTAssertEqual(sut.state.sortDirection, .ascending)
+    }
+
+    func test_action_toggleSort_switchColumn_resetsToAsc() {
+        // name 오름차순
+        sut.action(.toggleSort(.name))
+        XCTAssertEqual(sut.state.sortCriteria, .name)
+
+        // price로 전환 → 오름차순
+        sut.action(.toggleSort(.price))
+        XCTAssertEqual(sut.state.sortCriteria, .price)
+        XCTAssertEqual(sut.state.sortDirection, .ascending)
+    }
+
+    func test_sortedFavorites_byNameAsc_sortsAlphabetically() {
+        // Arrange — companyName으로 정렬 (KoreanStockDictionary는 테스트에서 비어있으므로 fallback)
+        let items = [
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        sut = makeStore(state: WatchListState(favorites: items))
+        sut.action(.toggleSort(.name)) // ascending
+
+        // Act
+        let sorted = sut.sortedFavorites
+
+        // Assert
+        XCTAssertEqual(sorted[0].ticker, "AAPL")
+        XCTAssertEqual(sorted[1].ticker, "TSLA")
+    }
+
+    func test_sortedFavorites_byNameDesc_sortsReverse() {
+        let items = [
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        sut = makeStore(state: WatchListState(favorites: items))
+        sut.action(.toggleSort(.name)) // asc
+        sut.action(.toggleSort(.name)) // desc
+
+        let sorted = sut.sortedFavorites
+        XCTAssertEqual(sorted[0].ticker, "TSLA")
+        XCTAssertEqual(sorted[1].ticker, "AAPL")
+    }
+
+    func test_sortedFavorites_byPriceAsc_sortsByCurrentPrice() {
+        let items = [
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        var state = WatchListState(favorites: items)
+        state.priceData = [
+            "AAPL": StockQuote(ticker: "AAPL", currentPrice: 150.0, priceChangePercent: 1.0, currency: "USD"),
+            "TSLA": StockQuote(ticker: "TSLA", currentPrice: 70.0, priceChangePercent: -2.0, currency: "USD")
+        ]
+        sut = makeStore(state: state)
+        sut.action(.toggleSort(.price)) // ascending
+
+        let sorted = sut.sortedFavorites
+        XCTAssertEqual(sorted[0].ticker, "TSLA") // 70 < 150
+        XCTAssertEqual(sorted[1].ticker, "AAPL")
+    }
+
+    func test_sortedFavorites_byChangePercentDesc_sortsByChangePercent() {
+        let items = [
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        var state = WatchListState(favorites: items)
+        state.priceData = [
+            "AAPL": StockQuote(ticker: "AAPL", currentPrice: 150.0, priceChangePercent: 1.0, currency: "USD"),
+            "TSLA": StockQuote(ticker: "TSLA", currentPrice: 70.0, priceChangePercent: -2.0, currency: "USD")
+        ]
+        sut = makeStore(state: state)
+        sut.action(.toggleSort(.changePercent)) // asc
+        sut.action(.toggleSort(.changePercent)) // desc
+
+        let sorted = sut.sortedFavorites
+        XCTAssertEqual(sorted[0].ticker, "AAPL") // 1.0 > -2.0
+        XCTAssertEqual(sorted[1].ticker, "TSLA")
+    }
+
+    func test_sortedFavorites_none_returnsOriginalOrder() {
+        let items = [
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        sut = makeStore(state: WatchListState(favorites: items))
+
+        // 정렬 없음 — 원본 순서
+        let sorted = sut.sortedFavorites
+        XCTAssertEqual(sorted[0].ticker, "TSLA")
+        XCTAssertEqual(sorted[1].ticker, "AAPL")
+    }
+
+    func test_sortedFavorites_byPrice_missingPriceData_placedAtEnd() {
+        let items = [
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        var state = WatchListState(favorites: items)
+        state.priceData = [
+            "TSLA": StockQuote(ticker: "TSLA", currentPrice: 70.0, priceChangePercent: -2.0, currency: "USD")
+        ]
+        sut = makeStore(state: state)
+        sut.action(.toggleSort(.price)) // ascending
+
+        let sorted = sut.sortedFavorites
+        XCTAssertEqual(sorted[0].ticker, "TSLA") // has price
+        XCTAssertEqual(sorted[1].ticker, "AAPL") // no price → end
+    }
+
+    // MARK: - deleteGroup (continued)
+
     func test_action_deleteGroup_currentGroupDeleted_selectsFirstRemaining() async {
         // Arrange
         let group1 = WatchListGroup(id: UUID(), name: "그룹1", createdAt: Date())

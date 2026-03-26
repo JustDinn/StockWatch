@@ -112,7 +112,46 @@ final class WatchListStore: ObservableObject {
             Task { await removeFavoriteWithUndo(ticker: ticker) }
         case .undoRemoveFavorite:
             Task { await undoRemoveFavorite() }
+        case .toggleSort(let criteria):
+            toggleSort(criteria)
         }
+    }
+
+    // MARK: - Sorted Favorites
+
+    /// 정렬 기준이 있으면 정렬된 배열, 없으면 원본(추가순) 반환
+    var sortedFavorites: [FavoriteItem] {
+        guard let criteria = state.sortCriteria else { return state.favorites }
+        let ascending = state.sortDirection == .ascending
+        return state.favorites.sorted { a, b in
+            switch criteria {
+            case .name:
+                let nameA = displayName(for: a)
+                let nameB = displayName(for: b)
+                return ascending
+                    ? nameA.localizedCompare(nameB) == .orderedAscending
+                    : nameA.localizedCompare(nameB) == .orderedDescending
+            case .price:
+                let priceA = state.priceData[a.ticker]?.currentPrice
+                let priceB = state.priceData[b.ticker]?.currentPrice
+                guard let pA = priceA else { return false }
+                guard let pB = priceB else { return true }
+                return ascending ? pA < pB : pA > pB
+            case .changePercent:
+                let changeA = state.priceData[a.ticker]?.priceChangePercent
+                let changeB = state.priceData[b.ticker]?.priceChangePercent
+                guard let cA = changeA else { return false }
+                guard let cB = changeB else { return true }
+                return ascending ? cA < cB : cA > cB
+            }
+        }
+    }
+
+    /// 표시 이름: 한국어명 → 영어명 → 티커 fallback
+    private func displayName(for item: FavoriteItem) -> String {
+        KoreanStockDictionary.shared.entries
+            .first(where: { $0.ticker == item.ticker })?.nameKo
+            ?? (item.companyName.isEmpty ? item.ticker : item.companyName)
     }
 
     // MARK: - Navigation Binding
@@ -132,6 +171,23 @@ final class WatchListStore: ObservableObject {
 // MARK: - Private
 
 private extension WatchListStore {
+
+    func toggleSort(_ criteria: WatchListSortCriteria) {
+        if state.sortCriteria == criteria {
+            // 같은 컬럼: asc → desc → none
+            switch state.sortDirection {
+            case .ascending:
+                state.sortDirection = .descending
+            case .descending:
+                state.sortCriteria = nil
+                state.sortDirection = .ascending
+            }
+        } else {
+            // 다른 컬럼: 오름차순으로 시작
+            state.sortCriteria = criteria
+            state.sortDirection = .ascending
+        }
+    }
 
     func loadFavorites() {
         state.isLoading = true

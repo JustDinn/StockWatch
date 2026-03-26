@@ -49,4 +49,6 @@ enum WatchListIntent {
     case removeFavoriteWithUndo(ticker: String)
     /// 토스트 "되돌리기" 탭 → 관심 목록 복원
     case undoRemoveFavorite
+    /// 정렬 기준 토글 (같은 기준: asc→desc→none, 다른 기준: asc)
+    case toggleSort(WatchListSortCriteria)
 }
