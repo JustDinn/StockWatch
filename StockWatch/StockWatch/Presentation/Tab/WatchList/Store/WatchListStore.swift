@@ -22,6 +22,7 @@ final class WatchListStore: ObservableObject {
     private let fetchGroupIdsForTickerUseCase: FetchGroupIdsForTickerUseCaseProtocol
     private let updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCaseProtocol
     private let fetchSparklineUseCase: FetchSparklineUseCaseProtocol
+    private let fetchExchangeRateUseCase: FetchExchangeRateUseCaseProtocol
     private var toastDismissTask: Task<Void, Never>?
 
     // MARK: - Init
@@ -36,6 +37,7 @@ final class WatchListStore: ObservableObject {
         fetchGroupIdsForTickerUseCase: FetchGroupIdsForTickerUseCaseProtocol,
         updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCaseProtocol,
         fetchSparklineUseCase: FetchSparklineUseCaseProtocol,
+        fetchExchangeRateUseCase: FetchExchangeRateUseCaseProtocol,
         state: WatchListState = WatchListState()
     ) {
         self.state = state
@@ -48,6 +50,7 @@ final class WatchListStore: ObservableObject {
         self.fetchGroupIdsForTickerUseCase = fetchGroupIdsForTickerUseCase
         self.updateFavoriteGroupsUseCase = updateFavoriteGroupsUseCase
         self.fetchSparklineUseCase = fetchSparklineUseCase
+        self.fetchExchangeRateUseCase = fetchExchangeRateUseCase
     }
 
     // MARK: - Action
@@ -132,10 +135,12 @@ final class WatchListStore: ObservableObject {
                     ? nameA.localizedCompare(nameB) == .orderedAscending
                     : nameA.localizedCompare(nameB) == .orderedDescending
             case .price:
-                let priceA = state.priceData[a.ticker]?.currentPrice
-                let priceB = state.priceData[b.ticker]?.currentPrice
-                guard let pA = priceA else { return false }
-                guard let pB = priceB else { return true }
+                let quoteA = state.priceData[a.ticker]
+                let quoteB = state.priceData[b.ticker]
+                guard let qA = quoteA else { return false }
+                guard let qB = quoteB else { return true }
+                let pA = priceInUSD(qA.currentPrice, currency: qA.currency)
+                let pB = priceInUSD(qB.currentPrice, currency: qB.currency)
                 return ascending ? pA < pB : pA > pB
             case .changePercent:
                 let changeA = state.priceData[a.ticker]?.priceChangePercent
@@ -145,6 +150,13 @@ final class WatchListStore: ObservableObject {
                 return ascending ? cA < cB : cA > cB
             }
         }
+    }
+
+    /// 환율을 적용하여 USD 기준 가격으로 변환한다.
+    /// 환율 데이터가 없으면 원래 가격을 그대로 반환한다 (fallback).
+    private func priceInUSD(_ price: Double, currency: String) -> Double {
+        guard let rate = state.exchangeRates[currency], rate > 0 else { return price }
+        return price / rate
     }
 
     /// 표시 이름: 한국어명 → 영어명 → 티커 fallback
@@ -335,6 +347,16 @@ private extension WatchListStore {
             }
             state.priceData = result
             state.isPriceLoading = false
+            loadExchangeRates()
+        }
+    }
+
+    func loadExchangeRates() {
+        let currencies = Set(state.priceData.values.map(\.currency))
+        guard !currencies.isEmpty else { return }
+        Task {
+            let rates = try? await fetchExchangeRateUseCase.execute(currencies: Array(currencies))
+            if let rates { state.exchangeRates = rates }
         }
     }
 

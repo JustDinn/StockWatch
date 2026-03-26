@@ -38,7 +38,8 @@ private struct WatchListContentView: View {
             fetchStockQuoteUseCase: FetchStockQuoteUseCase(repository: StockQuoteRepository()),
             fetchGroupIdsForTickerUseCase: FetchGroupIdsForTickerUseCase(repository: repository),
             updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCase(repository: repository),
-            fetchSparklineUseCase: FetchSparklineUseCase(repository: CandlestickRepository())
+            fetchSparklineUseCase: FetchSparklineUseCase(repository: CandlestickRepository()),
+            fetchExchangeRateUseCase: FetchExchangeRateUseCase(repository: ExchangeRateRepository())
         ))
     }
 

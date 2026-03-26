@@ -60,6 +60,15 @@ final class MockFetchStockQuoteUseCase: FetchStockQuoteUseCaseProtocol {
     }
 }
 
+final class MockFetchExchangeRateUseCase: FetchExchangeRateUseCaseProtocol {
+    var stubbedResult: [String: Double] = ["USD": 1.0]
+    var stubbedError: Error?
+    func execute(currencies: [String]) async throws -> [String: Double] {
+        if let error = stubbedError { throw error }
+        return stubbedResult
+    }
+}
+
 // MARK: - Tests
 
 @MainActor
@@ -106,6 +115,7 @@ final class WatchListStoreTests: XCTestCase {
             fetchGroupIdsForTickerUseCase: MockFetchGroupIdsForTickerUseCase(),
             updateFavoriteGroupsUseCase: MockUpdateFavoriteGroupsUseCase(),
             fetchSparklineUseCase: MockFetchSparklineUseCase(),
+            fetchExchangeRateUseCase: MockFetchExchangeRateUseCase(),
             state: state
         )
     }
@@ -175,7 +185,7 @@ final class WatchListStoreTests: XCTestCase {
 
         // Act
         sut.action(.removeFavorite(ticker: "AAPL"))
-        for _ in 0..<4 { await Task.yield() }
+        for _ in 0..<8 { await Task.yield() }
 
         // Assert (에러 시 롤백)
         XCTAssertEqual(sut.state.favorites.count, 1)
@@ -615,6 +625,95 @@ final class WatchListStoreTests: XCTestCase {
         let sorted = sut.sortedFavorites
         XCTAssertEqual(sorted[0].ticker, "TSLA") // has price
         XCTAssertEqual(sorted[1].ticker, "AAPL") // no price → end
+    }
+
+    // MARK: - 환율 기반 현재가 정렬
+
+    // KRW 2880원 vs USD 280달러 → USD 환산 시 280 > ~2.09 → 280이 더 높아야 함
+    func test_sortedFavorites_byPrice_comparesInUSD() {
+        let items = [
+            FavoriteItem(ticker: "005930.KS", companyName: "삼성전자", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        var state = WatchListState(favorites: items)
+        state.priceData = [
+            "005930.KS": StockQuote(ticker: "005930.KS", currentPrice: 2880.0, priceChangePercent: 0.5, currency: "KRW"),
+            "AAPL": StockQuote(ticker: "AAPL", currentPrice: 280.0, priceChangePercent: 1.0, currency: "USD")
+        ]
+        state.exchangeRates = ["KRW": 1380.0, "USD": 1.0]
+        sut = makeStore(state: state)
+        sut.action(.toggleSort(.price)) // ascending
+
+        let sorted = sut.sortedFavorites
+        // 삼성전자: 2880 / 1380 ≈ 2.09 USD < AAPL: 280 USD
+        XCTAssertEqual(sorted[0].ticker, "005930.KS")
+        XCTAssertEqual(sorted[1].ticker, "AAPL")
+    }
+
+    // KRW, USD, JPY 혼합 정렬
+    func test_sortedFavorites_byPrice_withMixedCurrencies_sortsCorrectly() {
+        let items = [
+            FavoriteItem(ticker: "005930.KS", companyName: "삼성전자", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "7203.T", companyName: "Toyota", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        var state = WatchListState(favorites: items)
+        state.priceData = [
+            "005930.KS": StockQuote(ticker: "005930.KS", currentPrice: 70000.0, priceChangePercent: 0.5, currency: "KRW"),
+            "AAPL": StockQuote(ticker: "AAPL", currentPrice: 200.0, priceChangePercent: 1.0, currency: "USD"),
+            "7203.T": StockQuote(ticker: "7203.T", currentPrice: 3000.0, priceChangePercent: -0.5, currency: "JPY")
+        ]
+        // KRW: 70000/1380 ≈ 50.72 USD, JPY: 3000/155 ≈ 19.35 USD, AAPL: 200 USD
+        state.exchangeRates = ["KRW": 1380.0, "USD": 1.0, "JPY": 155.0]
+        sut = makeStore(state: state)
+        sut.action(.toggleSort(.price)) // ascending
+
+        let sorted = sut.sortedFavorites
+        XCTAssertEqual(sorted[0].ticker, "7203.T")    // 19.35 USD
+        XCTAssertEqual(sorted[1].ticker, "005930.KS")  // 50.72 USD
+        XCTAssertEqual(sorted[2].ticker, "AAPL")        // 200 USD
+    }
+
+    // 환율 데이터 없으면 raw price fallback
+    func test_sortedFavorites_byPrice_withoutExchangeRate_fallsBackToRawPrice() {
+        let items = [
+            FavoriteItem(ticker: "005930.KS", companyName: "삼성전자", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        var state = WatchListState(favorites: items)
+        state.priceData = [
+            "005930.KS": StockQuote(ticker: "005930.KS", currentPrice: 2880.0, priceChangePercent: 0.5, currency: "KRW"),
+            "AAPL": StockQuote(ticker: "AAPL", currentPrice: 280.0, priceChangePercent: 1.0, currency: "USD")
+        ]
+        // exchangeRates 비어있음 → fallback: raw price 비교
+        state.exchangeRates = [:]
+        sut = makeStore(state: state)
+        sut.action(.toggleSort(.price)) // ascending
+
+        let sorted = sut.sortedFavorites
+        // fallback: 280 < 2880
+        XCTAssertEqual(sorted[0].ticker, "AAPL")
+        XCTAssertEqual(sorted[1].ticker, "005930.KS")
+    }
+
+    // 같은 통화끼리는 직접 비교 (환율 변환이 동일하므로 결과 동일)
+    func test_sortedFavorites_byPrice_sameCurrency_comparesDirectly() {
+        let items = [
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        var state = WatchListState(favorites: items)
+        state.priceData = [
+            "AAPL": StockQuote(ticker: "AAPL", currentPrice: 200.0, priceChangePercent: 1.0, currency: "USD"),
+            "TSLA": StockQuote(ticker: "TSLA", currentPrice: 300.0, priceChangePercent: -1.0, currency: "USD")
+        ]
+        state.exchangeRates = ["USD": 1.0]
+        sut = makeStore(state: state)
+        sut.action(.toggleSort(.price)) // ascending
+
+        let sorted = sut.sortedFavorites
+        XCTAssertEqual(sorted[0].ticker, "AAPL")  // 200
+        XCTAssertEqual(sorted[1].ticker, "TSLA")   // 300
     }
 
     // MARK: - deleteGroup (continued)

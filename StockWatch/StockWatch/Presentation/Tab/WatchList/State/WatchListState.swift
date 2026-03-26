@@ -75,6 +75,9 @@ struct WatchListState {
     /// 정렬 방향 (기본 오름차순)
     var sortDirection: WatchListSortDirection = .ascending
 
+    /// 환율 데이터 (통화코드 → 1 USD 대비 환율, 예: ["KRW": 1380.0])
+    var exchangeRates: [String: Double] = [:]
+
     /// 테스트 편의용 이니셜라이저
     init(favorites: [FavoriteItem] = []) {
         self.favorites = favorites
