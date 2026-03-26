@@ -64,6 +64,7 @@ final class MockFetchStockDetailUseCase: FetchStockDetailUseCaseProtocol {
     }
 }
 
+@MainActor
 final class MockToggleFavoriteUseCase: ToggleFavoriteUseCaseProtocol {
     var stubbedResult: Bool = false
     var stubbedError: Error?
