@@ -721,7 +721,7 @@ private struct WatchListSortHeaderView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            sortButton(label: "종목", criteria: .name)
+            sortButton(label: sortCriteria == .name ? "가나다 순" : "종목", criteria: .name)
             Spacer()
             sortButton(label: "현재가", criteria: .price)
             Spacer()
