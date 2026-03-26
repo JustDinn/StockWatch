@@ -37,7 +37,9 @@ private struct WatchListContentView: View {
             addFavoriteToGroupUseCase: AddFavoriteToGroupUseCase(repository: repository),
             fetchStockQuoteUseCase: FetchStockQuoteUseCase(repository: StockQuoteRepository()),
             fetchGroupIdsForTickerUseCase: FetchGroupIdsForTickerUseCase(repository: repository),
-            updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCase(repository: repository)
+            updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCase(repository: repository),
+            fetchSparklineUseCase: FetchSparklineUseCase(repository: CandlestickRepository()),
+            fetchExchangeRateUseCase: FetchExchangeRateUseCase(repository: ExchangeRateRepository())
         ))
     }
 
@@ -91,6 +93,17 @@ private struct WatchListContentView: View {
                 }
                 .onAppear {
                     store.action(.loadGroups)
+                }
+                .safeAreaInset(edge: .bottom) {
+                    if !store.state.dbGroups.isEmpty {
+                        WatchListMarketFilterBar(
+                            selectedFilter: store.state.marketFilter,
+                            onSelect: { store.action(.selectMarketFilter($0)) }
+                        )
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 24)
+                    }
                 }
             }
 
@@ -229,10 +242,16 @@ private struct WatchListContentView: View {
     private var stockList: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                ForEach(store.state.favorites, id: \.ticker) { item in
+                WatchListSortHeaderView(
+                    sortCriteria: store.state.sortCriteria,
+                    sortDirection: store.state.sortDirection,
+                    onToggle: { store.action(.toggleSort($0)) }
+                )
+                ForEach(store.sortedFavorites, id: \.ticker) { item in
                     WatchListStockRow(
                         item: item,
                         quoteData: store.state.priceData[item.ticker],
+                        sparklineData: store.state.sparklineData[item.ticker],
                         displayName: displayName(for: item),
                         onTap: { store.action(.selectTicker(item.ticker)) },
                         onRemove: { store.action(.removeFavoriteWithUndo(ticker: item.ticker)) }
@@ -705,11 +724,58 @@ private struct WatchListGroupManageModalView: View {
     }
 }
 
+// MARK: - Sort Header
+
+private struct WatchListSortHeaderView: View {
+    let sortCriteria: WatchListSortCriteria?
+    let sortDirection: WatchListSortDirection
+    let onToggle: (WatchListSortCriteria) -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            sortButton(label: sortCriteria == .name ? "가나다 순" : "종목", criteria: .name)
+            Spacer()
+            sortButton(label: "현재가", criteria: .price)
+            Spacer()
+            sortButton(label: "등락", criteria: .changePercent)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+    }
+
+    private func sortButton(label: String, criteria: WatchListSortCriteria) -> some View {
+        let isActive = sortCriteria == criteria
+        return Button {
+            onToggle(criteria)
+        } label: {
+            HStack(spacing: 4) {
+                Text(label)
+                    .font(.pretendardMedium(size: 13))
+                sortIcon(isActive: isActive)
+            }
+            .foregroundStyle(isActive ? .blue : .secondary)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func sortIcon(isActive: Bool) -> some View {
+        Group {
+            if isActive {
+                Image(systemName: sortDirection == .ascending ? "arrow.up" : "arrow.down")
+            } else {
+                Image(systemName: "chevron.up.chevron.down")
+            }
+        }
+        .font(.system(size: 11, weight: .medium))
+    }
+}
+
 // MARK: - Stock Row
 
 private struct WatchListStockRow: View {
     let item: FavoriteItem
     let quoteData: StockQuote?
+    let sparklineData: SparklineData?
     let displayName: String
     let onTap: () -> Void
     let onRemove: () -> Void
@@ -718,6 +784,8 @@ private struct WatchListStockRow: View {
         HStack(spacing: 12) {
             logoView
             nameColumn
+            Spacer()
+            sparklineColumn
             Spacer()
             priceColumn
             heartButton
@@ -776,6 +844,18 @@ private struct WatchListStockRow: View {
         }
     }
 
+    @ViewBuilder
+    private var sparklineColumn: some View {
+        if let sparkline = sparklineData, sparkline.closePrices.count >= 2 {
+            SparklineView(
+                closePrices: sparkline.closePrices,
+                isPositive: (quoteData?.priceChangePercent ?? 0) >= 0,
+                currentPrice: quoteData?.currentPrice
+            )
+            .frame(width: 60, height: 32)
+        }
+    }
+
     private var priceColumn: some View {
         VStack(alignment: .trailing, spacing: 2) {
             if let data = quoteData {
@@ -825,6 +905,41 @@ private struct WatchListAddStockRow: View {
         .padding(.vertical, 12)
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
+    }
+}
+
+// MARK: - Market Filter Bar
+
+private struct WatchListMarketFilterBar: View {
+    let selectedFilter: WatchListMarketFilter
+    let onSelect: (WatchListMarketFilter) -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(WatchListMarketFilter.allCases, id: \.self) { filter in
+                Button {
+                    onSelect(filter)
+                } label: {
+                    Text(filter.rawValue)
+                        .font(selectedFilter == filter ? .pretendardBold(size: 14) : .pretendardMedium(size: 14))
+                        .foregroundStyle(selectedFilter == filter ? Color.primary : Color.secondary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            Group {
+                                if selectedFilter == filter {
+                                    Capsule()
+                                        .fill(Color(.systemBackground))
+                                        .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
+                                }
+                            }
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(Capsule().fill(Color(.systemGray6)))
     }
 }
 

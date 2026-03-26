@@ -31,4 +31,12 @@ final class CandlestickRepository: CandlestickRepositoryProtocol {
         )
         return mapper.map(dto: dto, ticker: ticker)
     }
+
+    func fetchCandlesticks(ticker: String, range: String, interval: String) async throws -> CandlestickData {
+        let dto = try await networkService.request(
+            router: YahooFinanceCandlestickRouter(symbol: ticker, range: range, interval: interval),
+            model: YahooFinanceCandlestickDTO.self
+        )
+        return mapper.map(dto: dto, ticker: ticker)
+    }
 }

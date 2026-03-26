@@ -21,6 +21,8 @@ final class WatchListStore: ObservableObject {
     private let fetchStockQuoteUseCase: FetchStockQuoteUseCaseProtocol
     private let fetchGroupIdsForTickerUseCase: FetchGroupIdsForTickerUseCaseProtocol
     private let updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCaseProtocol
+    private let fetchSparklineUseCase: FetchSparklineUseCaseProtocol
+    private let fetchExchangeRateUseCase: FetchExchangeRateUseCaseProtocol
     private var toastDismissTask: Task<Void, Never>?
 
     // MARK: - Init
@@ -34,6 +36,8 @@ final class WatchListStore: ObservableObject {
         fetchStockQuoteUseCase: FetchStockQuoteUseCaseProtocol,
         fetchGroupIdsForTickerUseCase: FetchGroupIdsForTickerUseCaseProtocol,
         updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCaseProtocol,
+        fetchSparklineUseCase: FetchSparklineUseCaseProtocol,
+        fetchExchangeRateUseCase: FetchExchangeRateUseCaseProtocol,
         state: WatchListState = WatchListState()
     ) {
         self.state = state
@@ -45,6 +49,8 @@ final class WatchListStore: ObservableObject {
         self.fetchStockQuoteUseCase = fetchStockQuoteUseCase
         self.fetchGroupIdsForTickerUseCase = fetchGroupIdsForTickerUseCase
         self.updateFavoriteGroupsUseCase = updateFavoriteGroupsUseCase
+        self.fetchSparklineUseCase = fetchSparklineUseCase
+        self.fetchExchangeRateUseCase = fetchExchangeRateUseCase
     }
 
     // MARK: - Action
@@ -109,7 +115,66 @@ final class WatchListStore: ObservableObject {
             Task { await removeFavoriteWithUndo(ticker: ticker) }
         case .undoRemoveFavorite:
             Task { await undoRemoveFavorite() }
+        case .toggleSort(let criteria):
+            toggleSort(criteria)
+        case .selectMarketFilter(let filter):
+            state.marketFilter = filter
         }
+    }
+
+    // MARK: - Sorted Favorites
+
+    /// 마켓 필터 적용 후 정렬 기준이 있으면 정렬된 배열, 없으면 원본(추가순) 반환
+    var sortedFavorites: [FavoriteItem] {
+        let filtered: [FavoriteItem]
+        switch state.marketFilter {
+        case .all:
+            filtered = state.favorites
+        case .domestic:
+            filtered = state.favorites.filter { $0.ticker.isDomesticTicker }
+        case .overseas:
+            filtered = state.favorites.filter { !$0.ticker.isDomesticTicker }
+        }
+        guard let criteria = state.sortCriteria else { return filtered }
+        let ascending = state.sortDirection == .ascending
+        return filtered.sorted { a, b in
+            switch criteria {
+            case .name:
+                let nameA = displayName(for: a)
+                let nameB = displayName(for: b)
+                return ascending
+                    ? nameA.localizedCompare(nameB) == .orderedAscending
+                    : nameA.localizedCompare(nameB) == .orderedDescending
+            case .price:
+                let quoteA = state.priceData[a.ticker]
+                let quoteB = state.priceData[b.ticker]
+                guard let qA = quoteA else { return false }
+                guard let qB = quoteB else { return true }
+                let pA = priceInUSD(qA.currentPrice, currency: qA.currency)
+                let pB = priceInUSD(qB.currentPrice, currency: qB.currency)
+                return ascending ? pA < pB : pA > pB
+            case .changePercent:
+                let changeA = state.priceData[a.ticker]?.priceChangePercent
+                let changeB = state.priceData[b.ticker]?.priceChangePercent
+                guard let cA = changeA else { return false }
+                guard let cB = changeB else { return true }
+                return ascending ? cA < cB : cA > cB
+            }
+        }
+    }
+
+    /// 환율을 적용하여 USD 기준 가격으로 변환한다.
+    /// 환율 데이터가 없으면 원래 가격을 그대로 반환한다 (fallback).
+    private func priceInUSD(_ price: Double, currency: String) -> Double {
+        guard let rate = state.exchangeRates[currency], rate > 0 else { return price }
+        return price / rate
+    }
+
+    /// 표시 이름: 한국어명 → 영어명 → 티커 fallback
+    private func displayName(for item: FavoriteItem) -> String {
+        KoreanStockDictionary.shared.entries
+            .first(where: { $0.ticker == item.ticker })?.nameKo
+            ?? (item.companyName.isEmpty ? item.ticker : item.companyName)
     }
 
     // MARK: - Navigation Binding
@@ -130,6 +195,25 @@ final class WatchListStore: ObservableObject {
 
 private extension WatchListStore {
 
+    func toggleSort(_ criteria: WatchListSortCriteria) {
+        // 등락률은 내림차순(변동 큰 종목)부터 시작, 나머지는 오름차순부터 시작
+        let defaultDirection: WatchListSortDirection = criteria == .changePercent ? .descending : .ascending
+
+        if state.sortCriteria == criteria {
+            // 같은 컬럼: 기본방향 → 반대방향 → none
+            if state.sortDirection == defaultDirection {
+                state.sortDirection = defaultDirection == .ascending ? .descending : .ascending
+            } else {
+                state.sortCriteria = nil
+                state.sortDirection = .ascending
+            }
+        } else {
+            // 다른 컬럼: 해당 기준의 기본방향으로 시작
+            state.sortCriteria = criteria
+            state.sortDirection = defaultDirection
+        }
+    }
+
     func loadFavorites() {
         state.isLoading = true
         Task {
@@ -147,7 +231,9 @@ private extension WatchListStore {
             let groupId = state.dbGroups[index].id
             state.favorites = await fetchFavoritesByGroupUseCase.execute(groupId: groupId)
             state.isLoading = false
-            loadPrices(for: state.favorites.map(\.ticker))
+            let tickers = state.favorites.map(\.ticker)
+            loadPrices(for: tickers)
+            loadSparklines(for: tickers)
         }
     }
 
@@ -272,6 +358,35 @@ private extension WatchListStore {
             }
             state.priceData = result
             state.isPriceLoading = false
+            loadExchangeRates()
+        }
+    }
+
+    func loadExchangeRates() {
+        let currencies = Set(state.priceData.values.map(\.currency))
+        guard !currencies.isEmpty else { return }
+        Task {
+            let rates = try? await fetchExchangeRateUseCase.execute(currencies: Array(currencies))
+            if let rates { state.exchangeRates = rates }
+        }
+    }
+
+    func loadSparklines(for tickers: [String]) {
+        guard !tickers.isEmpty else { return }
+        Task {
+            var result: [String: SparklineData] = [:]
+            await withTaskGroup(of: (String, SparklineData?).self) { group in
+                for ticker in tickers {
+                    group.addTask {
+                        let data = try? await self.fetchSparklineUseCase.execute(ticker: ticker)
+                        return (ticker, data)
+                    }
+                }
+                for await (ticker, data) in group {
+                    if let data { result[ticker] = data }
+                }
+            }
+            state.sparklineData = result
         }
     }
 

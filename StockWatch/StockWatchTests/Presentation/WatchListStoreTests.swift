@@ -42,12 +42,30 @@ final class MockAddFavoriteToGroupUseCase: AddFavoriteToGroupUseCaseProtocol {
     func execute(ticker: String, companyName: String, logoURL: String, groupId: UUID) async throws {}
 }
 
+final class MockFetchSparklineUseCase: FetchSparklineUseCaseProtocol {
+    var stubbedResult: SparklineData?
+    var stubbedError: Error?
+    func execute(ticker: String) async throws -> SparklineData {
+        if let error = stubbedError { throw error }
+        return stubbedResult ?? SparklineData(ticker: ticker, closePrices: [])
+    }
+}
+
 final class MockFetchStockQuoteUseCase: FetchStockQuoteUseCaseProtocol {
     var stubbedResult: StockQuote = StockQuote(ticker: "", currentPrice: 0, priceChangePercent: 0, currency: "USD")
     var stubbedError: Error?
     func execute(ticker: String) async throws -> StockQuote {
         if let error = stubbedError { throw error }
         return StockQuote(ticker: ticker, currentPrice: stubbedResult.currentPrice, priceChangePercent: stubbedResult.priceChangePercent, currency: stubbedResult.currency)
+    }
+}
+
+final class MockFetchExchangeRateUseCase: FetchExchangeRateUseCaseProtocol {
+    var stubbedResult: [String: Double] = ["USD": 1.0]
+    var stubbedError: Error?
+    func execute(currencies: [String]) async throws -> [String: Double] {
+        if let error = stubbedError { throw error }
+        return stubbedResult
     }
 }
 
@@ -94,6 +112,10 @@ final class WatchListStoreTests: XCTestCase {
             fetchFavoritesByGroupUseCase: mockFetchByGroupUseCase,
             addFavoriteToGroupUseCase: MockAddFavoriteToGroupUseCase(),
             fetchStockQuoteUseCase: mockFetchStockQuoteUseCase,
+            fetchGroupIdsForTickerUseCase: MockFetchGroupIdsForTickerUseCase(),
+            updateFavoriteGroupsUseCase: MockUpdateFavoriteGroupsUseCase(),
+            fetchSparklineUseCase: MockFetchSparklineUseCase(),
+            fetchExchangeRateUseCase: MockFetchExchangeRateUseCase(),
             state: state
         )
     }
@@ -163,7 +185,7 @@ final class WatchListStoreTests: XCTestCase {
 
         // Act
         sut.action(.removeFavorite(ticker: "AAPL"))
-        for _ in 0..<4 { await Task.yield() }
+        for _ in 0..<8 { await Task.yield() }
 
         // Assert (에러 시 롤백)
         XCTAssertEqual(sut.state.favorites.count, 1)
@@ -435,6 +457,284 @@ final class WatchListStoreTests: XCTestCase {
         XCTAssertNil(sut.state.draggedGroupId)
     }
 
+    // MARK: - toggleSort
+
+    func test_action_toggleSort_name_cyclesNoneAscDescNone() {
+        // 초기: 정렬 없음
+        XCTAssertNil(sut.state.sortCriteria)
+
+        // 1탭: 오름차순
+        sut.action(.toggleSort(.name))
+        XCTAssertEqual(sut.state.sortCriteria, .name)
+        XCTAssertEqual(sut.state.sortDirection, .ascending)
+
+        // 2탭: 내림차순
+        sut.action(.toggleSort(.name))
+        XCTAssertEqual(sut.state.sortCriteria, .name)
+        XCTAssertEqual(sut.state.sortDirection, .descending)
+
+        // 3탭: 해제
+        sut.action(.toggleSort(.name))
+        XCTAssertNil(sut.state.sortCriteria)
+        XCTAssertEqual(sut.state.sortDirection, .ascending)
+    }
+
+    func test_action_toggleSort_switchColumn_resetsToAsc() {
+        // name 오름차순
+        sut.action(.toggleSort(.name))
+        XCTAssertEqual(sut.state.sortCriteria, .name)
+
+        // price로 전환 → 오름차순
+        sut.action(.toggleSort(.price))
+        XCTAssertEqual(sut.state.sortCriteria, .price)
+        XCTAssertEqual(sut.state.sortDirection, .ascending)
+    }
+
+    func test_action_toggleSort_changePercent_cyclesDescAscNone() {
+        // 초기: 정렬 없음
+        XCTAssertNil(sut.state.sortCriteria)
+
+        // 1탭: 내림차순 (등락률은 내림차순부터 시작)
+        sut.action(.toggleSort(.changePercent))
+        XCTAssertEqual(sut.state.sortCriteria, .changePercent)
+        XCTAssertEqual(sut.state.sortDirection, .descending)
+
+        // 2탭: 오름차순
+        sut.action(.toggleSort(.changePercent))
+        XCTAssertEqual(sut.state.sortCriteria, .changePercent)
+        XCTAssertEqual(sut.state.sortDirection, .ascending)
+
+        // 3탭: 해제
+        sut.action(.toggleSort(.changePercent))
+        XCTAssertNil(sut.state.sortCriteria)
+        XCTAssertEqual(sut.state.sortDirection, .ascending)
+    }
+
+    func test_action_toggleSort_switchToChangePercent_startsDescending() {
+        // name 오름차순 상태에서 changePercent로 전환 → 내림차순
+        sut.action(.toggleSort(.name))
+        XCTAssertEqual(sut.state.sortCriteria, .name)
+
+        sut.action(.toggleSort(.changePercent))
+        XCTAssertEqual(sut.state.sortCriteria, .changePercent)
+        XCTAssertEqual(sut.state.sortDirection, .descending)
+    }
+
+    func test_action_toggleSort_switchFromChangePercent_startsAscending() {
+        // changePercent 정렬 중에 name으로 전환 → 오름차순
+        sut.action(.toggleSort(.changePercent))
+        XCTAssertEqual(sut.state.sortCriteria, .changePercent)
+
+        sut.action(.toggleSort(.name))
+        XCTAssertEqual(sut.state.sortCriteria, .name)
+        XCTAssertEqual(sut.state.sortDirection, .ascending)
+    }
+
+    func test_sortedFavorites_byNameAsc_sortsAlphabetically() {
+        // Arrange — companyName으로 정렬 (KoreanStockDictionary는 테스트에서 비어있으므로 fallback)
+        let items = [
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        sut = makeStore(state: WatchListState(favorites: items))
+        sut.action(.toggleSort(.name)) // ascending
+
+        // Act
+        let sorted = sut.sortedFavorites
+
+        // Assert
+        XCTAssertEqual(sorted[0].ticker, "AAPL")
+        XCTAssertEqual(sorted[1].ticker, "TSLA")
+    }
+
+    func test_sortedFavorites_byNameDesc_sortsReverse() {
+        let items = [
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        sut = makeStore(state: WatchListState(favorites: items))
+        sut.action(.toggleSort(.name)) // asc
+        sut.action(.toggleSort(.name)) // desc
+
+        let sorted = sut.sortedFavorites
+        XCTAssertEqual(sorted[0].ticker, "TSLA")
+        XCTAssertEqual(sorted[1].ticker, "AAPL")
+    }
+
+    func test_sortedFavorites_byPriceAsc_sortsByCurrentPrice() {
+        let items = [
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        var state = WatchListState(favorites: items)
+        state.priceData = [
+            "AAPL": StockQuote(ticker: "AAPL", currentPrice: 150.0, priceChangePercent: 1.0, currency: "USD"),
+            "TSLA": StockQuote(ticker: "TSLA", currentPrice: 70.0, priceChangePercent: -2.0, currency: "USD")
+        ]
+        sut = makeStore(state: state)
+        sut.action(.toggleSort(.price)) // ascending
+
+        let sorted = sut.sortedFavorites
+        XCTAssertEqual(sorted[0].ticker, "TSLA") // 70 < 150
+        XCTAssertEqual(sorted[1].ticker, "AAPL")
+    }
+
+    func test_sortedFavorites_byChangePercentDesc_sortsByChangePercent() {
+        let items = [
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        var state = WatchListState(favorites: items)
+        state.priceData = [
+            "AAPL": StockQuote(ticker: "AAPL", currentPrice: 150.0, priceChangePercent: 1.0, currency: "USD"),
+            "TSLA": StockQuote(ticker: "TSLA", currentPrice: 70.0, priceChangePercent: -2.0, currency: "USD")
+        ]
+        sut = makeStore(state: state)
+        sut.action(.toggleSort(.changePercent)) // desc (등락률은 첫 탭이 내림차순)
+
+        let sorted = sut.sortedFavorites
+        XCTAssertEqual(sorted[0].ticker, "AAPL") // 1.0 > -2.0
+        XCTAssertEqual(sorted[1].ticker, "TSLA")
+    }
+
+    func test_sortedFavorites_none_returnsOriginalOrder() {
+        let items = [
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        sut = makeStore(state: WatchListState(favorites: items))
+
+        // 정렬 없음 — 원본 순서
+        let sorted = sut.sortedFavorites
+        XCTAssertEqual(sorted[0].ticker, "TSLA")
+        XCTAssertEqual(sorted[1].ticker, "AAPL")
+    }
+
+    func test_sortedFavorites_byPrice_missingPriceData_placedAtEnd() {
+        let items = [
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        var state = WatchListState(favorites: items)
+        state.priceData = [
+            "TSLA": StockQuote(ticker: "TSLA", currentPrice: 70.0, priceChangePercent: -2.0, currency: "USD")
+        ]
+        sut = makeStore(state: state)
+        sut.action(.toggleSort(.price)) // ascending
+
+        let sorted = sut.sortedFavorites
+        XCTAssertEqual(sorted[0].ticker, "TSLA") // has price
+        XCTAssertEqual(sorted[1].ticker, "AAPL") // no price → end
+    }
+
+    // MARK: - 환율 기반 현재가 정렬
+
+    // KRW 2880원 vs USD 280달러 → USD 환산 시 280 > ~2.09 → 280이 더 높아야 함
+    func test_sortedFavorites_byPrice_comparesInUSD() {
+        let items = [
+            FavoriteItem(ticker: "005930.KS", companyName: "삼성전자", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        var state = WatchListState(favorites: items)
+        state.priceData = [
+            "005930.KS": StockQuote(ticker: "005930.KS", currentPrice: 2880.0, priceChangePercent: 0.5, currency: "KRW"),
+            "AAPL": StockQuote(ticker: "AAPL", currentPrice: 280.0, priceChangePercent: 1.0, currency: "USD")
+        ]
+        state.exchangeRates = ["KRW": 1380.0, "USD": 1.0]
+        sut = makeStore(state: state)
+        sut.action(.toggleSort(.price)) // ascending
+
+        let sorted = sut.sortedFavorites
+        // 삼성전자: 2880 / 1380 ≈ 2.09 USD < AAPL: 280 USD
+        XCTAssertEqual(sorted[0].ticker, "005930.KS")
+        XCTAssertEqual(sorted[1].ticker, "AAPL")
+    }
+
+    // KRW, USD, JPY 혼합 정렬
+    func test_sortedFavorites_byPrice_withMixedCurrencies_sortsCorrectly() {
+        let items = [
+            FavoriteItem(ticker: "005930.KS", companyName: "삼성전자", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "7203.T", companyName: "Toyota", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        var state = WatchListState(favorites: items)
+        state.priceData = [
+            "005930.KS": StockQuote(ticker: "005930.KS", currentPrice: 70000.0, priceChangePercent: 0.5, currency: "KRW"),
+            "AAPL": StockQuote(ticker: "AAPL", currentPrice: 200.0, priceChangePercent: 1.0, currency: "USD"),
+            "7203.T": StockQuote(ticker: "7203.T", currentPrice: 3000.0, priceChangePercent: -0.5, currency: "JPY")
+        ]
+        // KRW: 70000/1380 ≈ 50.72 USD, JPY: 3000/155 ≈ 19.35 USD, AAPL: 200 USD
+        state.exchangeRates = ["KRW": 1380.0, "USD": 1.0, "JPY": 155.0]
+        sut = makeStore(state: state)
+        sut.action(.toggleSort(.price)) // ascending
+
+        let sorted = sut.sortedFavorites
+        XCTAssertEqual(sorted[0].ticker, "7203.T")    // 19.35 USD
+        XCTAssertEqual(sorted[1].ticker, "005930.KS")  // 50.72 USD
+        XCTAssertEqual(sorted[2].ticker, "AAPL")        // 200 USD
+    }
+
+    // 환율 데이터 없으면 raw price fallback
+    func test_sortedFavorites_byPrice_withoutExchangeRate_fallsBackToRawPrice() {
+        let items = [
+            FavoriteItem(ticker: "005930.KS", companyName: "삼성전자", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        var state = WatchListState(favorites: items)
+        state.priceData = [
+            "005930.KS": StockQuote(ticker: "005930.KS", currentPrice: 2880.0, priceChangePercent: 0.5, currency: "KRW"),
+            "AAPL": StockQuote(ticker: "AAPL", currentPrice: 280.0, priceChangePercent: 1.0, currency: "USD")
+        ]
+        // exchangeRates 비어있음 → fallback: raw price 비교
+        state.exchangeRates = [:]
+        sut = makeStore(state: state)
+        sut.action(.toggleSort(.price)) // ascending
+
+        let sorted = sut.sortedFavorites
+        // fallback: 280 < 2880
+        XCTAssertEqual(sorted[0].ticker, "AAPL")
+        XCTAssertEqual(sorted[1].ticker, "005930.KS")
+    }
+
+    // 같은 통화끼리는 직접 비교 (환율 변환이 동일하므로 결과 동일)
+    func test_sortedFavorites_byPrice_sameCurrency_comparesDirectly() {
+        let items = [
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        var state = WatchListState(favorites: items)
+        state.priceData = [
+            "AAPL": StockQuote(ticker: "AAPL", currentPrice: 200.0, priceChangePercent: 1.0, currency: "USD"),
+            "TSLA": StockQuote(ticker: "TSLA", currentPrice: 300.0, priceChangePercent: -1.0, currency: "USD")
+        ]
+        state.exchangeRates = ["USD": 1.0]
+        sut = makeStore(state: state)
+        sut.action(.toggleSort(.price)) // ascending
+
+        let sorted = sut.sortedFavorites
+        XCTAssertEqual(sorted[0].ticker, "AAPL")  // 200
+        XCTAssertEqual(sorted[1].ticker, "TSLA")   // 300
+    }
+
+    // MARK: - deleteGroup (continued)
+
+    func test_action_selectMarketFilter_updatesState() {
+        // Arrange
+        XCTAssertEqual(sut.state.marketFilter, .all)
+
+        // Act
+        sut.action(.selectMarketFilter(.domestic))
+
+        // Assert
+        XCTAssertEqual(sut.state.marketFilter, .domestic)
+
+        // Act — 해외주식으로 변경
+        sut.action(.selectMarketFilter(.overseas))
+
+        // Assert
+        XCTAssertEqual(sut.state.marketFilter, .overseas)
+    }
+
     func test_action_deleteGroup_currentGroupDeleted_selectsFirstRemaining() async {
         // Arrange
         let group1 = WatchListGroup(id: UUID(), name: "그룹1", createdAt: Date())
@@ -451,5 +751,81 @@ final class WatchListStoreTests: XCTestCase {
         // Assert — 남은 첫 번째 그룹으로 이동
         XCTAssertEqual(sut.state.dbGroups.count, 1)
         XCTAssertEqual(sut.state.selectedGroupIndex, 0)
+    }
+
+    // MARK: - sortedFavorites 마켓 필터
+
+    func test_sortedFavorites_domesticFilter_returnsOnlyKoreanTickers() {
+        // Arrange
+        let items = [
+            FavoriteItem(ticker: "005930.KS", companyName: "삼성전자", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "035720.KQ", companyName: "카카오", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        sut = makeStore(state: WatchListState(favorites: items))
+
+        // Act
+        sut.action(.selectMarketFilter(.domestic))
+        let result = sut.sortedFavorites
+
+        // Assert
+        XCTAssertEqual(result.count, 2)
+        XCTAssertTrue(result.allSatisfy { $0.ticker.isDomesticTicker })
+        XCTAssertEqual(result.map(\.ticker).sorted(), ["005930.KS", "035720.KQ"])
+    }
+
+    func test_sortedFavorites_overseasFilter_excludesKoreanTickers() {
+        // Arrange
+        let items = [
+            FavoriteItem(ticker: "005930.KS", companyName: "삼성전자", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        sut = makeStore(state: WatchListState(favorites: items))
+
+        // Act
+        sut.action(.selectMarketFilter(.overseas))
+        let result = sut.sortedFavorites
+
+        // Assert
+        XCTAssertEqual(result.count, 2)
+        XCTAssertFalse(result.contains { $0.ticker.isDomesticTicker })
+        XCTAssertEqual(result.map(\.ticker).sorted(), ["AAPL", "TSLA"])
+    }
+
+    func test_sortedFavorites_allFilter_returnsAllFavorites() {
+        // Arrange
+        let items = [
+            FavoriteItem(ticker: "005930.KS", companyName: "삼성전자", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        sut = makeStore(state: WatchListState(favorites: items))
+
+        // Act
+        sut.action(.selectMarketFilter(.all))
+        let result = sut.sortedFavorites
+
+        // Assert
+        XCTAssertEqual(result.count, 2)
+    }
+
+    func test_sortedFavorites_domesticFilter_withSort_appliesFilterThenSort() {
+        // Arrange
+        let items = [
+            FavoriteItem(ticker: "005930.KS", companyName: "삼성전자", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "000660.KS", companyName: "SK하이닉스", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        sut = makeStore(state: WatchListState(favorites: items))
+        sut.action(.selectMarketFilter(.domestic))
+        sut.action(.toggleSort(.name)) // ascending
+
+        // Act
+        let result = sut.sortedFavorites
+
+        // Assert — 국내 2개만 이름 오름차순 정렬 (KoreanStockDictionary fallback → companyName)
+        XCTAssertEqual(result.count, 2)
+        XCTAssertFalse(result.contains { $0.ticker == "AAPL" })
     }
 }
