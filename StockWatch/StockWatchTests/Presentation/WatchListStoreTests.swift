@@ -752,4 +752,80 @@ final class WatchListStoreTests: XCTestCase {
         XCTAssertEqual(sut.state.dbGroups.count, 1)
         XCTAssertEqual(sut.state.selectedGroupIndex, 0)
     }
+
+    // MARK: - sortedFavorites 마켓 필터
+
+    func test_sortedFavorites_domesticFilter_returnsOnlyKoreanTickers() {
+        // Arrange
+        let items = [
+            FavoriteItem(ticker: "005930.KS", companyName: "삼성전자", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "035720.KQ", companyName: "카카오", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        sut = makeStore(state: WatchListState(favorites: items))
+
+        // Act
+        sut.action(.selectMarketFilter(.domestic))
+        let result = sut.sortedFavorites
+
+        // Assert
+        XCTAssertEqual(result.count, 2)
+        XCTAssertTrue(result.allSatisfy { $0.ticker.isDomesticTicker })
+        XCTAssertEqual(result.map(\.ticker).sorted(), ["005930.KS", "035720.KQ"])
+    }
+
+    func test_sortedFavorites_overseasFilter_excludesKoreanTickers() {
+        // Arrange
+        let items = [
+            FavoriteItem(ticker: "005930.KS", companyName: "삼성전자", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "TSLA", companyName: "Tesla", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        sut = makeStore(state: WatchListState(favorites: items))
+
+        // Act
+        sut.action(.selectMarketFilter(.overseas))
+        let result = sut.sortedFavorites
+
+        // Assert
+        XCTAssertEqual(result.count, 2)
+        XCTAssertFalse(result.contains { $0.ticker.isDomesticTicker })
+        XCTAssertEqual(result.map(\.ticker).sorted(), ["AAPL", "TSLA"])
+    }
+
+    func test_sortedFavorites_allFilter_returnsAllFavorites() {
+        // Arrange
+        let items = [
+            FavoriteItem(ticker: "005930.KS", companyName: "삼성전자", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        sut = makeStore(state: WatchListState(favorites: items))
+
+        // Act
+        sut.action(.selectMarketFilter(.all))
+        let result = sut.sortedFavorites
+
+        // Assert
+        XCTAssertEqual(result.count, 2)
+    }
+
+    func test_sortedFavorites_domesticFilter_withSort_appliesFilterThenSort() {
+        // Arrange
+        let items = [
+            FavoriteItem(ticker: "005930.KS", companyName: "삼성전자", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "AAPL", companyName: "Apple", addedAt: Date(), logoURL: "", groupIds: []),
+            FavoriteItem(ticker: "000660.KS", companyName: "SK하이닉스", addedAt: Date(), logoURL: "", groupIds: [])
+        ]
+        sut = makeStore(state: WatchListState(favorites: items))
+        sut.action(.selectMarketFilter(.domestic))
+        sut.action(.toggleSort(.name)) // ascending
+
+        // Act
+        let result = sut.sortedFavorites
+
+        // Assert — 국내 2개만 이름 오름차순 정렬 (KoreanStockDictionary fallback → companyName)
+        XCTAssertEqual(result.count, 2)
+        XCTAssertFalse(result.contains { $0.ticker == "AAPL" })
+    }
 }

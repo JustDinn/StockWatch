@@ -124,11 +124,20 @@ final class WatchListStore: ObservableObject {
 
     // MARK: - Sorted Favorites
 
-    /// 정렬 기준이 있으면 정렬된 배열, 없으면 원본(추가순) 반환
+    /// 마켓 필터 적용 후 정렬 기준이 있으면 정렬된 배열, 없으면 원본(추가순) 반환
     var sortedFavorites: [FavoriteItem] {
-        guard let criteria = state.sortCriteria else { return state.favorites }
+        let filtered: [FavoriteItem]
+        switch state.marketFilter {
+        case .all:
+            filtered = state.favorites
+        case .domestic:
+            filtered = state.favorites.filter { $0.ticker.isDomesticTicker }
+        case .overseas:
+            filtered = state.favorites.filter { !$0.ticker.isDomesticTicker }
+        }
+        guard let criteria = state.sortCriteria else { return filtered }
         let ascending = state.sortDirection == .ascending
-        return state.favorites.sorted { a, b in
+        return filtered.sorted { a, b in
             switch criteria {
             case .name:
                 let nameA = displayName(for: a)
