@@ -173,19 +173,21 @@ final class WatchListStore: ObservableObject {
 private extension WatchListStore {
 
     func toggleSort(_ criteria: WatchListSortCriteria) {
+        // 등락률은 내림차순(변동 큰 종목)부터 시작, 나머지는 오름차순부터 시작
+        let defaultDirection: WatchListSortDirection = criteria == .changePercent ? .descending : .ascending
+
         if state.sortCriteria == criteria {
-            // 같은 컬럼: asc → desc → none
-            switch state.sortDirection {
-            case .ascending:
-                state.sortDirection = .descending
-            case .descending:
+            // 같은 컬럼: 기본방향 → 반대방향 → none
+            if state.sortDirection == defaultDirection {
+                state.sortDirection = defaultDirection == .ascending ? .descending : .ascending
+            } else {
                 state.sortCriteria = nil
                 state.sortDirection = .ascending
             }
         } else {
-            // 다른 컬럼: 오름차순으로 시작
+            // 다른 컬럼: 해당 기준의 기본방향으로 시작
             state.sortCriteria = criteria
-            state.sortDirection = .ascending
+            state.sortDirection = defaultDirection
         }
     }
 

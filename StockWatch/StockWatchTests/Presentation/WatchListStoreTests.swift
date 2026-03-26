@@ -480,6 +480,46 @@ final class WatchListStoreTests: XCTestCase {
         XCTAssertEqual(sut.state.sortDirection, .ascending)
     }
 
+    func test_action_toggleSort_changePercent_cyclesDescAscNone() {
+        // 초기: 정렬 없음
+        XCTAssertNil(sut.state.sortCriteria)
+
+        // 1탭: 내림차순 (등락률은 내림차순부터 시작)
+        sut.action(.toggleSort(.changePercent))
+        XCTAssertEqual(sut.state.sortCriteria, .changePercent)
+        XCTAssertEqual(sut.state.sortDirection, .descending)
+
+        // 2탭: 오름차순
+        sut.action(.toggleSort(.changePercent))
+        XCTAssertEqual(sut.state.sortCriteria, .changePercent)
+        XCTAssertEqual(sut.state.sortDirection, .ascending)
+
+        // 3탭: 해제
+        sut.action(.toggleSort(.changePercent))
+        XCTAssertNil(sut.state.sortCriteria)
+        XCTAssertEqual(sut.state.sortDirection, .ascending)
+    }
+
+    func test_action_toggleSort_switchToChangePercent_startsDescending() {
+        // name 오름차순 상태에서 changePercent로 전환 → 내림차순
+        sut.action(.toggleSort(.name))
+        XCTAssertEqual(sut.state.sortCriteria, .name)
+
+        sut.action(.toggleSort(.changePercent))
+        XCTAssertEqual(sut.state.sortCriteria, .changePercent)
+        XCTAssertEqual(sut.state.sortDirection, .descending)
+    }
+
+    func test_action_toggleSort_switchFromChangePercent_startsAscending() {
+        // changePercent 정렬 중에 name으로 전환 → 오름차순
+        sut.action(.toggleSort(.changePercent))
+        XCTAssertEqual(sut.state.sortCriteria, .changePercent)
+
+        sut.action(.toggleSort(.name))
+        XCTAssertEqual(sut.state.sortCriteria, .name)
+        XCTAssertEqual(sut.state.sortDirection, .ascending)
+    }
+
     func test_sortedFavorites_byNameAsc_sortsAlphabetically() {
         // Arrange — companyName으로 정렬 (KoreanStockDictionary는 테스트에서 비어있으므로 fallback)
         let items = [
@@ -540,8 +580,7 @@ final class WatchListStoreTests: XCTestCase {
             "TSLA": StockQuote(ticker: "TSLA", currentPrice: 70.0, priceChangePercent: -2.0, currency: "USD")
         ]
         sut = makeStore(state: state)
-        sut.action(.toggleSort(.changePercent)) // asc
-        sut.action(.toggleSort(.changePercent)) // desc
+        sut.action(.toggleSort(.changePercent)) // desc (등락률은 첫 탭이 내림차순)
 
         let sorted = sut.sortedFavorites
         XCTAssertEqual(sorted[0].ticker, "AAPL") // 1.0 > -2.0
