@@ -718,6 +718,23 @@ final class WatchListStoreTests: XCTestCase {
 
     // MARK: - deleteGroup (continued)
 
+    func test_action_selectMarketFilter_updatesState() {
+        // Arrange
+        XCTAssertEqual(sut.state.marketFilter, .all)
+
+        // Act
+        sut.action(.selectMarketFilter(.domestic))
+
+        // Assert
+        XCTAssertEqual(sut.state.marketFilter, .domestic)
+
+        // Act — 해외주식으로 변경
+        sut.action(.selectMarketFilter(.overseas))
+
+        // Assert
+        XCTAssertEqual(sut.state.marketFilter, .overseas)
+    }
+
     func test_action_deleteGroup_currentGroupDeleted_selectsFirstRemaining() async {
         // Arrange
         let group1 = WatchListGroup(id: UUID(), name: "그룹1", createdAt: Date())

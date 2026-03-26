@@ -5,6 +5,13 @@
 
 import Foundation
 
+/// 시장 필터
+enum WatchListMarketFilter: String, CaseIterable, Equatable {
+    case all = "전체"
+    case domestic = "국내주식"
+    case overseas = "해외주식"
+}
+
 /// 정렬 기준
 enum WatchListSortCriteria: Equatable {
     case name
@@ -77,6 +84,9 @@ struct WatchListState {
 
     /// 환율 데이터 (통화코드 → 1 USD 대비 환율, 예: ["KRW": 1380.0])
     var exchangeRates: [String: Double] = [:]
+
+    /// 시장 필터 (전체/국내주식/해외주식)
+    var marketFilter: WatchListMarketFilter = .all
 
     /// 테스트 편의용 이니셜라이저
     init(favorites: [FavoriteItem] = []) {

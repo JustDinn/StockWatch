@@ -117,6 +117,8 @@ final class WatchListStore: ObservableObject {
             Task { await undoRemoveFavorite() }
         case .toggleSort(let criteria):
             toggleSort(criteria)
+        case .selectMarketFilter(let filter):
+            state.marketFilter = filter
         }
     }
 

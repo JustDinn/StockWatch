@@ -94,6 +94,17 @@ private struct WatchListContentView: View {
                 .onAppear {
                     store.action(.loadGroups)
                 }
+                .safeAreaInset(edge: .bottom) {
+                    if !store.state.dbGroups.isEmpty {
+                        WatchListMarketFilterBar(
+                            selectedFilter: store.state.marketFilter,
+                            onSelect: { store.action(.selectMarketFilter($0)) }
+                        )
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 24)
+                    }
+                }
             }
 
             if isShowingGroupManageModal {
@@ -894,6 +905,41 @@ private struct WatchListAddStockRow: View {
         .padding(.vertical, 12)
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
+    }
+}
+
+// MARK: - Market Filter Bar
+
+private struct WatchListMarketFilterBar: View {
+    let selectedFilter: WatchListMarketFilter
+    let onSelect: (WatchListMarketFilter) -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(WatchListMarketFilter.allCases, id: \.self) { filter in
+                Button {
+                    onSelect(filter)
+                } label: {
+                    Text(filter.rawValue)
+                        .font(selectedFilter == filter ? .pretendardBold(size: 14) : .pretendardMedium(size: 14))
+                        .foregroundStyle(selectedFilter == filter ? Color.primary : Color.secondary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            Group {
+                                if selectedFilter == filter {
+                                    Capsule()
+                                        .fill(Color(.systemBackground))
+                                        .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
+                                }
+                            }
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(Capsule().fill(Color(.systemGray6)))
     }
 }
 
