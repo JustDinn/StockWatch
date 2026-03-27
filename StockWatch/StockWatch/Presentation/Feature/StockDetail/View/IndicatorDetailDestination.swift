@@ -9,11 +9,23 @@ import SwiftUI
 /// 새 지표의 상세 뷰가 추가되면 이 파일에 case만 추가하면 됩니다.
 struct IndicatorDetailDestination: View {
     let indicator: TechnicalIndicator
+    let onMAConfirm: ((MAIndicatorConfiguration) -> Void)?
+
+    init(indicator: TechnicalIndicator, onMAConfirm: ((MAIndicatorConfiguration) -> Void)? = nil) {
+        self.indicator = indicator
+        self.onMAConfirm = onMAConfirm
+    }
 
     var body: some View {
         switch indicator {
         case .movingAverage:
-            MAIndicatorDetailView()
+            if let onConfirm = onMAConfirm {
+                MAIndicatorDetailView(onConfirm: onConfirm)
+            } else {
+                Text("설정 오류")
+                    .navigationTitle(indicator.title)
+                    .navigationBarTitleDisplayMode(.inline)
+            }
         case .volume:
             Text("거래량 상세 설정")
                 .navigationTitle(indicator.title)

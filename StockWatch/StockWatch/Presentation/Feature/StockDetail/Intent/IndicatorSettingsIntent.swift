@@ -8,4 +8,5 @@ enum IndicatorSettingsIntent {
     case resetAll
     case apply
     case selectTab(IndicatorTab)
+    case stageMAConfig(MAIndicatorConfiguration)
 }

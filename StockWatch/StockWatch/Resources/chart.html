@@ -44,6 +44,8 @@
       wickDownColor: '#1976d2'
     });
 
+    var maSeriesMap = {};
+
     function setColors(bodyUp, bodyDown, borderUp, borderDown, wickUp, wickDown) {
       candleSeries.applyOptions({
         upColor: bodyUp,
@@ -91,6 +93,33 @@
           chart.timeScale().fitContent();
         }
       } catch (e) {}
+    }
+
+    function clearMovingAverages() {
+      for (var key in maSeriesMap) {
+        chart.removeSeries(maSeriesMap[key]);
+      }
+      maSeriesMap = {};
+    }
+
+    function setMovingAverages(jsonString) {
+      try {
+        clearMovingAverages();
+        var maLines = JSON.parse(jsonString);
+        for (var i = 0; i < maLines.length; i++) {
+          var line = maLines[i];
+          var series = chart.addSeries(LightweightCharts.LineSeries, {
+            color: line.color,
+            lineWidth: line.lineWidth,
+            priceLineVisible: false,
+            lastValueVisible: false
+          });
+          series.setData(line.data);
+          maSeriesMap[line.period] = series;
+        }
+      } catch (e) {
+        console.error('Failed to set moving averages:', e);
+      }
     }
 
     var edgeDebounceTimer = null;

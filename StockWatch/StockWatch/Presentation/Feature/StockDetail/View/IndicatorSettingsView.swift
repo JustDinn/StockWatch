@@ -65,7 +65,12 @@ struct IndicatorSettingsView: View {
                         isEnabled: store.enabledBinding(for: indicator),
                         onDetailTap: { }
                     ) {
-                        IndicatorDetailDestination(indicator: indicator)
+                        IndicatorDetailDestination(
+                            indicator: indicator,
+                            onMAConfirm: { config in
+                                store.action(.stageMAConfig(config))
+                            }
+                        )
                     }
                 }
             }

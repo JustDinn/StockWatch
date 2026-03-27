@@ -7,17 +7,28 @@ import SwiftUI
 
 struct MAIndicatorDetailView: View {
 
-    @StateObject private var store = MAIndicatorStore()
+    @StateObject private var store: MAIndicatorStore
     @Environment(\.dismiss) private var dismiss
+
+    init(
+        initialState: MAIndicatorState? = nil,
+        onConfirm: @escaping (MAIndicatorConfiguration) -> Void
+    ) {
+        let state = initialState ?? MAIndicatorState()
+        _store = StateObject(wrappedValue: MAIndicatorStore(
+            state: state,
+            onConfirm: onConfirm
+        ))
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     header
-                    periodList
-                    if store.state.periods.count < MAIndicatorState.maxPeriodCount {
-                        addPeriodButton
+                    lineList
+                    if store.state.lines.count < MAIndicatorState.maxLineCount {
+                        addLineButton
                     }
                     footerNote
                 }
@@ -53,34 +64,34 @@ struct MAIndicatorDetailView: View {
         }
     }
 
-    private var periodList: some View {
+    private var lineList: some View {
         VStack(alignment: .leading, spacing: 20) {
-            ForEach(Array(store.state.periods.enumerated()), id: \.element.id) { index, period in
-                periodSection(index: index, period: period)
+            ForEach(Array(store.state.lines.enumerated()), id: \.element.id) { index, line in
+                lineSection(index: index, line: line)
             }
         }
     }
 
-    private func periodSection(index: Int, period: MAIndicatorPeriod) -> some View {
+    private func lineSection(index: Int, line: MALine) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("기간 \(index + 1)")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 
-            PeriodRowView(
-                period: period,
+            LineRowView(
+                line: line,
                 isFirst: index == 0,
-                onDelete: { store.action(.removePeriod(id: period.id)) },
+                onDelete: { store.action(.removeLine(id: line.id)) },
                 onPeriodChange: { newValue in
-                    store.action(.updatePeriod(id: period.id, period: newValue))
+                    store.action(.updatePeriod(id: line.id, period: newValue))
                 }
             )
         }
     }
 
-    private var addPeriodButton: some View {
+    private var addLineButton: some View {
         Button {
-            store.action(.addPeriod)
+            store.action(.addLine)
         } label: {
             HStack(spacing: 10) {
                 ZStack {
@@ -125,23 +136,23 @@ struct MAIndicatorDetailView: View {
     }
 }
 
-// MARK: - PeriodRowView
+// MARK: - LineRowView
 
-private struct PeriodRowView: View {
+private struct LineRowView: View {
 
-    let period: MAIndicatorPeriod
+    let line: MALine
     let isFirst: Bool
     let onDelete: () -> Void
     let onPeriodChange: (Int) -> Void
 
     @State private var periodText: String
 
-    init(period: MAIndicatorPeriod, isFirst: Bool, onDelete: @escaping () -> Void, onPeriodChange: @escaping (Int) -> Void) {
-        self.period = period
+    init(line: MALine, isFirst: Bool, onDelete: @escaping () -> Void, onPeriodChange: @escaping (Int) -> Void) {
+        self.line = line
         self.isFirst = isFirst
         self.onDelete = onDelete
         self.onPeriodChange = onPeriodChange
-        self._periodText = State(initialValue: "\(period.period)")
+        self._periodText = State(initialValue: "\(line.period)")
     }
 
     var body: some View {
@@ -158,9 +169,9 @@ private struct PeriodRowView: View {
     private var colorSwatch: some View {
         HStack(spacing: 6) {
             RoundedRectangle(cornerRadius: 6)
-                .fill(Color(hex: period.colorHex) ?? .yellow)
+                .fill(Color(hex: line.colorHex) ?? .yellow)
                 .frame(width: 24, height: 24)
-            Text("\(period.lineWidth)px")
+            Text("\(line.lineWidth)px")
                 .font(.footnote)
                 .foregroundStyle(.primary)
         }
@@ -202,7 +213,7 @@ private struct PeriodRowView: View {
                 if let value = Int(periodText), value > 0 {
                     onPeriodChange(value)
                 } else {
-                    periodText = "\(period.period)"
+                    periodText = "\(line.period)"
                 }
             }
     }

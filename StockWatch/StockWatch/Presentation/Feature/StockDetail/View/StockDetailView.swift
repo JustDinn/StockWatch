@@ -94,6 +94,8 @@ private struct StockDetailContentView: View {
                         LightweightChartView(
                             candles: data.candles,
                             olderCandles: state.pendingOlderCandles,
+                            maConfiguration: state.maConfiguration,
+                            isMAEnabled: state.isMAEnabled,
                             onReachedLeftEdge: { store.action(.loadOlderCandles) },
                             onOlderDataInjected: { store.action(.clearPendingOlderCandles) }
                         )
@@ -146,6 +148,12 @@ private struct StockDetailContentView: View {
          }
          .navigationDestination(isPresented: store.isShowingIndicatorSettingsBinding) {
              IndicatorSettingsView()
+         }
+         .onChange(of: store.state.isShowingIndicatorSettings) { _, newValue in
+             if !newValue {
+                 // IndicatorSettingsView가 dismiss되면 설정 리로드
+                 store.action(.reloadIndicatorSettings)
+             }
          }
          .task {
              store.action(.loadDetail)

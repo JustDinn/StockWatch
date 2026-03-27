@@ -21,6 +21,7 @@ final class StockDetailStore: ObservableObject {
     private let updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCaseProtocol
     private var chartTask: Task<Void, Never>?
     private var toastDismissTask: Task<Void, Never>?
+    private let indicatorManager = TechnicalIndicatorSettingsManager.shared
 
     // MARK: - Init
 
@@ -83,6 +84,8 @@ final class StockDetailStore: ObservableObject {
             chartTask = Task { await loadOlderCandles() }
         case .clearPendingOlderCandles:
             state.pendingOlderCandles = nil
+        case .reloadIndicatorSettings:
+            loadIndicatorSettings()
         }
     }
 
@@ -120,6 +123,9 @@ extension StockDetailStore {
         state.isChartLoading = true
         state.errorMessage = nil
         state.chartErrorMessage = nil
+
+        // 기술적 지표 설정 로드
+        loadIndicatorSettings()
 
         Task {
             // 즐겨찾기 상태, 주식 상세 정보, 캔들스틱 데이터를 병렬로 로드
@@ -292,5 +298,10 @@ extension StockDetailStore {
             state.toastMessage = nil
             state.undoInfo = nil
         }
+    }
+
+    private func loadIndicatorSettings() {
+        state.maConfiguration = indicatorManager.maConfiguration
+        state.isMAEnabled = indicatorManager.isMAEnabled
     }
 }

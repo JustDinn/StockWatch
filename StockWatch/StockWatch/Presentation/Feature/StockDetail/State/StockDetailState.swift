@@ -89,6 +89,10 @@ struct StockDetailState: Equatable {
     var toastMessage: String?
     /// 되돌리기용 삭제 정보
     var undoInfo: UndoFavoriteInfo?
+    /// 이동평균선 설정
+    var maConfiguration: MAIndicatorConfiguration?
+    /// 이동평균선 활성화 여부
+    var isMAEnabled: Bool
 
     init(ticker: String) {
         self.ticker = ticker
@@ -113,6 +117,8 @@ struct StockDetailState: Equatable {
         self.isShowingToast = false
         self.toastMessage = nil
         self.undoInfo = nil
+        self.maConfiguration = nil
+        self.isMAEnabled = false
     }
 
     /// 가격 표시 문자열 (예: "₩193,900", "$150.25", "¥2,500"), 소수점 셋째자리에서 반올림

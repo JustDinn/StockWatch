@@ -29,4 +29,6 @@ enum StockDetailIntent {
     case loadOlderCandles
     /// 과거 캔들 차트 주입 완료 후 pending 초기화
     case clearPendingOlderCandles
+    /// 기술적 지표 설정 리로드
+    case reloadIndicatorSettings
 }

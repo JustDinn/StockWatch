@@ -10,6 +10,8 @@ struct LightweightChartView: UIViewRepresentable {
 
     let candles: [Candle]
     var olderCandles: [Candle]? = nil
+    var maConfiguration: MAIndicatorConfiguration? = nil
+    var isMAEnabled: Bool = false
     var onReachedLeftEdge: (() -> Void)? = nil
     var onOlderDataInjected: (() -> Void)? = nil
 
@@ -68,6 +70,17 @@ struct LightweightChartView: UIViewRepresentable {
                     context.coordinator.injectData(candles, into: webView)
                     context.coordinator.lastInjectedDataID = newID
                 }
+            }
+
+            // 이동평균선 주입
+            if isMAEnabled, let config = maConfiguration {
+                context.coordinator.injectMovingAverages(
+                    candles: candles,
+                    configuration: config,
+                    into: webView
+                )
+            } else {
+                context.coordinator.clearMovingAverages(into: webView)
             }
         } else {
             context.coordinator.pendingCandles = candles
@@ -149,6 +162,59 @@ extension LightweightChartView {
         func dataID(for candles: [Candle]) -> String {
             guard let first = candles.first, let last = candles.last else { return "" }
             return "\(candles.count)_\(Int(first.timestamp.timeIntervalSince1970))_\(Int(last.timestamp.timeIntervalSince1970))"
+        }
+
+        func injectMovingAverages(
+            candles: [Candle],
+            configuration: MAIndicatorConfiguration,
+            into webView: WKWebView
+        ) {
+            guard !candles.isEmpty, !configuration.lines.isEmpty else {
+                clearMovingAverages(into: webView)
+                return
+            }
+
+            var maLines: [[String: Any]] = []
+
+            for line in configuration.lines {
+                let smaData = TechnicalIndicatorCalculator.smaTimeSeries(
+                    candles: candles,
+                    period: line.period
+                )
+
+                guard !smaData.isEmpty else { continue }
+
+                let jsData = smaData.map { item in
+                    [
+                        "time": Int(item.timestamp.timeIntervalSince1970),
+                        "value": item.value
+                    ] as [String: Any]
+                }
+
+                maLines.append([
+                    "period": line.period,
+                    "color": line.colorHex,
+                    "lineWidth": line.lineWidth,
+                    "data": jsData
+                ])
+            }
+
+            guard !maLines.isEmpty else {
+                clearMovingAverages(into: webView)
+                return
+            }
+
+            // Convert to JSON
+            if let jsonData = try? JSONSerialization.data(withJSONObject: maLines),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                let js = "setMovingAverages('\(jsonString.replacingOccurrences(of: "'", with: "\\'"))')"
+                webView.evaluateJavaScript(js, completionHandler: nil)
+            }
+        }
+
+        func clearMovingAverages(into webView: WKWebView) {
+            let js = "clearMovingAverages()"
+            webView.evaluateJavaScript(js, completionHandler: nil)
         }
 
         private func buildJSArray(_ candles: [Candle]) -> String {
