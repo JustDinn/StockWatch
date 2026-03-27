@@ -149,9 +149,9 @@ private struct PeriodRowView: View {
             colorSwatch
             sourcePill
             periodTextField
-            if !isFirst {
-                deleteButton
-            }
+            deleteButton
+                .opacity(isFirst ? 0 : 1)
+                .allowsHitTesting(!isFirst)
         }
     }
 
@@ -159,13 +159,13 @@ private struct PeriodRowView: View {
         HStack(spacing: 6) {
             RoundedRectangle(cornerRadius: 6)
                 .fill(Color(hex: period.colorHex) ?? .yellow)
-                .frame(width: 28, height: 28)
+                .frame(width: 24, height: 24)
             Text("\(period.lineWidth)px")
                 .font(.footnote)
                 .foregroundStyle(.primary)
         }
+        .frame(height: 44)
         .padding(.horizontal, 10)
-        .padding(.vertical, 10)
         .background(Color(.systemGray6))
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
@@ -178,8 +178,8 @@ private struct PeriodRowView: View {
                 .font(.caption)
         }
         .foregroundStyle(.primary)
+        .frame(height: 44)
         .padding(.horizontal, 12)
-        .padding(.vertical, 10)
         .background(Color(.systemGray6))
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
@@ -189,9 +189,8 @@ private struct PeriodRowView: View {
             .keyboardType(.numberPad)
             .multilineTextAlignment(.center)
             .font(.subheadline)
-            .frame(minWidth: 52)
+            .frame(maxWidth: .infinity, minHeight: 44)
             .padding(.horizontal, 12)
-            .padding(.vertical, 10)
             .background(Color(.systemGray6))
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .onChange(of: periodText) { _, newValue in
