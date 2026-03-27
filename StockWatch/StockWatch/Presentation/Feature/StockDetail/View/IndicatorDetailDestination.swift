@@ -13,9 +13,7 @@ struct IndicatorDetailDestination: View {
     var body: some View {
         switch indicator {
         case .movingAverage:
-            Text("이동평균선 상세 설정")
-                .navigationTitle(indicator.title)
-                .navigationBarTitleDisplayMode(.inline)
+            MAIndicatorDetailView()
         case .volume:
             Text("거래량 상세 설정")
                 .navigationTitle(indicator.title)
