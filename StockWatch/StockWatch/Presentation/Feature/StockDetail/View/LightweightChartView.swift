@@ -84,6 +84,8 @@ struct LightweightChartView: UIViewRepresentable {
             }
         } else {
             context.coordinator.pendingCandles = candles
+            context.coordinator.pendingIsMAEnabled = isMAEnabled
+            context.coordinator.pendingMAConfiguration = maConfiguration
         }
     }
 }
@@ -109,6 +111,8 @@ extension LightweightChartView {
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         var webView: WKWebView?
         var pendingCandles: [Candle] = []
+        var pendingIsMAEnabled: Bool = false
+        var pendingMAConfiguration: MAIndicatorConfiguration? = nil
         var isLoaded = false
         var onReachedLeftEdge: (() -> Void)?
         var onOlderDataInjected: (() -> Void)?
@@ -125,6 +129,9 @@ extension LightweightChartView {
             injectColors(into: webView)
             injectData(pendingCandles, into: webView)
             lastInjectedDataID = dataID(for: pendingCandles)
+            if pendingIsMAEnabled, let config = pendingMAConfiguration {
+                injectMovingAverages(candles: pendingCandles, configuration: config, into: webView)
+            }
         }
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
