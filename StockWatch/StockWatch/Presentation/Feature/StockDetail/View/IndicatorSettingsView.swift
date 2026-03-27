@@ -6,16 +6,8 @@
 import SwiftUI
 
 struct IndicatorSettingsView: View {
-    enum Tab: String, CaseIterable {
-        case upper = "상단지표"
-        case lower = "하단지표"
-    }
-
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedTab: Tab = .upper
-    @State private var isMAEnabled: Bool = false
-    @State private var isVolumeEnabled: Bool = false
-    @State private var isRSIEnabled: Bool = false
+    @StateObject private var store = IndicatorSettingsStore()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,9 +19,7 @@ struct IndicatorSettingsView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("초기화 하기") {
-                    isMAEnabled = false
-                    isVolumeEnabled = false
-                    isRSIEnabled = false
+                    store.action(.resetAll)
                 }
                 .foregroundStyle(.blue)
             }
@@ -39,7 +29,7 @@ struct IndicatorSettingsView: View {
     private var tabBar: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                ForEach(Tab.allCases, id: \.self) { tab in
+                ForEach(IndicatorTab.allCases, id: \.self) { tab in
                     tabBarItem(tab)
                 }
             }
@@ -48,10 +38,10 @@ struct IndicatorSettingsView: View {
         }
     }
 
-    private func tabBarItem(_ tab: Tab) -> some View {
-        let isSelected = selectedTab == tab
+    private func tabBarItem(_ tab: IndicatorTab) -> some View {
+        let isSelected = store.state.selectedTab == tab
         return Button {
-            selectedTab = tab
+            store.action(.selectTab(tab))
         } label: {
             VStack(spacing: 8) {
                 Text(tab.rawValue)
@@ -65,45 +55,17 @@ struct IndicatorSettingsView: View {
         .frame(maxWidth: .infinity)
     }
 
-    @ViewBuilder
     private var indicatorList: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                switch selectedTab {
-                case .upper:
+                ForEach(TechnicalIndicator.indicators(for: store.state.selectedTab)) { indicator in
                     IndicatorRow(
-                        title: "이동평균선",
-                        description: "지난 n일 동안의 주가 평균값을 이은 선",
-                        isEnabled: $isMAEnabled
+                        title: indicator.title,
+                        description: indicator.description,
+                        isEnabled: store.enabledBinding(for: indicator),
+                        onDetailTap: { }
                     ) {
-                        // 추후 상세 설정 화면으로 교체
-                    } detailDestination: {
-                        Text("이동평균선 상세 설정")
-                            .navigationTitle("이동평균선")
-                            .navigationBarTitleDisplayMode(.inline)
-                    }
-                case .lower:
-                    IndicatorRow(
-                        title: "거래량",
-                        description: "거래량을 가격대별로 비교할 수 있는 막대그래프",
-                        isEnabled: $isVolumeEnabled
-                    ) {
-                        // 추후 상세 설정 화면으로 교체
-                    } detailDestination: {
-                        Text("거래량 상세 설정")
-                            .navigationTitle("거래량")
-                            .navigationBarTitleDisplayMode(.inline)
-                    }
-                    IndicatorRow(
-                        title: "RSI",
-                        description: "주가의 상승/하락 강도를 나타내는 0~100 사이의 지표",
-                        isEnabled: $isRSIEnabled
-                    ) {
-                        // 추후 상세 설정 화면으로 교체
-                    } detailDestination: {
-                        Text("RSI 상세 설정")
-                            .navigationTitle("RSI")
-                            .navigationBarTitleDisplayMode(.inline)
+                        IndicatorDetailDestination(indicator: indicator)
                     }
                 }
             }
@@ -112,6 +74,7 @@ struct IndicatorSettingsView: View {
 
     private var applyButton: some View {
         Button {
+            store.action(.apply)
             dismiss()
         } label: {
             Text("적용하기")
