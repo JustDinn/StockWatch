@@ -69,6 +69,8 @@ final class StockDetailStore: ObservableObject {
             state.undoInfo = nil
         case .navigateToApplyStrategy:
             state.isShowingApplyStrategy = true
+        case .navigateToIndicatorSettings:
+            state.isShowingIndicatorSettings = true
         case .selectPeriod(let period):
             state.selectedPeriod = period
             state.hasMoreOlderCandles = true
@@ -88,6 +90,13 @@ final class StockDetailStore: ObservableObject {
         Binding(
             get: { self.state.isShowingApplyStrategy },
             set: { self.state.isShowingApplyStrategy = $0 }
+        )
+    }
+
+    var isShowingIndicatorSettingsBinding: Binding<Bool> {
+        Binding(
+            get: { self.state.isShowingIndicatorSettings },
+            set: { self.state.isShowingIndicatorSettings = $0 }
         )
     }
 

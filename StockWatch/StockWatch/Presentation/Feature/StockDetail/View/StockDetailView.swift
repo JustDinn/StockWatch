@@ -132,8 +132,20 @@ private struct StockDetailContentView: View {
             }
          }
          .navigationBarTitleDisplayMode(.inline)
+         .toolbar {
+             ToolbarItem(placement: .navigationBarTrailing) {
+                 Button {
+                     store.action(.navigateToIndicatorSettings)
+                 } label: {
+                     Image(systemName: "gearshape")
+                 }
+             }
+         }
          .navigationDestination(isPresented: store.isShowingApplyStrategyBinding) {
              StrategyView(ticker: store.state.ticker)
+         }
+         .navigationDestination(isPresented: store.isShowingIndicatorSettingsBinding) {
+             IndicatorSettingsView()
          }
          .task {
              store.action(.loadDetail)
