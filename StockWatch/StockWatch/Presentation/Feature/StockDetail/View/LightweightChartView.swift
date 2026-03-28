@@ -10,6 +10,8 @@ struct LightweightChartView: UIViewRepresentable {
 
     let candles: [Candle]
     var olderCandles: [Candle]? = nil
+    /// MA 계산 전용 캔들 (warmup 포함). nil이면 candles로 계산
+    var maCalculationCandles: [Candle]? = nil
     var maConfiguration: MAIndicatorConfiguration? = nil
     var isMAEnabled: Bool = false
     var onReachedLeftEdge: (() -> Void)? = nil
@@ -76,6 +78,7 @@ struct LightweightChartView: UIViewRepresentable {
             if isMAEnabled, let config = maConfiguration {
                 context.coordinator.injectMovingAverages(
                     candles: candles,
+                    maCalculationCandles: maCalculationCandles,
                     configuration: config,
                     into: webView
                 )
@@ -86,6 +89,7 @@ struct LightweightChartView: UIViewRepresentable {
             context.coordinator.pendingCandles = candles
             context.coordinator.pendingIsMAEnabled = isMAEnabled
             context.coordinator.pendingMAConfiguration = maConfiguration
+            context.coordinator.pendingMACalculationCandles = maCalculationCandles
         }
     }
 }
@@ -113,6 +117,7 @@ extension LightweightChartView {
         var pendingCandles: [Candle] = []
         var pendingIsMAEnabled: Bool = false
         var pendingMAConfiguration: MAIndicatorConfiguration? = nil
+        var pendingMACalculationCandles: [Candle]? = nil
         var isLoaded = false
         var onReachedLeftEdge: (() -> Void)?
         var onOlderDataInjected: (() -> Void)?
@@ -130,7 +135,7 @@ extension LightweightChartView {
             injectData(pendingCandles, into: webView)
             lastInjectedDataID = dataID(for: pendingCandles)
             if pendingIsMAEnabled, let config = pendingMAConfiguration {
-                injectMovingAverages(candles: pendingCandles, configuration: config, into: webView)
+                injectMovingAverages(candles: pendingCandles, maCalculationCandles: pendingMACalculationCandles, configuration: config, into: webView)
             }
         }
 
@@ -173,9 +178,11 @@ extension LightweightChartView {
 
         func injectMovingAverages(
             candles: [Candle],
+            maCalculationCandles: [Candle]?,
             configuration: MAIndicatorConfiguration,
             into webView: WKWebView
         ) {
+            let calcCandles = maCalculationCandles ?? candles
             guard !candles.isEmpty, !configuration.lines.isEmpty else {
                 clearMovingAverages(into: webView)
                 return
@@ -185,13 +192,14 @@ extension LightweightChartView {
 
             for line in configuration.lines {
                 let smaData = TechnicalIndicatorCalculator.smaTimeSeries(
-                    candles: candles,
+                    candles: calcCandles,
                     period: line.period
                 )
+                let displayStart = candles.first?.timestamp ?? Date.distantPast
+                let filteredSmaData = smaData.filter { $0.timestamp >= displayStart }
+                guard !filteredSmaData.isEmpty else { continue }
 
-                guard !smaData.isEmpty else { continue }
-
-                let jsData = smaData.map { item in
+                let jsData = filteredSmaData.map { item in
                     [
                         "time": Int(item.timestamp.timeIntervalSince1970),
                         "value": item.value

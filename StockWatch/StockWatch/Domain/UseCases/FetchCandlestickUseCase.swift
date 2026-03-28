@@ -10,14 +10,22 @@ enum FetchCandlestickError: Error {
 }
 
 protocol FetchCandlestickUseCaseProtocol {
-    func execute(ticker: String, period: ChartPeriod) async throws -> CandlestickData
+    func execute(ticker: String, period: ChartPeriod, warmupCount: Int) async throws -> CandlestickData
     func fetchOlderCandles(ticker: String, period: ChartPeriod, before: Date) async throws -> CandlestickData
+}
+
+extension FetchCandlestickUseCaseProtocol {
+    func execute(ticker: String, period: ChartPeriod) async throws -> CandlestickData {
+        try await execute(ticker: ticker, period: period, warmupCount: 0)
+    }
 }
 
 final class FetchCandlestickUseCase: FetchCandlestickUseCaseProtocol {
 
     /// 초기 차트 표시 캔들 수 (좌측 스크롤로 과거 데이터 추가 로드 가능)
     private let initialCandleCount = 20
+    /// 일봉 기본 range("6mo")로 확보 가능한 근사 캔들 수
+    private let defaultDailyCapacity = 125
 
     private let repository: CandlestickRepositoryProtocol
 
@@ -25,10 +33,16 @@ final class FetchCandlestickUseCase: FetchCandlestickUseCaseProtocol {
         self.repository = repository
     }
 
-    func execute(ticker: String, period: ChartPeriod) async throws -> CandlestickData {
+    func execute(ticker: String, period: ChartPeriod, warmupCount: Int) async throws -> CandlestickData {
         guard !ticker.isEmpty else { throw FetchCandlestickError.emptyTicker }
-        let data = try await repository.fetchCandlesticks(ticker: ticker, period: period)
-        let limited = Array(data.candles.suffix(initialCandleCount))
+        let totalNeeded = initialCandleCount + warmupCount
+        let data: CandlestickData
+        if period == .day && totalNeeded > defaultDailyCapacity {
+            data = try await repository.fetchCandlesticks(ticker: ticker, range: "2y", interval: period.interval)
+        } else {
+            data = try await repository.fetchCandlesticks(ticker: ticker, period: period)
+        }
+        let limited = Array(data.candles.suffix(totalNeeded))
         return CandlestickData(ticker: data.ticker, candles: limited)
     }
 

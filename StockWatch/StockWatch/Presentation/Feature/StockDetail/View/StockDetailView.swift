@@ -94,6 +94,7 @@ private struct StockDetailContentView: View {
                         LightweightChartView(
                             candles: data.candles,
                             olderCandles: state.pendingOlderCandles,
+                            maCalculationCandles: state.maCalculationCandles,
                             maConfiguration: state.maConfiguration,
                             isMAEnabled: state.isMAEnabled,
                             onReachedLeftEdge: { store.action(.loadOlderCandles) },

@@ -129,9 +129,10 @@ extension StockDetailStore {
 
         Task {
             // 즐겨찾기 상태, 주식 상세 정보, 캔들스틱 데이터를 병렬로 로드
+            let warmupCount = maxMAPeriod()
             async let isFav = checkFavoriteUseCase.execute(ticker: state.ticker)
             async let detail = fetchDetail()
-            async let candlestick = fetchCandlestick(period: state.selectedPeriod)
+            async let candlestick = fetchCandlestick(period: state.selectedPeriod, warmupCount: warmupCount)
 
             state.isFavorite = await isFav
 
@@ -150,7 +151,7 @@ extension StockDetailStore {
 
             switch await candlestick {
             case .success(let data):
-                state.candlestickData = data
+                applyFetchedCandles(data, warmupCount: warmupCount)
             case .failure(let error):
                 state.chartErrorMessage = error.localizedDescription
             }
@@ -160,13 +161,30 @@ extension StockDetailStore {
         }
     }
 
-    private func fetchCandlestick(period: ChartPeriod) async -> Result<CandlestickData, Error> {
+    private func fetchCandlestick(period: ChartPeriod, warmupCount: Int = 0) async -> Result<CandlestickData, Error> {
         do {
-            let data = try await fetchCandlestickUseCase.execute(ticker: state.ticker, period: period)
+            let data = try await fetchCandlestickUseCase.execute(ticker: state.ticker, period: period, warmupCount: warmupCount)
             return .success(data)
         } catch {
             return .failure(error)
         }
+    }
+
+    /// warmup 캔들을 MA 계산 전용으로 분리하고, display 캔들만 candlestickData에 저장
+    private func applyFetchedCandles(_ data: CandlestickData, warmupCount: Int) {
+        if warmupCount > 0, data.candles.count > warmupCount {
+            state.maCalculationCandles = data.candles
+            let displayCandles = Array(data.candles.dropFirst(warmupCount))
+            state.candlestickData = CandlestickData(ticker: data.ticker, candles: displayCandles)
+        } else {
+            state.maCalculationCandles = nil
+            state.candlestickData = data
+        }
+    }
+
+    private func maxMAPeriod() -> Int {
+        guard state.isMAEnabled, let config = state.maConfiguration else { return 0 }
+        return config.lines.map(\.period).max() ?? 0
     }
 
     private func loadOlderCandles() async {
@@ -195,6 +213,7 @@ extension StockDetailStore {
                     .values
                     .sorted { $0.timestamp < $1.timestamp }
                 state.candlestickData = CandlestickData(ticker: state.ticker, candles: merged)
+                state.maCalculationCandles = nil  // 이후 MA 계산은 merged candles 사용
                 state.pendingOlderCandles = olderData.candles
             }
         } catch {
@@ -208,10 +227,11 @@ extension StockDetailStore {
         state.isChartLoading = true
         state.chartErrorMessage = nil
 
-        switch await fetchCandlestick(period: period) {
+        let warmupCount = maxMAPeriod()
+        switch await fetchCandlestick(period: period, warmupCount: warmupCount) {
         case .success(let data):
             guard !Task.isCancelled else { return }
-            state.candlestickData = data
+            applyFetchedCandles(data, warmupCount: warmupCount)
         case .failure(let error):
             guard !Task.isCancelled else { return }
             state.chartErrorMessage = error.localizedDescription
