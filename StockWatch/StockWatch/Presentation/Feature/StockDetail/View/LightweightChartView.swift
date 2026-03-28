@@ -213,7 +213,8 @@ extension LightweightChartView {
             for line in configuration.lines {
                 let smaData = TechnicalIndicatorCalculator.smaTimeSeries(
                     candles: calcCandles,
-                    period: line.period
+                    period: line.period,
+                    priceSource: line.priceSource
                 )
                 let displayStart = candles.first?.timestamp ?? Date.distantPast
                 let filteredSmaData = smaData.filter { $0.timestamp >= displayStart }

@@ -19,10 +19,12 @@ enum TechnicalIndicatorCalculator {
     /// - Parameters:
     ///   - candles: 캔들 데이터 배열
     ///   - period: 이동평균 기간
+    ///   - priceSource: 계산 기준 가격 (종가/시가)
     /// - Returns: (timestamp, sma value) 배열. period개 미만은 건너뜀.
-    static func smaTimeSeries(candles: [Candle], period: Int) -> [(timestamp: Date, value: Double)] {
+    static func smaTimeSeries(candles: [Candle], period: Int, priceSource: MAPriceSource = .close) -> [(timestamp: Date, value: Double)] {
         guard period > 0, !candles.isEmpty else { return [] }
 
+        let keyPath: KeyPath<Candle, Double> = priceSource == .close ? \.close : \.open
         var result: [(Date, Double)] = []
 
         for index in 0..<candles.count {
@@ -32,7 +34,7 @@ enum TechnicalIndicatorCalculator {
             let startIndex = index + 1 - period
             let endIndex = index + 1
             let slice = candles[startIndex..<endIndex]
-            let average = slice.map(\.close).reduce(0, +) / Double(period)
+            let average = slice.map { $0[keyPath: keyPath] }.reduce(0, +) / Double(period)
 
             result.append((candles[index].timestamp, average))
         }

@@ -82,9 +82,10 @@ struct MAIndicatorDetailView: View {
                 line: line,
                 isFirst: index == 0,
                 onDelete: { store.action(.removeLine(id: line.id)) },
-                onPeriodChange: { newValue in
-                    store.action(.updatePeriod(id: line.id, period: newValue))
-                }
+                onPeriodChange: { store.action(.updatePeriod(id: line.id, period: $0)) },
+                onColorChange: { store.action(.updateColor(id: line.id, colorHex: $0)) },
+                onLineWidthChange: { store.action(.updateLineWidth(id: line.id, lineWidth: $0)) },
+                onPriceSourceChange: { store.action(.updatePriceSource(id: line.id, priceSource: $0)) }
             )
         }
     }
@@ -144,15 +145,31 @@ private struct LineRowView: View {
     let isFirst: Bool
     let onDelete: () -> Void
     let onPeriodChange: (Int) -> Void
+    let onColorChange: (String) -> Void
+    let onLineWidthChange: (Int) -> Void
+    let onPriceSourceChange: (MAPriceSource) -> Void
 
     @State private var periodText: String
+    @State private var selectedColor: Color
 
-    init(line: MALine, isFirst: Bool, onDelete: @escaping () -> Void, onPeriodChange: @escaping (Int) -> Void) {
+    init(
+        line: MALine,
+        isFirst: Bool,
+        onDelete: @escaping () -> Void,
+        onPeriodChange: @escaping (Int) -> Void,
+        onColorChange: @escaping (String) -> Void,
+        onLineWidthChange: @escaping (Int) -> Void,
+        onPriceSourceChange: @escaping (MAPriceSource) -> Void
+    ) {
         self.line = line
         self.isFirst = isFirst
         self.onDelete = onDelete
         self.onPeriodChange = onPeriodChange
+        self.onColorChange = onColorChange
+        self.onLineWidthChange = onLineWidthChange
+        self.onPriceSourceChange = onPriceSourceChange
         self._periodText = State(initialValue: "\(line.period)")
+        self._selectedColor = State(initialValue: Color(hex: line.colorHex) ?? .yellow)
     }
 
     var body: some View {
@@ -168,12 +185,21 @@ private struct LineRowView: View {
 
     private var colorSwatch: some View {
         HStack(spacing: 6) {
-            RoundedRectangle(cornerRadius: 6)
-                .fill(Color(hex: line.colorHex) ?? .yellow)
+            ColorPicker("", selection: $selectedColor, supportsOpacity: false)
+                .labelsHidden()
                 .frame(width: 24, height: 24)
-            Text("\(line.lineWidth)px")
-                .font(.footnote)
-                .foregroundStyle(.primary)
+                .onChange(of: selectedColor) { _, newColor in
+                    onColorChange(newColor.toHex())
+                }
+            Menu {
+                ForEach([1, 2, 3], id: \.self) { width in
+                    Button("\(width)px") { onLineWidthChange(width) }
+                }
+            } label: {
+                Text("\(line.lineWidth)px")
+                    .font(.footnote)
+                    .foregroundStyle(.primary)
+            }
         }
         .frame(height: 44)
         .padding(.horizontal, 10)
@@ -182,17 +208,23 @@ private struct LineRowView: View {
     }
 
     private var sourcePill: some View {
-        HStack(spacing: 4) {
-            Text("종가")
-                .font(.subheadline)
-            Image(systemName: "chevron.down")
-                .font(.caption)
+        Menu {
+            ForEach(MAPriceSource.allCases, id: \.self) { source in
+                Button(source.displayName) { onPriceSourceChange(source) }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(line.priceSource.displayName)
+                    .font(.subheadline)
+                Image(systemName: "chevron.down")
+                    .font(.caption)
+            }
+            .foregroundStyle(.primary)
+            .frame(height: 44)
+            .padding(.horizontal, 12)
+            .background(Color(.systemGray6))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
         }
-        .foregroundStyle(.primary)
-        .frame(height: 44)
-        .padding(.horizontal, 12)
-        .background(Color(.systemGray6))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     private var periodTextField: some View {

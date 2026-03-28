@@ -82,6 +82,66 @@ final class MAIndicatorStoreTests: XCTestCase {
         XCTAssertEqual(store.state.lines, originalLines)
     }
 
+    // MARK: - updateColor
+
+    func test_action_updateColor_updatesColorHex() {
+        let targetId = store.state.lines[0].id
+
+        store.action(.updateColor(id: targetId, colorHex: "#FF0000"))
+
+        XCTAssertEqual(store.state.lines[0].colorHex, "#FF0000")
+    }
+
+    func test_action_updateColor_withUnknownId_doesNothing() {
+        let original = store.state.lines
+
+        store.action(.updateColor(id: UUID(), colorHex: "#FF0000"))
+
+        XCTAssertEqual(store.state.lines, original)
+    }
+
+    // MARK: - updateLineWidth
+
+    func test_action_updateLineWidth_updatesValue() {
+        let targetId = store.state.lines[0].id
+
+        store.action(.updateLineWidth(id: targetId, lineWidth: 3))
+
+        XCTAssertEqual(store.state.lines[0].lineWidth, 3)
+    }
+
+    func test_action_updateLineWidth_withUnknownId_doesNothing() {
+        let original = store.state.lines
+
+        store.action(.updateLineWidth(id: UUID(), lineWidth: 2))
+
+        XCTAssertEqual(store.state.lines, original)
+    }
+
+    // MARK: - updatePriceSource
+
+    func test_action_updatePriceSource_updatesValue() {
+        let targetId = store.state.lines[0].id
+
+        store.action(.updatePriceSource(id: targetId, priceSource: .open))
+
+        XCTAssertEqual(store.state.lines[0].priceSource, .open)
+    }
+
+    func test_action_updatePriceSource_withUnknownId_doesNothing() {
+        let original = store.state.lines
+
+        store.action(.updatePriceSource(id: UUID(), priceSource: .open))
+
+        XCTAssertEqual(store.state.lines, original)
+    }
+
+    func test_action_addLine_hasDefaultPriceSourceClose() {
+        store.action(.addLine)
+
+        XCTAssertEqual(store.state.lines.last?.priceSource, .close)
+    }
+
     // MARK: - reset
 
     func test_action_reset_restoresDefaultTwoLines() {
@@ -102,5 +162,14 @@ final class MAIndicatorStoreTests: XCTestCase {
 
         XCTAssertEqual(store.state.lines[0].period, MAIndicatorState.defaultLines[0].period)
         XCTAssertEqual(store.state.lines[1].period, MAIndicatorState.defaultLines[1].period)
+    }
+
+    func test_action_reset_restoresDefaultPriceSource() {
+        let targetId = store.state.lines[0].id
+        store.action(.updatePriceSource(id: targetId, priceSource: .open))
+
+        store.action(.reset)
+
+        XCTAssertEqual(store.state.lines[0].priceSource, .close)
     }
 }

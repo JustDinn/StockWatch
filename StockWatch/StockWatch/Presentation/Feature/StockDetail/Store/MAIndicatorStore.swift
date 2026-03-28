@@ -27,6 +27,12 @@ final class MAIndicatorStore: ObservableObject {
             removeLine(id: id)
         case .updatePeriod(let id, let period):
             updatePeriod(id: id, period: period)
+        case .updateColor(let id, let colorHex):
+            updateColor(id: id, colorHex: colorHex)
+        case .updateLineWidth(let id, let lineWidth):
+            updateLineWidth(id: id, lineWidth: lineWidth)
+        case .updatePriceSource(let id, let priceSource):
+            updatePriceSource(id: id, priceSource: priceSource)
         case .reset:
             reset()
         case .confirm:
@@ -52,6 +58,21 @@ final class MAIndicatorStore: ObservableObject {
     private func updatePeriod(id: UUID, period: Int) {
         guard let index = state.lines.firstIndex(where: { $0.id == id }) else { return }
         state.lines[index].period = period
+    }
+
+    private func updateColor(id: UUID, colorHex: String) {
+        guard let index = state.lines.firstIndex(where: { $0.id == id }) else { return }
+        state.lines[index].colorHex = colorHex
+    }
+
+    private func updateLineWidth(id: UUID, lineWidth: Int) {
+        guard let index = state.lines.firstIndex(where: { $0.id == id }) else { return }
+        state.lines[index].lineWidth = lineWidth
+    }
+
+    private func updatePriceSource(id: UUID, priceSource: MAPriceSource) {
+        guard let index = state.lines.firstIndex(where: { $0.id == id }) else { return }
+        state.lines[index].priceSource = priceSource
     }
 
     private func reset() {
