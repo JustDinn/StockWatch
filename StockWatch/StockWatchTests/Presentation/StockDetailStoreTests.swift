@@ -43,7 +43,7 @@ final class MockFetchCandlestickUseCase: FetchCandlestickUseCaseProtocol {
         return stubbedResult ?? CandlestickData(ticker: ticker, candles: [])
     }
 
-    func fetchOlderCandles(ticker: String, period: ChartPeriod, before: Date) async throws -> CandlestickData {
+    func fetchOlderCandles(ticker: String, period: ChartPeriod, before: Date, warmupCount: Int) async throws -> CandlestickData {
         if let error = stubbedError { throw error }
         return CandlestickData(ticker: ticker, candles: [])
     }

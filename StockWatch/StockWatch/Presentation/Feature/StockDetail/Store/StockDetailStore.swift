@@ -172,13 +172,16 @@ extension StockDetailStore {
 
     /// warmup 캔들을 MA 계산 전용으로 분리하고, display 캔들만 candlestickData에 저장
     private func applyFetchedCandles(_ data: CandlestickData, warmupCount: Int) {
+        print("<< [ApplyFetchedCandles] warmupCount=\(warmupCount) 전체캔들=\(data.candles.count)")
         if warmupCount > 0, data.candles.count > warmupCount {
             state.maCalculationCandles = data.candles
             let displayCandles = Array(data.candles.dropFirst(warmupCount))
             state.candlestickData = CandlestickData(ticker: data.ticker, candles: displayCandles)
+            print("<< [ApplyFetchedCandles] maCalculationCandles=\(data.candles.count)개 displayCandles=\(displayCandles.count)개")
         } else {
             state.maCalculationCandles = nil
             state.candlestickData = data
+            print("<< [ApplyFetchedCandles] warmup없음 → maCalculationCandles=nil displayCandles=\(data.candles.count)개")
         }
     }
 
@@ -194,29 +197,55 @@ extension StockDetailStore {
         state.isLoadingOlderCandles = true
         state.pendingOlderCandles = nil
 
+        let warmupCount = maxMAPeriod()
+        print("<< [LoadOlderCandles] 시작 existingCandles=\(existingCandles.count) oldestCandle=\(oldestCandle.timestamp) warmupCount=\(warmupCount)")
+
         do {
             let olderData = try await fetchCandlestickUseCase.fetchOlderCandles(
                 ticker: state.ticker,
                 period: state.selectedPeriod,
-                before: oldestCandle.timestamp
+                before: oldestCandle.timestamp,
+                warmupCount: warmupCount
             )
             guard !Task.isCancelled else { return }
 
+            print("<< [LoadOlderCandles] 가져온 olderData 캔들=\(olderData.candles.count)")
+
             if olderData.candles.isEmpty {
                 state.hasMoreOlderCandles = false
+                print("<< [LoadOlderCandles] 더 이상 과거 데이터 없음")
             } else {
-                // 기존 캔들과 병합 (중복 제거, 시간순 정렬)
-                let merged = (olderData.candles + existingCandles)
+                // warmup 부분과 display 부분을 분리
+                // olderData.candles는 (warmup 포함) before 이전 데이터
+                // before 이전 캔들만 display에 포함 (중복 제거를 위해 timestamp 기준)
+                let beforeTimestamp = oldestCandle.timestamp
+                let displayOlderCandles = olderData.candles.filter { $0.timestamp < beforeTimestamp }
+                print("<< [LoadOlderCandles] displayOlderCandles=\(displayOlderCandles.count) (before \(beforeTimestamp))")
+
+                // display 캔들: older display + 기존 display (중복 제거, 시간순)
+                let mergedDisplay = (displayOlderCandles + existingCandles)
                     .reduce(into: [Date: Candle]()) { dict, candle in
                         dict[candle.timestamp] = candle
                     }
                     .values
                     .sorted { $0.timestamp < $1.timestamp }
-                state.candlestickData = CandlestickData(ticker: state.ticker, candles: merged)
-                state.maCalculationCandles = nil  // 이후 MA 계산은 merged candles 사용
-                state.pendingOlderCandles = olderData.candles
+
+                // MA 계산용: 전체 older(warmup 포함) + 기존 display (중복 제거, 시간순)
+                let mergedForMA = (olderData.candles + existingCandles)
+                    .reduce(into: [Date: Candle]()) { dict, candle in
+                        dict[candle.timestamp] = candle
+                    }
+                    .values
+                    .sorted { $0.timestamp < $1.timestamp }
+
+                print("<< [LoadOlderCandles] mergedDisplay=\(mergedDisplay.count) mergedForMA=\(mergedForMA.count)")
+
+                state.candlestickData = CandlestickData(ticker: state.ticker, candles: mergedDisplay)
+                state.maCalculationCandles = mergedForMA
+                state.pendingOlderCandles = displayOlderCandles
             }
         } catch {
+            print("<< [LoadOlderCandles] 에러: \(error)")
             // 과거 데이터 로드 실패는 무시 (현재 차트 유지)
         }
 

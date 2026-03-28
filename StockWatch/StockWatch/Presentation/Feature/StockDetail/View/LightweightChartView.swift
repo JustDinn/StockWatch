@@ -183,6 +183,7 @@ extension LightweightChartView {
             into webView: WKWebView
         ) {
             let calcCandles = maCalculationCandles ?? candles
+            print("<< [InjectMA] calcCandles 소스=\(maCalculationCandles != nil ? "maCalculationCandles" : "candles") calcCandles.count=\(calcCandles.count) displayCandles.count=\(candles.count)")
             guard !candles.isEmpty, !configuration.lines.isEmpty else {
                 clearMovingAverages(into: webView)
                 return
@@ -197,6 +198,7 @@ extension LightweightChartView {
                 )
                 let displayStart = candles.first?.timestamp ?? Date.distantPast
                 let filteredSmaData = smaData.filter { $0.timestamp >= displayStart }
+                print("<< [InjectMA] period=\(line.period) smaData.count=\(smaData.count) displayStart=\(displayStart) filteredSmaData.count=\(filteredSmaData.count)")
                 guard !filteredSmaData.isEmpty else { continue }
 
                 let jsData = filteredSmaData.map { item in
