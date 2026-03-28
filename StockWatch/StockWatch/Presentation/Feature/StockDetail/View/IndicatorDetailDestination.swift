@@ -33,6 +33,7 @@ struct IndicatorDetailDestination: View {
                     .navigationBarTitleDisplayMode(.inline)
             }
         case .volume:
+            // TODO: 거래량 이동평균선(Volume MA) 기간 설정 UI 추가 예정
             Text("거래량 상세 설정")
                 .navigationTitle(indicator.title)
                 .navigationBarTitleDisplayMode(.inline)

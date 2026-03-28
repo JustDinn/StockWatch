@@ -95,6 +95,8 @@ struct StockDetailState: Equatable {
     var isMAEnabled: Bool
     /// MA 계산 전용 캔들 (warmup 포함 전체). nil이면 candlestickData.candles로 계산
     var maCalculationCandles: [Candle]?
+    /// 거래량 차트 활성화 여부
+    var isVolumeEnabled: Bool
 
     init(ticker: String) {
         self.ticker = ticker
@@ -122,6 +124,7 @@ struct StockDetailState: Equatable {
         self.maConfiguration = nil
         self.isMAEnabled = false
         self.maCalculationCandles = nil
+        self.isVolumeEnabled = false
     }
 
     /// 가격 표시 문자열 (예: "₩193,900", "$150.25", "¥2,500"), 소수점 셋째자리에서 반올림

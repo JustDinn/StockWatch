@@ -14,6 +14,7 @@ struct LightweightChartView: UIViewRepresentable {
     var maCalculationCandles: [Candle]? = nil
     var maConfiguration: MAIndicatorConfiguration? = nil
     var isMAEnabled: Bool = false
+    var isVolumeEnabled: Bool = false
     var onReachedLeftEdge: (() -> Void)? = nil
     var onOlderDataInjected: (() -> Void)? = nil
 
@@ -64,11 +65,12 @@ struct LightweightChartView: UIViewRepresentable {
         if context.coordinator.isLoaded {
             context.coordinator.injectColors(into: webView)
             if let older = olderCandles {
-                // olderCandles가 있을 때는 appendOlderData 완료 후 MA 주입 (타이밍 보장)
+                // olderCandles가 있을 때는 appendOlderData 완료 후 MA/Volume 주입 (타이밍 보장)
                 let maEnabled = isMAEnabled
                 let maConfig = maConfiguration
                 let maCalcCandles = maCalculationCandles
                 let displayCandles = candles
+                let volumeEnabled = isVolumeEnabled
                 context.coordinator.injectOlderData(older, into: webView) { [weak coordinator = context.coordinator] in
                     guard let coordinator, let webView = coordinator.webView else { return }
                     if maEnabled, let config = maConfig {
@@ -80,6 +82,9 @@ struct LightweightChartView: UIViewRepresentable {
                         )
                     } else {
                         coordinator.clearMovingAverages(into: webView)
+                    }
+                    if volumeEnabled {
+                        coordinator.injectOlderVolumeData(older, into: webView)
                     }
                 }
                 context.coordinator.lastInjectedDataID = context.coordinator.dataID(for: candles)
@@ -100,12 +105,19 @@ struct LightweightChartView: UIViewRepresentable {
                 } else {
                     context.coordinator.clearMovingAverages(into: webView)
                 }
+                // 거래량 주입
+                if isVolumeEnabled {
+                    context.coordinator.injectVolumeData(candles, into: webView)
+                } else {
+                    context.coordinator.clearVolume(into: webView)
+                }
             }
         } else {
             context.coordinator.pendingCandles = candles
             context.coordinator.pendingIsMAEnabled = isMAEnabled
             context.coordinator.pendingMAConfiguration = maConfiguration
             context.coordinator.pendingMACalculationCandles = maCalculationCandles
+            context.coordinator.pendingIsVolumeEnabled = isVolumeEnabled
         }
     }
 }
@@ -134,6 +146,7 @@ extension LightweightChartView {
         var pendingIsMAEnabled: Bool = false
         var pendingMAConfiguration: MAIndicatorConfiguration? = nil
         var pendingMACalculationCandles: [Candle]? = nil
+        var pendingIsVolumeEnabled: Bool = false
         var isLoaded = false
         var onReachedLeftEdge: (() -> Void)?
         var onOlderDataInjected: (() -> Void)?
@@ -152,6 +165,9 @@ extension LightweightChartView {
             lastInjectedDataID = dataID(for: pendingCandles)
             if pendingIsMAEnabled, let config = pendingMAConfiguration {
                 injectMovingAverages(candles: pendingCandles, maCalculationCandles: pendingMACalculationCandles, configuration: config, into: webView)
+            }
+            if pendingIsVolumeEnabled {
+                injectVolumeData(pendingCandles, into: webView)
             }
         }
 
@@ -253,10 +269,37 @@ extension LightweightChartView {
             webView.evaluateJavaScript(js, completionHandler: nil)
         }
 
+        func injectVolumeData(_ candles: [Candle], into webView: WKWebView) {
+            guard !candles.isEmpty else { return }
+            let jsData = buildVolumeJSArray(candles)
+            let js = "setVolumeData('[\(jsData)]')"
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+
+        func injectOlderVolumeData(_ candles: [Candle], into webView: WKWebView) {
+            guard !candles.isEmpty else { return }
+            let jsData = buildVolumeJSArray(candles)
+            let js = "appendOlderVolumeData('[\(jsData)]')"
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+
+        func clearVolume(into webView: WKWebView) {
+            let js = "clearVolume()"
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+
         private func buildJSArray(_ candles: [Candle]) -> String {
             candles.map { c in
                 let time = Int(c.timestamp.timeIntervalSince1970)
                 return "{\"time\":\(time),\"open\":\(c.open),\"high\":\(c.high),\"low\":\(c.low),\"close\":\(c.close)}"
+            }.joined(separator: ",")
+        }
+
+        private func buildVolumeJSArray(_ candles: [Candle]) -> String {
+            candles.map { c in
+                let time = Int(c.timestamp.timeIntervalSince1970)
+                let color = c.close >= c.open ? bodyUpColorHex : bodyDownColorHex
+                return "{\"time\":\(time),\"value\":\(c.volume),\"color\":\"\(color)\"}"
             }.joined(separator: ",")
         }
     }

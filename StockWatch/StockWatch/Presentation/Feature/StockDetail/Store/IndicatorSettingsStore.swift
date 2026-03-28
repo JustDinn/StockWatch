@@ -19,6 +19,9 @@ final class IndicatorSettingsStore: ObservableObject {
         if manager.isMAEnabled {
             initialState.enabledIndicators.insert(.movingAverage)
         }
+        if manager.isVolumeEnabled {
+            initialState.enabledIndicators.insert(.volume)
+        }
         self.state = initialState
     }
 
@@ -61,6 +64,7 @@ final class IndicatorSettingsStore: ObservableObject {
 
         // 활성화 상태 적용
         manager.updateMAEnabled(state.enabledIndicators.contains(.movingAverage))
+        manager.updateVolumeEnabled(state.enabledIndicators.contains(.volume))
 
         // staged 설정 초기화
         state.stagedMAConfig = nil

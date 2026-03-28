@@ -97,6 +97,7 @@ private struct StockDetailContentView: View {
                             maCalculationCandles: state.maCalculationCandles,
                             maConfiguration: state.maConfiguration,
                             isMAEnabled: state.isMAEnabled,
+                            isVolumeEnabled: state.isVolumeEnabled,
                             onReachedLeftEdge: { store.action(.loadOlderCandles) },
                             onOlderDataInjected: { store.action(.clearPendingOlderCandles) }
                         )

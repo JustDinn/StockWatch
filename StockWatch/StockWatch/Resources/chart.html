@@ -45,8 +45,13 @@
     });
 
     var maSeriesMap = {};
+    var volumeSeries = null;
+    var upColorHex = '#ef5350';
+    var downColorHex = '#1976d2';
 
     function setColors(bodyUp, bodyDown, borderUp, borderDown, wickUp, wickDown) {
+      upColorHex = bodyUp;
+      downColorHex = bodyDown;
       candleSeries.applyOptions({
         upColor: bodyUp,
         downColor: bodyDown,
@@ -119,6 +124,50 @@
         }
       } catch (e) {
         console.error('Failed to set moving averages:', e);
+      }
+    }
+
+    function setVolumeData(jsonString) {
+      try {
+        var data = JSON.parse(jsonString);
+        if (!volumeSeries) {
+          volumeSeries = chart.addSeries(LightweightCharts.HistogramSeries, {
+            priceFormat: { type: 'volume' },
+            priceScaleId: 'volume',
+            priceLineVisible: false,
+            lastValueVisible: false
+          }, 1);
+          chart.panes()[1].setHeight(80);
+        }
+        volumeSeries.setData(data);
+      } catch (e) {
+        console.error('Failed to set volume data:', e);
+      }
+    }
+
+    function appendOlderVolumeData(jsonString) {
+      try {
+        if (!volumeSeries) return;
+        var olderData = JSON.parse(jsonString);
+        var currentData = volumeSeries.data();
+        var merged = olderData.concat(currentData);
+        var seen = {};
+        merged = merged.filter(function(d) {
+          if (seen[d.time]) return false;
+          seen[d.time] = true;
+          return true;
+        });
+        merged.sort(function(a, b) { return a.time - b.time; });
+        volumeSeries.setData(merged);
+      } catch (e) {
+        console.error('Failed to append older volume data:', e);
+      }
+    }
+
+    function clearVolume() {
+      if (volumeSeries) {
+        chart.removeSeries(volumeSeries);
+        volumeSeries = null;
       }
     }
 

@@ -28,11 +28,18 @@ final class TechnicalIndicatorSettingsManager: ObservableObject {
         }
     }
 
+    @Published private(set) var isVolumeEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(isVolumeEnabled, forKey: Keys.isVolumeEnabled)
+        }
+    }
+
     // MARK: - Private Properties
 
     private enum Keys {
         static let maConfiguration = "technical_indicator_ma_configuration"
         static let isMAEnabled = "technical_indicator_ma_enabled"
+        static let isVolumeEnabled = "technical_indicator_volume_enabled"
     }
 
     // MARK: - Init
@@ -40,6 +47,7 @@ final class TechnicalIndicatorSettingsManager: ObservableObject {
     private init() {
         self.maConfiguration = Self.loadMAConfiguration()
         self.isMAEnabled = UserDefaults.standard.bool(forKey: Keys.isMAEnabled)
+        self.isVolumeEnabled = UserDefaults.standard.bool(forKey: Keys.isVolumeEnabled)
     }
 
     // MARK: - Public Methods
@@ -54,10 +62,16 @@ final class TechnicalIndicatorSettingsManager: ObservableObject {
         self.isMAEnabled = enabled
     }
 
+    /// 거래량 활성화 상태 업데이트
+    func updateVolumeEnabled(_ enabled: Bool) {
+        self.isVolumeEnabled = enabled
+    }
+
     /// 모든 설정 초기화
     func reset() {
         self.maConfiguration = MAIndicatorConfiguration.defaultConfiguration
         self.isMAEnabled = false
+        self.isVolumeEnabled = false
     }
 
     // MARK: - Private Methods
