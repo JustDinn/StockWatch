@@ -36,7 +36,6 @@ final class FetchCandlestickUseCase: FetchCandlestickUseCaseProtocol {
     func execute(ticker: String, period: ChartPeriod, warmupCount: Int) async throws -> CandlestickData {
         guard !ticker.isEmpty else { throw FetchCandlestickError.emptyTicker }
         let totalNeeded = initialCandleCount + warmupCount
-        print("<< [Execute] ticker=\(ticker) period=\(period) warmupCount=\(warmupCount) totalNeeded=\(totalNeeded)")
         let data: CandlestickData
         if period == .day && totalNeeded > defaultDailyCapacity {
             data = try await repository.fetchCandlesticks(ticker: ticker, range: "2y", interval: period.interval)
@@ -44,7 +43,6 @@ final class FetchCandlestickUseCase: FetchCandlestickUseCaseProtocol {
             data = try await repository.fetchCandlesticks(ticker: ticker, period: period)
         }
         let limited = Array(data.candles.suffix(totalNeeded))
-        print("<< [Execute] 전체 가져온 캔들=\(data.candles.count) suffix 후=\(limited.count)")
         return CandlestickData(ticker: data.ticker, candles: limited)
     }
 
@@ -67,16 +65,14 @@ final class FetchCandlestickUseCase: FetchCandlestickUseCaseProtocol {
             pageInterval = 60 * 60 * 24 * 365 * 20 // 20년
             intervalSeconds = 60 * 60 * 24 * 365   // 1년
         }
-        let warmupInterval = intervalSeconds * Double(warmupCount)
+        let warmupInterval = intervalSeconds * Double(warmupCount) * 1.5
         let period1 = Int(before.timeIntervalSince1970 - pageInterval - warmupInterval)
-        print("<< [FetchOlderCandles] ticker=\(ticker) period=\(period) before=\(before) warmupCount=\(warmupCount) pageInterval=\(pageInterval/86400)일 warmupInterval=\(warmupInterval/86400)일")
         let result = try await repository.fetchCandlesticks(
             ticker: ticker,
             interval: period.interval,
             period1: period1,
             period2: period2
         )
-        print("<< [FetchOlderCandles] 반환된 캔들 수=\(result.candles.count)")
         return result
     }
 }

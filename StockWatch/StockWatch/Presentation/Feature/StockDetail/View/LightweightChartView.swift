@@ -64,7 +64,24 @@ struct LightweightChartView: UIViewRepresentable {
         if context.coordinator.isLoaded {
             context.coordinator.injectColors(into: webView)
             if let older = olderCandles {
-                context.coordinator.injectOlderData(older, into: webView)
+                // olderCandles가 있을 때는 appendOlderData 완료 후 MA 주입 (타이밍 보장)
+                let maEnabled = isMAEnabled
+                let maConfig = maConfiguration
+                let maCalcCandles = maCalculationCandles
+                let displayCandles = candles
+                context.coordinator.injectOlderData(older, into: webView) { [weak coordinator = context.coordinator] in
+                    guard let coordinator, let webView = coordinator.webView else { return }
+                    if maEnabled, let config = maConfig {
+                        coordinator.injectMovingAverages(
+                            candles: displayCandles,
+                            maCalculationCandles: maCalcCandles,
+                            configuration: config,
+                            into: webView
+                        )
+                    } else {
+                        coordinator.clearMovingAverages(into: webView)
+                    }
+                }
                 context.coordinator.lastInjectedDataID = context.coordinator.dataID(for: candles)
             } else {
                 let newID = context.coordinator.dataID(for: candles)
@@ -72,18 +89,17 @@ struct LightweightChartView: UIViewRepresentable {
                     context.coordinator.injectData(candles, into: webView)
                     context.coordinator.lastInjectedDataID = newID
                 }
-            }
-
-            // 이동평균선 주입
-            if isMAEnabled, let config = maConfiguration {
-                context.coordinator.injectMovingAverages(
-                    candles: candles,
-                    maCalculationCandles: maCalculationCandles,
-                    configuration: config,
-                    into: webView
-                )
-            } else {
-                context.coordinator.clearMovingAverages(into: webView)
+                // 일반 업데이트 시 MA 주입
+                if isMAEnabled, let config = maConfiguration {
+                    context.coordinator.injectMovingAverages(
+                        candles: candles,
+                        maCalculationCandles: maCalculationCandles,
+                        configuration: config,
+                        into: webView
+                    )
+                } else {
+                    context.coordinator.clearMovingAverages(into: webView)
+                }
             }
         } else {
             context.coordinator.pendingCandles = candles
@@ -160,13 +176,17 @@ extension LightweightChartView {
             webView.evaluateJavaScript(js, completionHandler: nil)
         }
 
-        func injectOlderData(_ candles: [Candle], into webView: WKWebView) {
-            guard !candles.isEmpty else { return }
+        func injectOlderData(_ candles: [Candle], into webView: WKWebView, completion: (() -> Void)? = nil) {
+            guard !candles.isEmpty else {
+                completion?()
+                return
+            }
             let jsData = buildJSArray(candles)
             let js = "appendOlderData('[\(jsData)]')"
             webView.evaluateJavaScript(js) { [weak self] _, _ in
                 DispatchQueue.main.async {
                     self?.onOlderDataInjected?()
+                    completion?()
                 }
             }
         }
@@ -183,7 +203,6 @@ extension LightweightChartView {
             into webView: WKWebView
         ) {
             let calcCandles = maCalculationCandles ?? candles
-            print("<< [InjectMA] calcCandles 소스=\(maCalculationCandles != nil ? "maCalculationCandles" : "candles") calcCandles.count=\(calcCandles.count) displayCandles.count=\(candles.count)")
             guard !candles.isEmpty, !configuration.lines.isEmpty else {
                 clearMovingAverages(into: webView)
                 return
@@ -198,7 +217,6 @@ extension LightweightChartView {
                 )
                 let displayStart = candles.first?.timestamp ?? Date.distantPast
                 let filteredSmaData = smaData.filter { $0.timestamp >= displayStart }
-                print("<< [InjectMA] period=\(line.period) smaData.count=\(smaData.count) displayStart=\(displayStart) filteredSmaData.count=\(filteredSmaData.count)")
                 guard !filteredSmaData.isEmpty else { continue }
 
                 let jsData = filteredSmaData.map { item in
