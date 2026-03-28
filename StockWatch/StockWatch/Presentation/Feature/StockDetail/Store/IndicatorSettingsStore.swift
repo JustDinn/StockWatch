@@ -42,6 +42,10 @@ final class IndicatorSettingsStore: ObservableObject {
         }
     }
 
+    var currentMAState: MAIndicatorState {
+        MAIndicatorState(configuration: manager.maConfiguration)
+    }
+
     func enabledBinding(for indicator: TechnicalIndicator) -> Binding<Bool> {
         Binding(
             get: { self.state.isEnabled(indicator) },

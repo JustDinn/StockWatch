@@ -67,6 +67,7 @@ struct IndicatorSettingsView: View {
                     ) {
                         IndicatorDetailDestination(
                             indicator: indicator,
+                            initialMAState: store.currentMAState,
                             onMAConfirm: { config in
                                 store.action(.stageMAConfig(config))
                             }

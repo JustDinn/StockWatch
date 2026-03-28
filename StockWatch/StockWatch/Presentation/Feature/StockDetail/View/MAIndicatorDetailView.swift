@@ -110,7 +110,7 @@ struct MAIndicatorDetailView: View {
     }
 
     private var footerNote: some View {
-        Text("① 입력한 기간 값보다 종목이 상장된 기간이 짧으면 이동평균선이 보이지 않아요.")
+        Text("입력한 기간 값보다 종목이 상장된 기간이 짧으면 이동평균선이 보이지 않아요.")
             .font(.footnote)
             .foregroundStyle(.secondary)
             .padding(.top, 8)

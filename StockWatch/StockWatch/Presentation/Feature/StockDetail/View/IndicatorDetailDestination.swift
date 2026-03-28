@@ -10,9 +10,15 @@ import SwiftUI
 struct IndicatorDetailDestination: View {
     let indicator: TechnicalIndicator
     let onMAConfirm: ((MAIndicatorConfiguration) -> Void)?
+    let initialMAState: MAIndicatorState?
 
-    init(indicator: TechnicalIndicator, onMAConfirm: ((MAIndicatorConfiguration) -> Void)? = nil) {
+    init(
+        indicator: TechnicalIndicator,
+        initialMAState: MAIndicatorState? = nil,
+        onMAConfirm: ((MAIndicatorConfiguration) -> Void)? = nil
+    ) {
         self.indicator = indicator
+        self.initialMAState = initialMAState
         self.onMAConfirm = onMAConfirm
     }
 
@@ -20,7 +26,7 @@ struct IndicatorDetailDestination: View {
         switch indicator {
         case .movingAverage:
             if let onConfirm = onMAConfirm {
-                MAIndicatorDetailView(onConfirm: onConfirm)
+                MAIndicatorDetailView(initialState: initialMAState, onConfirm: onConfirm)
             } else {
                 Text("설정 오류")
                     .navigationTitle(indicator.title)
