@@ -135,7 +135,10 @@
             priceFormat: { type: 'volume' },
             priceScaleId: 'volume',
             priceLineVisible: false,
-            lastValueVisible: false
+            lastValueVisible: true,
+            priceScale: {
+              scaleMargins: { top: 0.1, bottom: 0 }
+            }
           }, 1);
           chart.panes()[1].setHeight(80);
         }

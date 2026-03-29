@@ -91,25 +91,48 @@ struct LightweightChartView: UIViewRepresentable {
             } else {
                 let newID = context.coordinator.dataID(for: candles)
                 if newID != context.coordinator.lastInjectedDataID {
-                    context.coordinator.injectData(candles, into: webView)
+                    // 새 캔들 데이터가 있을 때: setData() 완료 후 MA/Volume 주입 (타이밍 보장)
                     context.coordinator.lastInjectedDataID = newID
-                }
-                // 일반 업데이트 시 MA 주입
-                if isMAEnabled, let config = maConfiguration {
-                    context.coordinator.injectMovingAverages(
-                        candles: candles,
-                        maCalculationCandles: maCalculationCandles,
-                        configuration: config,
-                        into: webView
-                    )
+                    let maEnabled = isMAEnabled
+                    let maConfig = maConfiguration
+                    let maCalcCandles = maCalculationCandles
+                    let volumeEnabled = isVolumeEnabled
+                    context.coordinator.injectData(candles, into: webView) { [weak coordinator = context.coordinator] in
+                        guard let coordinator, let webView = coordinator.webView else { return }
+
+                        if maEnabled, let config = maConfig {
+                            coordinator.injectMovingAverages(
+                                candles: candles,
+                                maCalculationCandles: maCalcCandles,
+                                configuration: config,
+                                into: webView
+                            )
+                        } else {
+                            coordinator.clearMovingAverages(into: webView)
+                        }
+                        if volumeEnabled {
+                            coordinator.injectVolumeData(candles, into: webView)
+                        } else {
+                            coordinator.clearVolume(into: webView)
+                        }
+                    }
                 } else {
-                    context.coordinator.clearMovingAverages(into: webView)
-                }
-                // 거래량 주입
-                if isVolumeEnabled {
-                    context.coordinator.injectVolumeData(candles, into: webView)
-                } else {
-                    context.coordinator.clearVolume(into: webView)
+                    // dataID 변경 없음 (설정만 바뀐 경우): setData() 재호출 없으므로 즉시 주입
+                    if isMAEnabled, let config = maConfiguration {
+                        context.coordinator.injectMovingAverages(
+                            candles: candles,
+                            maCalculationCandles: maCalculationCandles,
+                            configuration: config,
+                            into: webView
+                        )
+                    } else {
+                        context.coordinator.clearMovingAverages(into: webView)
+                    }
+                    if isVolumeEnabled {
+                        context.coordinator.injectVolumeData(candles, into: webView)
+                    } else {
+                        context.coordinator.clearVolume(into: webView)
+                    }
                 }
             }
         } else {
@@ -161,13 +184,21 @@ extension LightweightChartView {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             isLoaded = true
             injectColors(into: webView)
-            injectData(pendingCandles, into: webView)
             lastInjectedDataID = dataID(for: pendingCandles)
-            if pendingIsMAEnabled, let config = pendingMAConfiguration {
-                injectMovingAverages(candles: pendingCandles, maCalculationCandles: pendingMACalculationCandles, configuration: config, into: webView)
-            }
-            if pendingIsVolumeEnabled {
-                injectVolumeData(pendingCandles, into: webView)
+            injectData(pendingCandles, into: webView) { [weak self] in
+                guard let self, let webView = self.webView else { return }
+
+                if self.pendingIsMAEnabled, let config = self.pendingMAConfiguration {
+                    self.injectMovingAverages(
+                        candles: self.pendingCandles,
+                        maCalculationCandles: self.pendingMACalculationCandles,
+                        configuration: config,
+                        into: webView
+                    )
+                }
+                if self.pendingIsVolumeEnabled {
+                    self.injectVolumeData(self.pendingCandles, into: webView)
+                }
             }
         }
 
@@ -185,11 +216,18 @@ extension LightweightChartView {
             webView.evaluateJavaScript(js, completionHandler: nil)
         }
 
-        func injectData(_ candles: [Candle], into webView: WKWebView) {
-            guard !candles.isEmpty else { return }
+        func injectData(_ candles: [Candle], into webView: WKWebView, completion: (() -> Void)? = nil) {
+            guard !candles.isEmpty else {
+                completion?()
+                return
+            }
             let jsData = buildJSArray(candles)
             let js = "setData('[\(jsData)]')"
-            webView.evaluateJavaScript(js, completionHandler: nil)
+            webView.evaluateJavaScript(js) { _, _ in
+                DispatchQueue.main.async {
+                    completion?()
+                }
+            }
         }
 
         func injectOlderData(_ candles: [Candle], into webView: WKWebView, completion: (() -> Void)? = nil) {
