@@ -49,6 +49,14 @@
     var upColorHex = '#ef5350';
     var downColorHex = '#1976d2';
 
+    function formatVolume(price) {
+      var abs = Math.abs(price);
+      if (abs >= 1e9) return (price / 1e9).toFixed(abs >= 10e9 ? 1 : 2).replace(/\.?0+$/, '') + 'B';
+      if (abs >= 1e6) return (price / 1e6).toFixed(abs >= 10e6 ? 1 : 2).replace(/\.?0+$/, '') + 'M';
+      if (abs >= 1e3) return (price / 1e3).toFixed(abs >= 10e3 ? 1 : 2).replace(/\.?0+$/, '') + 'K';
+      return String(Math.round(price));
+    }
+
     function setColors(bodyUp, bodyDown, borderUp, borderDown, wickUp, wickDown) {
       upColorHex = bodyUp;
       downColorHex = bodyDown;
@@ -132,15 +140,19 @@
         var data = JSON.parse(jsonString);
         if (!volumeSeries) {
           volumeSeries = chart.addSeries(LightweightCharts.HistogramSeries, {
-            priceFormat: { type: 'volume' },
-            priceScaleId: 'volume',
+            priceFormat: { type: 'custom', formatter: formatVolume, minMove: 1 },
+            priceScaleId: 'right',
             priceLineVisible: false,
-            lastValueVisible: true,
-            priceScale: {
-              scaleMargins: { top: 0.1, bottom: 0 }
-            }
+            lastValueVisible: true
           }, 1);
           chart.panes()[1].setHeight(80);
+          volumeSeries.priceScale().applyOptions({
+            visible: true,
+            autoScale: true,
+            scaleMargins: { top: 0.1, bottom: 0 },
+            ticksVisible: true,
+            borderVisible: false
+          });
         }
         volumeSeries.setData(data);
       } catch (e) {
