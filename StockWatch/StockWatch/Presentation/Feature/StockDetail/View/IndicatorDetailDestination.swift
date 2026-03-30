@@ -11,15 +11,21 @@ struct IndicatorDetailDestination: View {
     let indicator: TechnicalIndicator
     let onMAConfirm: ((MAIndicatorConfiguration) -> Void)?
     let initialMAState: MAIndicatorState?
+    let onVolumeConfirm: ((VolumeMAConfiguration) -> Void)?
+    let initialVolumeState: VolumeIndicatorState?
 
     init(
         indicator: TechnicalIndicator,
         initialMAState: MAIndicatorState? = nil,
-        onMAConfirm: ((MAIndicatorConfiguration) -> Void)? = nil
+        onMAConfirm: ((MAIndicatorConfiguration) -> Void)? = nil,
+        initialVolumeState: VolumeIndicatorState? = nil,
+        onVolumeConfirm: ((VolumeMAConfiguration) -> Void)? = nil
     ) {
         self.indicator = indicator
         self.initialMAState = initialMAState
         self.onMAConfirm = onMAConfirm
+        self.initialVolumeState = initialVolumeState
+        self.onVolumeConfirm = onVolumeConfirm
     }
 
     var body: some View {
@@ -33,10 +39,13 @@ struct IndicatorDetailDestination: View {
                     .navigationBarTitleDisplayMode(.inline)
             }
         case .volume:
-            // TODO: 거래량 이동평균선(Volume MA) 기간 설정 UI 추가 예정
-            Text("거래량 상세 설정")
-                .navigationTitle(indicator.title)
-                .navigationBarTitleDisplayMode(.inline)
+            if let onConfirm = onVolumeConfirm {
+                VolumeIndicatorDetailView(initialState: initialVolumeState, onConfirm: onConfirm)
+            } else {
+                Text("설정 오류")
+                    .navigationTitle(indicator.title)
+                    .navigationBarTitleDisplayMode(.inline)
+            }
         case .rsi:
             Text("RSI 상세 설정")
                 .navigationTitle(indicator.title)

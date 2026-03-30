@@ -42,11 +42,17 @@ final class IndicatorSettingsStore: ObservableObject {
             apply()
         case .stageMAConfig(let config):
             state.stagedMAConfig = config
+        case .stageVolumeConfig(let config):
+            state.stagedVolumeConfig = config
         }
     }
 
     var currentMAState: MAIndicatorState {
         MAIndicatorState(configuration: manager.maConfiguration)
+    }
+
+    var currentVolumeState: VolumeIndicatorState {
+        VolumeIndicatorState(configuration: manager.volumeMAConfiguration)
     }
 
     func enabledBinding(for indicator: TechnicalIndicator) -> Binding<Bool> {
@@ -66,7 +72,15 @@ final class IndicatorSettingsStore: ObservableObject {
         manager.updateMAEnabled(state.enabledIndicators.contains(.movingAverage))
         manager.updateVolumeEnabled(state.enabledIndicators.contains(.volume))
 
+        // 거래량 이동평균선 설정 적용
+        if let volumeConfig = state.stagedVolumeConfig {
+            manager.updateVolumeMAConfiguration(volumeConfig)
+        }
+
+        // TODO: 차트에 거래량 이평선 실제 적용
+
         // staged 설정 초기화
         state.stagedMAConfig = nil
+        state.stagedVolumeConfig = nil
     }
 }

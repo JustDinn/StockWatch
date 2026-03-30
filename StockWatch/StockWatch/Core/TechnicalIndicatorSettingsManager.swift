@@ -34,12 +34,19 @@ final class TechnicalIndicatorSettingsManager: ObservableObject {
         }
     }
 
+    @Published private(set) var volumeMAConfiguration: VolumeMAConfiguration {
+        didSet {
+            saveVolumeMAConfiguration()
+        }
+    }
+
     // MARK: - Private Properties
 
     private enum Keys {
         static let maConfiguration = "technical_indicator_ma_configuration"
         static let isMAEnabled = "technical_indicator_ma_enabled"
         static let isVolumeEnabled = "technical_indicator_volume_enabled"
+        static let volumeMAConfiguration = "technical_indicator_volume_ma_configuration"
     }
 
     // MARK: - Init
@@ -48,6 +55,7 @@ final class TechnicalIndicatorSettingsManager: ObservableObject {
         self.maConfiguration = Self.loadMAConfiguration()
         self.isMAEnabled = UserDefaults.standard.bool(forKey: Keys.isMAEnabled)
         self.isVolumeEnabled = UserDefaults.standard.bool(forKey: Keys.isVolumeEnabled)
+        self.volumeMAConfiguration = Self.loadVolumeMAConfiguration()
     }
 
     // MARK: - Public Methods
@@ -67,11 +75,17 @@ final class TechnicalIndicatorSettingsManager: ObservableObject {
         self.isVolumeEnabled = enabled
     }
 
+    /// 거래량 이동평균선 설정 업데이트
+    func updateVolumeMAConfiguration(_ configuration: VolumeMAConfiguration) {
+        self.volumeMAConfiguration = configuration
+    }
+
     /// 모든 설정 초기화
     func reset() {
         self.maConfiguration = MAIndicatorConfiguration.defaultConfiguration
         self.isMAEnabled = false
         self.isVolumeEnabled = false
+        self.volumeMAConfiguration = VolumeMAConfiguration.defaultConfiguration
     }
 
     // MARK: - Private Methods
@@ -83,6 +97,27 @@ final class TechnicalIndicatorSettingsManager: ObservableObject {
             UserDefaults.standard.set(data, forKey: Keys.maConfiguration)
         } catch {
             print("Failed to save MA configuration: \(error)")
+        }
+    }
+
+    private func saveVolumeMAConfiguration() {
+        do {
+            let data = try JSONEncoder().encode(volumeMAConfiguration)
+            UserDefaults.standard.set(data, forKey: Keys.volumeMAConfiguration)
+        } catch {
+            print("Failed to save VolumeMA configuration: \(error)")
+        }
+    }
+
+    private static func loadVolumeMAConfiguration() -> VolumeMAConfiguration {
+        guard let data = UserDefaults.standard.data(forKey: Keys.volumeMAConfiguration) else {
+            return VolumeMAConfiguration.defaultConfiguration
+        }
+        do {
+            return try JSONDecoder().decode(VolumeMAConfiguration.self, from: data)
+        } catch {
+            print("Failed to load VolumeMA configuration: \(error)")
+            return VolumeMAConfiguration.defaultConfiguration
         }
     }
 
