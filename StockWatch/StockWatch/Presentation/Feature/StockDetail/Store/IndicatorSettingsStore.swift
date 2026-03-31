@@ -77,8 +77,6 @@ final class IndicatorSettingsStore: ObservableObject {
             manager.updateVolumeMAConfiguration(volumeConfig)
         }
 
-        // TODO: 차트에 거래량 이평선 실제 적용
-
         // staged 설정 초기화
         state.stagedMAConfig = nil
         state.stagedVolumeConfig = nil

@@ -97,6 +97,8 @@ struct StockDetailState: Equatable {
     var maCalculationCandles: [Candle]?
     /// 거래량 차트 활성화 여부
     var isVolumeEnabled: Bool
+    /// 거래량 이동평균선 설정
+    var volumeMAConfiguration: VolumeMAConfiguration?
 
     init(ticker: String) {
         self.ticker = ticker
@@ -125,6 +127,7 @@ struct StockDetailState: Equatable {
         self.isMAEnabled = false
         self.maCalculationCandles = nil
         self.isVolumeEnabled = false
+        self.volumeMAConfiguration = nil
     }
 
     /// 가격 표시 문자열 (예: "₩193,900", "$150.25", "¥2,500"), 소수점 셋째자리에서 반올림

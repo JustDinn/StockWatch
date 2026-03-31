@@ -15,6 +15,7 @@ struct LightweightChartView: UIViewRepresentable {
     var maConfiguration: MAIndicatorConfiguration? = nil
     var isMAEnabled: Bool = false
     var isVolumeEnabled: Bool = false
+    var volumeMAConfiguration: VolumeMAConfiguration? = nil
     var onReachedLeftEdge: (() -> Void)? = nil
     var onOlderDataInjected: (() -> Void)? = nil
 
@@ -71,6 +72,7 @@ struct LightweightChartView: UIViewRepresentable {
                 let maCalcCandles = maCalculationCandles
                 let displayCandles = candles
                 let volumeEnabled = isVolumeEnabled
+                let volumeMAConfig = volumeMAConfiguration
                 context.coordinator.injectOlderData(older, into: webView) { [weak coordinator = context.coordinator] in
                     guard let coordinator, let webView = coordinator.webView else { return }
                     if maEnabled, let config = maConfig {
@@ -85,6 +87,9 @@ struct LightweightChartView: UIViewRepresentable {
                     }
                     if volumeEnabled {
                         coordinator.injectOlderVolumeData(older, into: webView)
+                        if let volumeMAConfig {
+                            coordinator.injectVolumeMA(candles: displayCandles, maCalculationCandles: nil, configuration: volumeMAConfig, into: webView)
+                        }
                     }
                 }
                 context.coordinator.lastInjectedDataID = context.coordinator.dataID(for: candles)
@@ -97,6 +102,7 @@ struct LightweightChartView: UIViewRepresentable {
                     let maConfig = maConfiguration
                     let maCalcCandles = maCalculationCandles
                     let volumeEnabled = isVolumeEnabled
+                    let volumeMAConfig = volumeMAConfiguration
                     context.coordinator.injectData(candles, into: webView) { [weak coordinator = context.coordinator] in
                         guard let coordinator, let webView = coordinator.webView else { return }
 
@@ -111,9 +117,15 @@ struct LightweightChartView: UIViewRepresentable {
                             coordinator.clearMovingAverages(into: webView)
                         }
                         if volumeEnabled {
-                            coordinator.injectVolumeData(candles, into: webView)
+                            coordinator.injectVolumeData(candles, into: webView) { [weak coordinator] in
+                                guard let coordinator, let webView = coordinator.webView else { return }
+                                if let volumeMAConfig {
+                                    coordinator.injectVolumeMA(candles: candles, maCalculationCandles: maCalcCandles, configuration: volumeMAConfig, into: webView)
+                                }
+                            }
                         } else {
                             coordinator.clearVolume(into: webView)
+                            coordinator.clearVolumeMA(into: webView)
                         }
                     }
                 } else {
@@ -129,9 +141,15 @@ struct LightweightChartView: UIViewRepresentable {
                         context.coordinator.clearMovingAverages(into: webView)
                     }
                     if isVolumeEnabled {
-                        context.coordinator.injectVolumeData(candles, into: webView)
+                        context.coordinator.injectVolumeData(candles, into: webView) { [weak coordinator = context.coordinator] in
+                            guard let coordinator, let webView = coordinator.webView else { return }
+                            if let volumeMAConfiguration {
+                                coordinator.injectVolumeMA(candles: candles, maCalculationCandles: maCalculationCandles, configuration: volumeMAConfiguration, into: webView)
+                            }
+                        }
                     } else {
                         context.coordinator.clearVolume(into: webView)
+                        context.coordinator.clearVolumeMA(into: webView)
                     }
                 }
             }
@@ -141,6 +159,7 @@ struct LightweightChartView: UIViewRepresentable {
             context.coordinator.pendingMAConfiguration = maConfiguration
             context.coordinator.pendingMACalculationCandles = maCalculationCandles
             context.coordinator.pendingIsVolumeEnabled = isVolumeEnabled
+            context.coordinator.pendingVolumeMAConfiguration = volumeMAConfiguration
         }
     }
 }
@@ -170,6 +189,7 @@ extension LightweightChartView {
         var pendingMAConfiguration: MAIndicatorConfiguration? = nil
         var pendingMACalculationCandles: [Candle]? = nil
         var pendingIsVolumeEnabled: Bool = false
+        var pendingVolumeMAConfiguration: VolumeMAConfiguration? = nil
         var isLoaded = false
         var onReachedLeftEdge: (() -> Void)?
         var onOlderDataInjected: (() -> Void)?
@@ -197,7 +217,12 @@ extension LightweightChartView {
                     )
                 }
                 if self.pendingIsVolumeEnabled {
-                    self.injectVolumeData(self.pendingCandles, into: webView)
+                    self.injectVolumeData(self.pendingCandles, into: webView) { [weak self] in
+                        guard let self, let webView = self.webView else { return }
+                        if let config = self.pendingVolumeMAConfiguration {
+                            self.injectVolumeMA(candles: self.pendingCandles, maCalculationCandles: self.pendingMACalculationCandles, configuration: config, into: webView)
+                        }
+                    }
                 }
             }
         }
@@ -307,11 +332,15 @@ extension LightweightChartView {
             webView.evaluateJavaScript(js, completionHandler: nil)
         }
 
-        func injectVolumeData(_ candles: [Candle], into webView: WKWebView) {
-            guard !candles.isEmpty else { return }
+        func injectVolumeData(_ candles: [Candle], into webView: WKWebView, completion: (() -> Void)? = nil) {
+            guard !candles.isEmpty else { completion?(); return }
             let jsData = buildVolumeJSArray(candles)
             let js = "setVolumeData('[\(jsData)]')"
-            webView.evaluateJavaScript(js, completionHandler: nil)
+            webView.evaluateJavaScript(js) { _, _ in
+                DispatchQueue.main.async {
+                    completion?()
+                }
+            }
         }
 
         func injectOlderVolumeData(_ candles: [Candle], into webView: WKWebView) {
@@ -323,6 +352,49 @@ extension LightweightChartView {
 
         func clearVolume(into webView: WKWebView) {
             let js = "clearVolume()"
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+
+        func injectVolumeMA(
+            candles: [Candle],
+            maCalculationCandles: [Candle]?,
+            configuration: VolumeMAConfiguration,
+            into webView: WKWebView
+        ) {
+            let line = configuration.line
+            guard line.isEnabled, !candles.isEmpty else {
+                clearVolumeMA(into: webView)
+                return
+            }
+
+            let calcCandles = maCalculationCandles ?? candles
+            let smaData = TechnicalIndicatorCalculator.volumeSmaTimeSeries(candles: calcCandles, period: line.period)
+            let displayStart = candles.first?.timestamp ?? Date.distantPast
+            let filteredSmaData = smaData.filter { $0.timestamp >= displayStart }
+            guard !filteredSmaData.isEmpty else {
+                clearVolumeMA(into: webView)
+                return
+            }
+
+            let jsData = filteredSmaData.map { item in
+                ["time": Int(item.timestamp.timeIntervalSince1970), "value": item.value] as [String: Any]
+            }
+
+            let payload: [String: Any] = [
+                "color": line.colorHex,
+                "lineWidth": line.lineWidth,
+                "data": jsData
+            ]
+
+            if let jsonData = try? JSONSerialization.data(withJSONObject: payload),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                let js = "setVolumeMA('\(jsonString.replacingOccurrences(of: "'", with: "\\'"))')"
+                webView.evaluateJavaScript(js, completionHandler: nil)
+            }
+        }
+
+        func clearVolumeMA(into webView: WKWebView) {
+            let js = "clearVolumeMA()"
             webView.evaluateJavaScript(js, completionHandler: nil)
         }
 

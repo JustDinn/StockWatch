@@ -46,6 +46,7 @@
 
     var maSeriesMap = {};
     var volumeSeries = null;
+    var volumeMASeries = null;
     var upColorHex = '#ef5350';
     var downColorHex = '#1976d2';
 
@@ -180,9 +181,34 @@
     }
 
     function clearVolume() {
+      clearVolumeMA();
       if (volumeSeries) {
         chart.removeSeries(volumeSeries);
         volumeSeries = null;
+      }
+    }
+
+    function setVolumeMA(jsonString) {
+      try {
+        if (!volumeSeries) return;
+        var line = JSON.parse(jsonString);
+        clearVolumeMA();
+        volumeMASeries = chart.addSeries(LightweightCharts.LineSeries, {
+          color: line.color,
+          lineWidth: line.lineWidth,
+          priceLineVisible: false,
+          lastValueVisible: false
+        }, 1);
+        volumeMASeries.setData(line.data);
+      } catch (e) {
+        console.error('Failed to set volume MA:', e);
+      }
+    }
+
+    function clearVolumeMA() {
+      if (volumeMASeries) {
+        chart.removeSeries(volumeMASeries);
+        volumeMASeries = null;
       }
     }
 

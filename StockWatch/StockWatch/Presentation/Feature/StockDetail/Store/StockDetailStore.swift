@@ -349,5 +349,6 @@ extension StockDetailStore {
         state.maConfiguration = indicatorManager.maConfiguration
         state.isMAEnabled = indicatorManager.isMAEnabled
         state.isVolumeEnabled = indicatorManager.isVolumeEnabled
+        state.volumeMAConfiguration = indicatorManager.volumeMAConfiguration
     }
 }

@@ -98,6 +98,7 @@ private struct StockDetailContentView: View {
                             maConfiguration: state.maConfiguration,
                             isMAEnabled: state.isMAEnabled,
                             isVolumeEnabled: state.isVolumeEnabled,
+                            volumeMAConfiguration: state.volumeMAConfiguration,
                             onReachedLeftEdge: { store.action(.loadOlderCandles) },
                             onOlderDataInjected: { store.action(.clearPendingOlderCandles) }
                         )
