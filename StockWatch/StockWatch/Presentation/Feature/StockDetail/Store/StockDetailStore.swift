@@ -129,7 +129,7 @@ extension StockDetailStore {
 
         Task {
             // 즐겨찾기 상태, 주식 상세 정보, 캔들스틱 데이터를 병렬로 로드
-            let warmupCount = maxMAPeriod()
+            let warmupCount = requiredWarmupCount()
             async let isFav = checkFavoriteUseCase.execute(ticker: state.ticker)
             async let detail = fetchDetail()
             async let candlestick = fetchCandlestick(period: state.selectedPeriod, warmupCount: warmupCount)
@@ -182,9 +182,15 @@ extension StockDetailStore {
         }
     }
 
-    private func maxMAPeriod() -> Int {
-        guard state.isMAEnabled, let config = state.maConfiguration else { return 0 }
-        return config.lines.map(\.period).max() ?? 0
+    private func requiredWarmupCount() -> Int {
+        var periods: [Int] = [0]
+        if state.isMAEnabled, let config = state.maConfiguration {
+            periods.append(contentsOf: config.lines.map(\.period))
+        }
+        if state.isRSIEnabled, let config = state.rsiConfiguration {
+            periods.append(config.line.period)
+        }
+        return periods.max() ?? 0
     }
 
     private func loadOlderCandles() async {
@@ -194,7 +200,7 @@ extension StockDetailStore {
         state.isLoadingOlderCandles = true
         state.pendingOlderCandles = nil
 
-        let warmupCount = maxMAPeriod()
+        let warmupCount = requiredWarmupCount()
 
         do {
             let olderData = try await fetchCandlestickUseCase.fetchOlderCandles(
@@ -252,7 +258,7 @@ extension StockDetailStore {
         state.isChartLoading = true
         state.chartErrorMessage = nil
 
-        let warmupCount = maxMAPeriod()
+        let warmupCount = requiredWarmupCount()
         switch await fetchCandlestick(period: period, warmupCount: warmupCount) {
         case .success(let data):
             guard !Task.isCancelled else { return }

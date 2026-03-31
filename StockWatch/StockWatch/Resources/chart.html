@@ -136,6 +136,28 @@
       }
     }
 
+    function updatePaneHeights() {
+      try {
+        var panes = chart.panes();
+        var volumeActive = !!volumeSeries;
+        var rsiActive = !!rsiSeries;
+
+        if (volumeActive && rsiActive) {
+          if (panes.length > 1) panes[1].setHeight(40);
+          if (panes.length > 2) panes[2].setHeight(40);
+        } else if (volumeActive) {
+          if (panes.length > 1) panes[1].setHeight(80);
+        } else if (rsiActive) {
+          // RSI만 있을 경우 (Volume이 없으면 RSI는 Pane 1에 그려짐)
+          if (panes.length > 1) panes[1].setHeight(80);
+        }
+
+
+      } catch (e) {
+        console.error('Failed to update pane heights:', e);
+      }
+    }
+
     function setVolumeData(jsonString) {
       try {
         var data = JSON.parse(jsonString);
@@ -146,7 +168,7 @@
             priceLineVisible: false,
             lastValueVisible: true
           }, 1);
-          chart.panes()[1].setHeight(80);
+          
           volumeSeries.priceScale().applyOptions({
             visible: true,
             autoScale: true,
@@ -156,6 +178,7 @@
           });
         }
         volumeSeries.setData(data);
+        updatePaneHeights();
       } catch (e) {
         console.error('Failed to set volume data:', e);
       }
@@ -186,6 +209,7 @@
         chart.removeSeries(volumeSeries);
         volumeSeries = null;
       }
+      updatePaneHeights();
     }
 
     function setVolumeMA(jsonString) {
@@ -209,6 +233,139 @@
       if (volumeMASeries) {
         chart.removeSeries(volumeMASeries);
         volumeMASeries = null;
+      }
+    }
+
+    var rsiSeries = null;
+    var rsiUpperPriceLine = null;
+    var rsiMiddlePriceLine = null;
+    var rsiLowerPriceLine = null;
+    var rsiBandSeries = null;
+
+    function setRSIData(jsonString) {
+      try {
+        var payload = JSON.parse(jsonString);
+        var data = payload.data;
+        var lineColor = payload.lineColor || '#7B1FA2';
+        var lineWidth = payload.lineWidth || 1;
+        var upperEnabled = payload.upperEnabled;
+        var upperValue = payload.upperValue;
+        var middleEnabled = payload.middleEnabled;
+        var middleValue = payload.middleValue;
+        var lowerEnabled = payload.lowerEnabled;
+        var lowerValue = payload.lowerValue;
+        var bgEnabled = payload.bgEnabled;
+        var bgColor = payload.bgColor || '#333333';
+        var volumeEnabled = payload.volumeEnabled;
+
+        clearRSI();
+
+        // RSI 전용 Pane index: 볼륨이 활성이면 Pane 2, 아니면 Pane 1
+        var rsiPaneIndex = volumeEnabled ? 2 : 1;
+
+        // RSI LineSeries
+        rsiSeries = chart.addSeries(LightweightCharts.LineSeries, {
+          color: lineColor,
+          lineWidth: lineWidth,
+          priceLineVisible: false,
+          lastValueVisible: true,
+          priceScaleId: 'rsi'
+        }, rsiPaneIndex);
+
+        rsiSeries.priceScale().applyOptions({
+          visible: true,
+          autoScale: false,
+          minValue: 0,
+          maxValue: 100,
+          scaleMargins: { top: 0.05, bottom: 0.05 },
+          borderVisible: false
+        });
+
+        rsiSeries.setData(data);
+
+        // 수평선 추가 (PriceLine)
+        if (upperEnabled) {
+          rsiUpperPriceLine = rsiSeries.createPriceLine({
+            price: upperValue,
+            color: 'rgba(255, 82, 82, 0.8)',
+            lineWidth: 1,
+            lineStyle: LightweightCharts.LineStyle.Dashed,
+            axisLabelVisible: true,
+            title: ''
+          });
+        }
+        if (middleEnabled) {
+          rsiMiddlePriceLine = rsiSeries.createPriceLine({
+            price: middleValue,
+            color: 'rgba(150, 150, 150, 0.8)',
+            lineWidth: 1,
+            lineStyle: LightweightCharts.LineStyle.Dashed,
+            axisLabelVisible: true,
+            title: ''
+          });
+        }
+        if (lowerEnabled) {
+          rsiLowerPriceLine = rsiSeries.createPriceLine({
+            price: lowerValue,
+            color: 'rgba(41, 182, 246, 0.8)',
+            lineWidth: 1,
+            lineStyle: LightweightCharts.LineStyle.Dashed,
+            axisLabelVisible: true,
+            title: ''
+          });
+        }
+
+        // 배경 음영: 하한선~상한선 구간 AreaSeries
+        if (bgEnabled && lowerEnabled && upperEnabled && data.length > 0) {
+          var hex = bgColor.replace('#', '');
+          var r = parseInt(hex.substring(0, 2), 16);
+          var g = parseInt(hex.substring(2, 4), 16);
+          var b = parseInt(hex.substring(4, 6), 16);
+          var bgFill = 'rgba(' + r + ',' + g + ',' + b + ',0.15)';
+
+          rsiBandSeries = chart.addSeries(LightweightCharts.AreaSeries, {
+            topColor: bgFill,
+            bottomColor: bgFill,
+            lineColor: 'rgba(0,0,0,0)',
+            lineWidth: 0,
+            priceLineVisible: false,
+            lastValueVisible: false,
+            crosshairMarkerVisible: false,
+            priceScaleId: 'rsi'
+          }, rsiPaneIndex);
+
+          var bandData = data.map(function(d) {
+            return { time: d.time, value: upperValue };
+          });
+          rsiBandSeries.setData(bandData);
+          rsiBandSeries.applyOptions({
+            baseValue: { type: 'price', price: lowerValue }
+          });
+        }
+
+        updatePaneHeights();
+      } catch (e) {
+        console.error('Failed to set RSI data:', e);
+      }
+    }
+
+    function clearRSI() {
+      try {
+        rsiUpperPriceLine = null;
+        rsiMiddlePriceLine = null;
+        rsiLowerPriceLine = null;
+
+        if (rsiBandSeries) {
+          chart.removeSeries(rsiBandSeries);
+          rsiBandSeries = null;
+        }
+        if (rsiSeries) {
+          chart.removeSeries(rsiSeries);
+          rsiSeries = null;
+        }
+        updatePaneHeights();
+      } catch (e) {
+        console.error('Failed to clear RSI:', e);
       }
     }
 

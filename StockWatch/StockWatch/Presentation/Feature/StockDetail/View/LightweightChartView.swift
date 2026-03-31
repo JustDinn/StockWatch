@@ -16,6 +16,8 @@ struct LightweightChartView: UIViewRepresentable {
     var isMAEnabled: Bool = false
     var isVolumeEnabled: Bool = false
     var volumeMAConfiguration: VolumeMAConfiguration? = nil
+    var isRSIEnabled: Bool = false
+    var rsiConfiguration: RSIConfiguration? = nil
     var onReachedLeftEdge: (() -> Void)? = nil
     var onOlderDataInjected: (() -> Void)? = nil
 
@@ -66,13 +68,15 @@ struct LightweightChartView: UIViewRepresentable {
         if context.coordinator.isLoaded {
             context.coordinator.injectColors(into: webView)
             if let older = olderCandles {
-                // olderCandles가 있을 때는 appendOlderData 완료 후 MA/Volume 주입 (타이밍 보장)
+                // olderCandles가 있을 때는 appendOlderData 완료 후 MA/Volume/RSI 주입 (타이밍 보장)
                 let maEnabled = isMAEnabled
                 let maConfig = maConfiguration
                 let maCalcCandles = maCalculationCandles
                 let displayCandles = candles
                 let volumeEnabled = isVolumeEnabled
                 let volumeMAConfig = volumeMAConfiguration
+                let rsiEnabled = isRSIEnabled
+                let rsiConfig = rsiConfiguration
                 context.coordinator.injectOlderData(older, into: webView) { [weak coordinator = context.coordinator] in
                     guard let coordinator, let webView = coordinator.webView else { return }
                     if maEnabled, let config = maConfig {
@@ -91,18 +95,31 @@ struct LightweightChartView: UIViewRepresentable {
                             coordinator.injectVolumeMA(candles: displayCandles, maCalculationCandles: nil, configuration: volumeMAConfig, into: webView)
                         }
                     }
+                    if rsiEnabled, let config = rsiConfig {
+                        coordinator.injectRSI(
+                            candles: displayCandles,
+                            maCalculationCandles: maCalcCandles,
+                            configuration: config,
+                            isVolumeEnabled: volumeEnabled,
+                            into: webView
+                        )
+                    } else {
+                        coordinator.clearRSI(into: webView)
+                    }
                 }
                 context.coordinator.lastInjectedDataID = context.coordinator.dataID(for: candles)
             } else {
                 let newID = context.coordinator.dataID(for: candles)
                 if newID != context.coordinator.lastInjectedDataID {
-                    // 새 캔들 데이터가 있을 때: setData() 완료 후 MA/Volume 주입 (타이밍 보장)
+                    // 새 캔들 데이터가 있을 때: setData() 완료 후 MA/Volume/RSI 주입 (타이밍 보장)
                     context.coordinator.lastInjectedDataID = newID
                     let maEnabled = isMAEnabled
                     let maConfig = maConfiguration
                     let maCalcCandles = maCalculationCandles
                     let volumeEnabled = isVolumeEnabled
                     let volumeMAConfig = volumeMAConfiguration
+                    let rsiEnabled = isRSIEnabled
+                    let rsiConfig = rsiConfiguration
                     context.coordinator.injectData(candles, into: webView) { [weak coordinator = context.coordinator] in
                         guard let coordinator, let webView = coordinator.webView else { return }
 
@@ -126,6 +143,17 @@ struct LightweightChartView: UIViewRepresentable {
                         } else {
                             coordinator.clearVolume(into: webView)
                             coordinator.clearVolumeMA(into: webView)
+                        }
+                        if rsiEnabled, let config = rsiConfig {
+                            coordinator.injectRSI(
+                                candles: candles,
+                                maCalculationCandles: maCalcCandles,
+                                configuration: config,
+                                isVolumeEnabled: volumeEnabled,
+                                into: webView
+                            )
+                        } else {
+                            coordinator.clearRSI(into: webView)
                         }
                     }
                 } else {
@@ -151,6 +179,17 @@ struct LightweightChartView: UIViewRepresentable {
                         context.coordinator.clearVolume(into: webView)
                         context.coordinator.clearVolumeMA(into: webView)
                     }
+                    if isRSIEnabled, let config = rsiConfiguration {
+                        context.coordinator.injectRSI(
+                            candles: candles,
+                            maCalculationCandles: maCalculationCandles,
+                            configuration: config,
+                            isVolumeEnabled: isVolumeEnabled,
+                            into: webView
+                        )
+                    } else {
+                        context.coordinator.clearRSI(into: webView)
+                    }
                 }
             }
         } else {
@@ -160,6 +199,8 @@ struct LightweightChartView: UIViewRepresentable {
             context.coordinator.pendingMACalculationCandles = maCalculationCandles
             context.coordinator.pendingIsVolumeEnabled = isVolumeEnabled
             context.coordinator.pendingVolumeMAConfiguration = volumeMAConfiguration
+            context.coordinator.pendingIsRSIEnabled = isRSIEnabled
+            context.coordinator.pendingRSIConfiguration = rsiConfiguration
         }
     }
 }
@@ -190,6 +231,8 @@ extension LightweightChartView {
         var pendingMACalculationCandles: [Candle]? = nil
         var pendingIsVolumeEnabled: Bool = false
         var pendingVolumeMAConfiguration: VolumeMAConfiguration? = nil
+        var pendingIsRSIEnabled: Bool = false
+        var pendingRSIConfiguration: RSIConfiguration? = nil
         var isLoaded = false
         var onReachedLeftEdge: (() -> Void)?
         var onOlderDataInjected: (() -> Void)?
@@ -223,6 +266,15 @@ extension LightweightChartView {
                             self.injectVolumeMA(candles: self.pendingCandles, maCalculationCandles: self.pendingMACalculationCandles, configuration: config, into: webView)
                         }
                     }
+                }
+                if self.pendingIsRSIEnabled, let config = self.pendingRSIConfiguration {
+                    self.injectRSI(
+                        candles: self.pendingCandles,
+                        maCalculationCandles: self.pendingMACalculationCandles,
+                        configuration: config,
+                        isVolumeEnabled: self.pendingIsVolumeEnabled,
+                        into: webView
+                    )
                 }
             }
         }
@@ -395,6 +447,61 @@ extension LightweightChartView {
 
         func clearVolumeMA(into webView: WKWebView) {
             let js = "clearVolumeMA()"
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+
+        func injectRSI(
+            candles: [Candle],
+            maCalculationCandles: [Candle]?,
+            configuration: RSIConfiguration,
+            isVolumeEnabled: Bool,
+            into webView: WKWebView
+        ) {
+            guard configuration.line.isEnabled, !candles.isEmpty else {
+                clearRSI(into: webView)
+                return
+            }
+
+            let calcCandles = maCalculationCandles ?? candles
+            let rsiData = TechnicalIndicatorCalculator.rsiTimeSeries(
+                candles: calcCandles,
+                period: configuration.line.period
+            )
+            let displayStart = candles.first?.timestamp ?? Date.distantPast
+            let filteredData = rsiData.filter { $0.timestamp >= displayStart }
+            guard !filteredData.isEmpty else {
+                clearRSI(into: webView)
+                return
+            }
+
+            let jsData = filteredData.map { item in
+                ["time": Int(item.timestamp.timeIntervalSince1970), "value": item.value] as [String: Any]
+            }
+
+            let payload: [String: Any] = [
+                "data": jsData,
+                "lineColor": configuration.line.colorHex,
+                "lineWidth": configuration.line.lineWidth,
+                "upperEnabled": configuration.upperLevel.isEnabled,
+                "upperValue": configuration.upperLevel.value,
+                "middleEnabled": configuration.middleLevel.isEnabled,
+                "middleValue": configuration.middleLevel.value,
+                "lowerEnabled": configuration.lowerLevel.isEnabled,
+                "lowerValue": configuration.lowerLevel.value,
+                "bgEnabled": configuration.background.isEnabled,
+                "bgColor": configuration.background.colorHex,
+                "volumeEnabled": isVolumeEnabled
+            ]
+
+            if let jsonData = try? JSONSerialization.data(withJSONObject: payload),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                let js = "setRSIData('\(jsonString.replacingOccurrences(of: "'", with: "\\'"))')"
+                webView.evaluateJavaScript(js, completionHandler: nil)
+            }
+        }
+
+        func clearRSI(into webView: WKWebView) {
+            let js = "clearRSI()"
             webView.evaluateJavaScript(js, completionHandler: nil)
         }
 
