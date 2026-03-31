@@ -10,4 +10,5 @@ enum IndicatorSettingsIntent {
     case selectTab(IndicatorTab)
     case stageMAConfig(MAIndicatorConfiguration)
     case stageVolumeConfig(VolumeMAConfiguration)
+    case stageRSIConfig(RSIConfiguration)
 }

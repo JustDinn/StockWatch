@@ -22,6 +22,9 @@ final class IndicatorSettingsStore: ObservableObject {
         if manager.isVolumeEnabled {
             initialState.enabledIndicators.insert(.volume)
         }
+        if manager.isRSIEnabled {
+            initialState.enabledIndicators.insert(.rsi)
+        }
         self.state = initialState
     }
 
@@ -36,6 +39,7 @@ final class IndicatorSettingsStore: ObservableObject {
         case .resetAll:
             state.enabledIndicators = []
             state.stagedMAConfig = nil
+            state.stagedRSIConfig = nil
         case .selectTab(let tab):
             state.selectedTab = tab
         case .apply:
@@ -44,6 +48,8 @@ final class IndicatorSettingsStore: ObservableObject {
             state.stagedMAConfig = config
         case .stageVolumeConfig(let config):
             state.stagedVolumeConfig = config
+        case .stageRSIConfig(let config):
+            state.stagedRSIConfig = config
         }
     }
 
@@ -53,6 +59,10 @@ final class IndicatorSettingsStore: ObservableObject {
 
     var currentVolumeState: VolumeIndicatorState {
         VolumeIndicatorState(configuration: manager.volumeMAConfiguration)
+    }
+
+    var currentRSIState: RSIIndicatorState {
+        RSIIndicatorState(configuration: manager.rsiConfiguration)
     }
 
     func enabledBinding(for indicator: TechnicalIndicator) -> Binding<Bool> {
@@ -71,14 +81,21 @@ final class IndicatorSettingsStore: ObservableObject {
         // 활성화 상태 적용
         manager.updateMAEnabled(state.enabledIndicators.contains(.movingAverage))
         manager.updateVolumeEnabled(state.enabledIndicators.contains(.volume))
+        manager.updateRSIEnabled(state.enabledIndicators.contains(.rsi))
 
         // 거래량 이동평균선 설정 적용
         if let volumeConfig = state.stagedVolumeConfig {
             manager.updateVolumeMAConfiguration(volumeConfig)
         }
 
+        // RSI 설정 적용
+        if let rsiConfig = state.stagedRSIConfig {
+            manager.updateRSIConfiguration(rsiConfig)
+        }
+
         // staged 설정 초기화
         state.stagedMAConfig = nil
         state.stagedVolumeConfig = nil
+        state.stagedRSIConfig = nil
     }
 }

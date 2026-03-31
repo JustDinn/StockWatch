@@ -40,6 +40,18 @@ final class TechnicalIndicatorSettingsManager: ObservableObject {
         }
     }
 
+    @Published private(set) var isRSIEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(isRSIEnabled, forKey: Keys.isRSIEnabled)
+        }
+    }
+
+    @Published private(set) var rsiConfiguration: RSIConfiguration {
+        didSet {
+            saveRSIConfiguration()
+        }
+    }
+
     // MARK: - Private Properties
 
     private enum Keys {
@@ -47,6 +59,8 @@ final class TechnicalIndicatorSettingsManager: ObservableObject {
         static let isMAEnabled = "technical_indicator_ma_enabled"
         static let isVolumeEnabled = "technical_indicator_volume_enabled"
         static let volumeMAConfiguration = "technical_indicator_volume_ma_configuration"
+        static let isRSIEnabled = "technical_indicator_rsi_enabled"
+        static let rsiConfiguration = "technical_indicator_rsi_configuration"
     }
 
     // MARK: - Init
@@ -56,6 +70,8 @@ final class TechnicalIndicatorSettingsManager: ObservableObject {
         self.isMAEnabled = UserDefaults.standard.bool(forKey: Keys.isMAEnabled)
         self.isVolumeEnabled = UserDefaults.standard.bool(forKey: Keys.isVolumeEnabled)
         self.volumeMAConfiguration = Self.loadVolumeMAConfiguration()
+        self.isRSIEnabled = UserDefaults.standard.bool(forKey: Keys.isRSIEnabled)
+        self.rsiConfiguration = Self.loadRSIConfiguration()
     }
 
     // MARK: - Public Methods
@@ -80,12 +96,24 @@ final class TechnicalIndicatorSettingsManager: ObservableObject {
         self.volumeMAConfiguration = configuration
     }
 
+    /// RSI 활성화 상태 업데이트
+    func updateRSIEnabled(_ enabled: Bool) {
+        self.isRSIEnabled = enabled
+    }
+
+    /// RSI 설정 업데이트
+    func updateRSIConfiguration(_ configuration: RSIConfiguration) {
+        self.rsiConfiguration = configuration
+    }
+
     /// 모든 설정 초기화
     func reset() {
         self.maConfiguration = MAIndicatorConfiguration.defaultConfiguration
         self.isMAEnabled = false
         self.isVolumeEnabled = false
         self.volumeMAConfiguration = VolumeMAConfiguration.defaultConfiguration
+        self.isRSIEnabled = false
+        self.rsiConfiguration = RSIConfiguration.defaultConfiguration
     }
 
     // MARK: - Private Methods
@@ -118,6 +146,27 @@ final class TechnicalIndicatorSettingsManager: ObservableObject {
         } catch {
             print("Failed to load VolumeMA configuration: \(error)")
             return VolumeMAConfiguration.defaultConfiguration
+        }
+    }
+
+    private func saveRSIConfiguration() {
+        do {
+            let data = try JSONEncoder().encode(rsiConfiguration)
+            UserDefaults.standard.set(data, forKey: Keys.rsiConfiguration)
+        } catch {
+            print("Failed to save RSI configuration: \(error)")
+        }
+    }
+
+    private static func loadRSIConfiguration() -> RSIConfiguration {
+        guard let data = UserDefaults.standard.data(forKey: Keys.rsiConfiguration) else {
+            return RSIConfiguration.defaultConfiguration
+        }
+        do {
+            return try JSONDecoder().decode(RSIConfiguration.self, from: data)
+        } catch {
+            print("Failed to load RSI configuration: \(error)")
+            return RSIConfiguration.defaultConfiguration
         }
     }
 

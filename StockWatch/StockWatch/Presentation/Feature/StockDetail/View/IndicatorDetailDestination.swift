@@ -13,19 +13,25 @@ struct IndicatorDetailDestination: View {
     let initialMAState: MAIndicatorState?
     let onVolumeConfirm: ((VolumeMAConfiguration) -> Void)?
     let initialVolumeState: VolumeIndicatorState?
+    let onRSIConfirm: ((RSIConfiguration) -> Void)?
+    let initialRSIState: RSIIndicatorState?
 
     init(
         indicator: TechnicalIndicator,
         initialMAState: MAIndicatorState? = nil,
         onMAConfirm: ((MAIndicatorConfiguration) -> Void)? = nil,
         initialVolumeState: VolumeIndicatorState? = nil,
-        onVolumeConfirm: ((VolumeMAConfiguration) -> Void)? = nil
+        onVolumeConfirm: ((VolumeMAConfiguration) -> Void)? = nil,
+        initialRSIState: RSIIndicatorState? = nil,
+        onRSIConfirm: ((RSIConfiguration) -> Void)? = nil
     ) {
         self.indicator = indicator
         self.initialMAState = initialMAState
         self.onMAConfirm = onMAConfirm
         self.initialVolumeState = initialVolumeState
         self.onVolumeConfirm = onVolumeConfirm
+        self.initialRSIState = initialRSIState
+        self.onRSIConfirm = onRSIConfirm
     }
 
     var body: some View {
@@ -47,9 +53,13 @@ struct IndicatorDetailDestination: View {
                     .navigationBarTitleDisplayMode(.inline)
             }
         case .rsi:
-            Text("RSI 상세 설정")
-                .navigationTitle(indicator.title)
-                .navigationBarTitleDisplayMode(.inline)
+            if let onConfirm = onRSIConfirm {
+                RSIIndicatorDetailView(initialState: initialRSIState, onConfirm: onConfirm)
+            } else {
+                Text("설정 오류")
+                    .navigationTitle(indicator.title)
+                    .navigationBarTitleDisplayMode(.inline)
+            }
         }
     }
 }

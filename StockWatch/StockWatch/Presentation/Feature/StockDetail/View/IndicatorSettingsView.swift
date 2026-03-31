@@ -74,6 +74,10 @@ struct IndicatorSettingsView: View {
                             initialVolumeState: store.currentVolumeState,
                             onVolumeConfirm: { config in
                                 store.action(.stageVolumeConfig(config))
+                            },
+                            initialRSIState: store.currentRSIState,
+                            onRSIConfirm: { config in
+                                store.action(.stageRSIConfig(config))
                             }
                         )
                     }

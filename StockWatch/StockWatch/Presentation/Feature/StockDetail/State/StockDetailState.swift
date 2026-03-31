@@ -99,6 +99,10 @@ struct StockDetailState: Equatable {
     var isVolumeEnabled: Bool
     /// 거래량 이동평균선 설정
     var volumeMAConfiguration: VolumeMAConfiguration?
+    /// RSI 활성화 여부
+    var isRSIEnabled: Bool
+    /// RSI 설정
+    var rsiConfiguration: RSIConfiguration?
 
     init(ticker: String) {
         self.ticker = ticker
@@ -128,6 +132,8 @@ struct StockDetailState: Equatable {
         self.maCalculationCandles = nil
         self.isVolumeEnabled = false
         self.volumeMAConfiguration = nil
+        self.isRSIEnabled = false
+        self.rsiConfiguration = nil
     }
 
     /// 가격 표시 문자열 (예: "₩193,900", "$150.25", "¥2,500"), 소수점 셋째자리에서 반올림
