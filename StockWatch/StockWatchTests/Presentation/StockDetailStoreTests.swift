@@ -424,4 +424,86 @@ final class StockDetailStoreTests: XCTestCase {
         // Then
         XCTAssertNil(sut.state.chartErrorMessage)
     }
+
+    // MARK: - Upper Indicator Labels
+
+    // MA 비활성화 → upperIndicatorLabels 빈 배열
+    func test_upperIndicatorLabels_whenMADisabled_returnsEmpty() {
+        // Given: 기본 상태는 isMAEnabled = false
+        XCTAssertFalse(sut.state.isMAEnabled)
+
+        // Then
+        XCTAssertTrue(sut.state.upperIndicatorLabels.isEmpty)
+    }
+
+    // MA 활성화 + 라인 있음 → 이동평균선 라벨 1개 반환
+    func test_upperIndicatorLabels_whenMAEnabled_returnsMALabel() async {
+        // Given
+        await TechnicalIndicatorSettingsManager.shared.updateMAEnabled(true)
+        await TechnicalIndicatorSettingsManager.shared.updateMAConfiguration(
+            MAIndicatorConfiguration(lines: [
+                MALine(period: 5, colorHex: "#F5A623", lineWidth: 1)
+            ])
+        )
+        sut.action(.reloadIndicatorSettings)
+        await Task.yield()
+
+        // Then
+        XCTAssertEqual(sut.state.upperIndicatorLabels.count, 1)
+        XCTAssertEqual(sut.state.upperIndicatorLabels.first?.name, "이동평균선")
+    }
+
+    // MA 라벨의 values가 MALine 순서대로 period/colorHex 포함
+    func test_upperIndicatorLabels_maLabel_containsPeriodsAndColors() async {
+        // Given
+        let line1 = MALine(period: 5, colorHex: "#F5A623", lineWidth: 1)
+        let line2 = MALine(period: 20, colorHex: "#4CAF50", lineWidth: 1)
+        await TechnicalIndicatorSettingsManager.shared.updateMAEnabled(true)
+        await TechnicalIndicatorSettingsManager.shared.updateMAConfiguration(
+            MAIndicatorConfiguration(lines: [line1, line2])
+        )
+        sut.action(.reloadIndicatorSettings)
+        await Task.yield()
+
+        // Then
+        let label = sut.state.upperIndicatorLabels.first
+        XCTAssertNotNil(label)
+        XCTAssertEqual(label?.values.count, 2)
+        XCTAssertEqual(label?.values[0].period, 5)
+        XCTAssertEqual(label?.values[0].colorHex, "#F5A623")
+        XCTAssertEqual(label?.values[1].period, 20)
+        XCTAssertEqual(label?.values[1].colorHex, "#4CAF50")
+    }
+
+    // MA 활성화지만 lines 빈 배열 → 빈 배열
+    func test_upperIndicatorLabels_whenMAEnabledButNoLines_returnsEmpty() async {
+        // Given
+        await TechnicalIndicatorSettingsManager.shared.updateMAEnabled(true)
+        await TechnicalIndicatorSettingsManager.shared.updateMAConfiguration(
+            MAIndicatorConfiguration(lines: [])
+        )
+        sut.action(.reloadIndicatorSettings)
+        await Task.yield()
+
+        // Then
+        XCTAssertTrue(sut.state.upperIndicatorLabels.isEmpty)
+    }
+
+    // toggleIndicatorLabelExpanded → isIndicatorLabelExpanded 토글
+    func test_action_toggleIndicatorLabelExpanded_togglesState() {
+        // Given
+        XCTAssertFalse(sut.state.isIndicatorLabelExpanded)
+
+        // When
+        sut.action(.toggleIndicatorLabelExpanded)
+
+        // Then
+        XCTAssertTrue(sut.state.isIndicatorLabelExpanded)
+
+        // When again
+        sut.action(.toggleIndicatorLabelExpanded)
+
+        // Then
+        XCTAssertFalse(sut.state.isIndicatorLabelExpanded)
+    }
 }

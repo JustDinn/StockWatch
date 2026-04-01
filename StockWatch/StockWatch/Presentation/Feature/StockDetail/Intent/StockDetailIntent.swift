@@ -31,4 +31,6 @@ enum StockDetailIntent {
     case clearPendingOlderCandles
     /// 기술적 지표 설정 리로드
     case reloadIndicatorSettings
+    /// 차트 상단 지표 라벨 펼침/접힘 토글
+    case toggleIndicatorLabelExpanded
 }

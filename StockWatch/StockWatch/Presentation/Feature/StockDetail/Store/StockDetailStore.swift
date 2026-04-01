@@ -86,6 +86,8 @@ final class StockDetailStore: ObservableObject {
             state.pendingOlderCandles = nil
         case .reloadIndicatorSettings:
             loadIndicatorSettings()
+        case .toggleIndicatorLabelExpanded:
+            state.isIndicatorLabelExpanded.toggle()
         }
     }
 

@@ -113,6 +113,13 @@ private struct StockDetailContentView: View {
                                 ProgressView()
                             }
                         }
+                        .overlay(alignment: .topLeading) {
+                            ChartIndicatorLabelView(
+                                labels: state.upperIndicatorLabels,
+                                isExpanded: state.isIndicatorLabelExpanded,
+                                onToggle: { store.action(.toggleIndicatorLabelExpanded) }
+                            )
+                        }
                     } else if state.isChartLoading {
                         RoundedRectangle(cornerRadius: 12)
                             .fill(Color(.systemGray6))
