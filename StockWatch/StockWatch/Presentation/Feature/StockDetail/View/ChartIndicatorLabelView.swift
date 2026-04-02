@@ -17,43 +17,47 @@ struct ChartIndicatorLabelView: View {
             EmptyView()
         } else {
             VStack(alignment: .leading, spacing: 2) {
-                if isExpanded {
-                    ForEach(labels) { label in
-                        indicatorRow(label)
-                    }
-                } else {
-                    HStack(spacing: 4) {
-                        if let first = labels.first {
-                            indicatorRow(first)
+                Group {
+                    if isExpanded {
+                        ForEach(labels) { label in
+                            indicatorRow(label)
                         }
-                        if labels.count > 1 {
-                            Button(action: onToggle) {
-                                HStack(spacing: 2) {
-                                    Text("외 \(labels.count - 1)개")
-                                        .font(.pretendardCaption)
-                                        .foregroundStyle(.secondary)
-                                    Image(systemName: "chevron.down")
-                                        .font(.system(size: 9, weight: .medium))
-                                        .foregroundStyle(.secondary)
-                                }
+                    } else {
+                        HStack(spacing: 4) {
+                            if let first = labels.first {
+                                indicatorRow(first)
                             }
-                            .buttonStyle(.plain)
+                            if labels.count > 1 {
+                                Button(action: onToggle) {
+                                    HStack(spacing: 2) {
+                                        Text("외 \(labels.count - 1)개")
+                                            .font(.pretendardCaption)
+                                            .foregroundStyle(.secondary)
+                                        Image(systemName: "chevron.down")
+                                            .font(.system(size: 9, weight: .medium))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
                     }
                 }
+                .animation(.easeInOut(duration: 0.2), value: isExpanded)
 
                 if isExpanded && labels.count > 1 {
                     Button(action: onToggle) {
                         Image(systemName: "chevron.up")
                             .font(.system(size: 9, weight: .medium))
                             .foregroundStyle(.secondary)
+                            .padding(8)
                     }
                     .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
-            .animation(.easeInOut(duration: 0.2), value: isExpanded)
+            .contentShape(Rectangle())
         }
     }
 
