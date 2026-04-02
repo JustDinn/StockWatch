@@ -82,6 +82,7 @@
     });
 
     var maSeriesMap = {};
+    var emaSeriesMap = {};
     var volumeSeries = null;
     var volumeMASeries = null;
     var upColorHex = '#ef5350';
@@ -170,6 +171,33 @@
         }
       } catch (e) {
         console.error('Failed to set moving averages:', e);
+      }
+    }
+
+    function clearExponentialMovingAverages() {
+      for (var key in emaSeriesMap) {
+        chart.removeSeries(emaSeriesMap[key]);
+      }
+      emaSeriesMap = {};
+    }
+
+    function setExponentialMovingAverages(jsonString) {
+      try {
+        clearExponentialMovingAverages();
+        var emaLines = JSON.parse(jsonString);
+        for (var i = 0; i < emaLines.length; i++) {
+          var line = emaLines[i];
+          var series = chart.addSeries(LightweightCharts.LineSeries, {
+            color: line.color,
+            lineWidth: line.lineWidth,
+            priceLineVisible: false,
+            lastValueVisible: false
+          });
+          series.setData(line.data);
+          emaSeriesMap[line.period] = series;
+        }
+      } catch (e) {
+        console.error('Failed to set exponential moving averages:', e);
       }
     }
 

@@ -356,6 +356,8 @@ extension StockDetailStore {
     private func loadIndicatorSettings() {
         state.maConfiguration = indicatorManager.maConfiguration
         state.isMAEnabled = indicatorManager.isMAEnabled
+        state.emaConfiguration = indicatorManager.emaConfiguration
+        state.isEMAEnabled = indicatorManager.isEMAEnabled
         state.isVolumeEnabled = indicatorManager.isVolumeEnabled
         state.volumeMAConfiguration = indicatorManager.volumeMAConfiguration
         state.isRSIEnabled = indicatorManager.isRSIEnabled

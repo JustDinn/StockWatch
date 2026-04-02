@@ -95,6 +95,10 @@ struct StockDetailState: Equatable {
     var isMAEnabled: Bool
     /// MA 계산 전용 캔들 (warmup 포함 전체). nil이면 candlestickData.candles로 계산
     var maCalculationCandles: [Candle]?
+    /// 지수이동평균선 설정
+    var emaConfiguration: EMAIndicatorConfiguration?
+    /// 지수이동평균선 활성화 여부
+    var isEMAEnabled: Bool
     /// 거래량 차트 활성화 여부
     var isVolumeEnabled: Bool
     /// 거래량 이동평균선 설정
@@ -132,6 +136,8 @@ struct StockDetailState: Equatable {
         self.maConfiguration = nil
         self.isMAEnabled = false
         self.maCalculationCandles = nil
+        self.emaConfiguration = nil
+        self.isEMAEnabled = false
         self.isVolumeEnabled = false
         self.volumeMAConfiguration = nil
         self.isRSIEnabled = false
@@ -173,6 +179,13 @@ struct StockDetailState: Equatable {
             labels.append(UpperIndicatorLabel(
                 id: TechnicalIndicator.movingAverage.rawValue,
                 name: TechnicalIndicator.movingAverage.title,
+                values: config.lines.map { IndicatorValue(period: $0.period, colorHex: $0.colorHex) }
+            ))
+        }
+        if isEMAEnabled, let config = emaConfiguration, !config.lines.isEmpty {
+            labels.append(UpperIndicatorLabel(
+                id: TechnicalIndicator.exponentialMovingAverage.rawValue,
+                name: TechnicalIndicator.exponentialMovingAverage.title,
                 values: config.lines.map { IndicatorValue(period: $0.period, colorHex: $0.colorHex) }
             ))
         }

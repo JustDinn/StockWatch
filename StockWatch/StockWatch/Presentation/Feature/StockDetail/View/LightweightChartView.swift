@@ -14,6 +14,8 @@ struct LightweightChartView: UIViewRepresentable {
     var maCalculationCandles: [Candle]? = nil
     var maConfiguration: MAIndicatorConfiguration? = nil
     var isMAEnabled: Bool = false
+    var emaConfiguration: EMAIndicatorConfiguration? = nil
+    var isEMAEnabled: Bool = false
     var isVolumeEnabled: Bool = false
     var volumeMAConfiguration: VolumeMAConfiguration? = nil
     var isRSIEnabled: Bool = false
@@ -68,9 +70,11 @@ struct LightweightChartView: UIViewRepresentable {
         if context.coordinator.isLoaded {
             context.coordinator.injectColors(into: webView)
             if let older = olderCandles {
-                // olderCandles가 있을 때는 appendOlderData 완료 후 MA/Volume/RSI 주입 (타이밍 보장)
+                // olderCandles가 있을 때는 appendOlderData 완료 후 MA/EMA/Volume/RSI 주입 (타이밍 보장)
                 let maEnabled = isMAEnabled
                 let maConfig = maConfiguration
+                let emaEnabled = isEMAEnabled
+                let emaConfig = emaConfiguration
                 let maCalcCandles = maCalculationCandles
                 let displayCandles = candles
                 let volumeEnabled = isVolumeEnabled
@@ -88,6 +92,16 @@ struct LightweightChartView: UIViewRepresentable {
                         )
                     } else {
                         coordinator.clearMovingAverages(into: webView)
+                    }
+                    if emaEnabled, let config = emaConfig {
+                        coordinator.injectExponentialMovingAverages(
+                            candles: displayCandles,
+                            maCalculationCandles: maCalcCandles,
+                            configuration: config,
+                            into: webView
+                        )
+                    } else {
+                        coordinator.clearExponentialMovingAverages(into: webView)
                     }
                     if volumeEnabled {
                         coordinator.injectOlderVolumeData(older, into: webView)
@@ -118,10 +132,12 @@ struct LightweightChartView: UIViewRepresentable {
             } else {
                 let newID = context.coordinator.dataID(for: candles)
                 if newID != context.coordinator.lastInjectedDataID {
-                    // 새 캔들 데이터가 있을 때: setData() 완료 후 MA/Volume/RSI 주입 (타이밍 보장)
+                    // 새 캔들 데이터가 있을 때: setData() 완료 후 MA/EMA/Volume/RSI 주입 (타이밍 보장)
                     context.coordinator.lastInjectedDataID = newID
                     let maEnabled = isMAEnabled
                     let maConfig = maConfiguration
+                    let emaEnabled = isEMAEnabled
+                    let emaConfig = emaConfiguration
                     let maCalcCandles = maCalculationCandles
                     let volumeEnabled = isVolumeEnabled
                     let volumeMAConfig = volumeMAConfiguration
@@ -139,6 +155,16 @@ struct LightweightChartView: UIViewRepresentable {
                             )
                         } else {
                             coordinator.clearMovingAverages(into: webView)
+                        }
+                        if emaEnabled, let config = emaConfig {
+                            coordinator.injectExponentialMovingAverages(
+                                candles: candles,
+                                maCalculationCandles: maCalcCandles,
+                                configuration: config,
+                                into: webView
+                            )
+                        } else {
+                            coordinator.clearExponentialMovingAverages(into: webView)
                         }
                         if volumeEnabled {
                             coordinator.injectVolumeData(candles, into: webView) { [weak coordinator] in
@@ -182,6 +208,16 @@ struct LightweightChartView: UIViewRepresentable {
                     } else {
                         context.coordinator.clearMovingAverages(into: webView)
                     }
+                    if isEMAEnabled, let config = emaConfiguration {
+                        context.coordinator.injectExponentialMovingAverages(
+                            candles: candles,
+                            maCalculationCandles: maCalculationCandles,
+                            configuration: config,
+                            into: webView
+                        )
+                    } else {
+                        context.coordinator.clearExponentialMovingAverages(into: webView)
+                    }
                     if isVolumeEnabled {
                         context.coordinator.injectVolumeData(candles, into: webView) { [weak coordinator = context.coordinator] in
                             guard let coordinator, let webView = coordinator.webView else { return }
@@ -218,6 +254,8 @@ struct LightweightChartView: UIViewRepresentable {
             context.coordinator.pendingIsMAEnabled = isMAEnabled
             context.coordinator.pendingMAConfiguration = maConfiguration
             context.coordinator.pendingMACalculationCandles = maCalculationCandles
+            context.coordinator.pendingIsEMAEnabled = isEMAEnabled
+            context.coordinator.pendingEMAConfiguration = emaConfiguration
             context.coordinator.pendingIsVolumeEnabled = isVolumeEnabled
             context.coordinator.pendingVolumeMAConfiguration = volumeMAConfiguration
             context.coordinator.pendingIsRSIEnabled = isRSIEnabled
@@ -250,6 +288,8 @@ extension LightweightChartView {
         var pendingIsMAEnabled: Bool = false
         var pendingMAConfiguration: MAIndicatorConfiguration? = nil
         var pendingMACalculationCandles: [Candle]? = nil
+        var pendingIsEMAEnabled: Bool = false
+        var pendingEMAConfiguration: EMAIndicatorConfiguration? = nil
         var pendingIsVolumeEnabled: Bool = false
         var pendingVolumeMAConfiguration: VolumeMAConfiguration? = nil
         var pendingIsRSIEnabled: Bool = false
@@ -274,6 +314,14 @@ extension LightweightChartView {
 
                 if self.pendingIsMAEnabled, let config = self.pendingMAConfiguration {
                     self.injectMovingAverages(
+                        candles: self.pendingCandles,
+                        maCalculationCandles: self.pendingMACalculationCandles,
+                        configuration: config,
+                        into: webView
+                    )
+                }
+                if self.pendingIsEMAEnabled, let config = self.pendingEMAConfiguration {
+                    self.injectExponentialMovingAverages(
                         candles: self.pendingCandles,
                         maCalculationCandles: self.pendingMACalculationCandles,
                         configuration: config,
@@ -409,6 +457,63 @@ extension LightweightChartView {
 
         func clearMovingAverages(into webView: WKWebView) {
             let js = "clearMovingAverages()"
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+
+        func injectExponentialMovingAverages(
+            candles: [Candle],
+            maCalculationCandles: [Candle]?,
+            configuration: EMAIndicatorConfiguration,
+            into webView: WKWebView
+        ) {
+            let calcCandles = maCalculationCandles ?? candles
+            guard !candles.isEmpty, !configuration.lines.isEmpty else {
+                clearExponentialMovingAverages(into: webView)
+                return
+            }
+
+            var emaLines: [[String: Any]] = []
+
+            for line in configuration.lines {
+                let emaData = TechnicalIndicatorCalculator.emaTimeSeries(
+                    candles: calcCandles,
+                    period: line.period,
+                    priceSource: line.priceSource
+                )
+                let displayStart = candles.first?.timestamp ?? Date.distantPast
+                let filteredEmaData = emaData.filter { $0.timestamp >= displayStart }
+                guard !filteredEmaData.isEmpty else { continue }
+
+                let jsData = filteredEmaData.map { item in
+                    [
+                        "time": Int(item.timestamp.timeIntervalSince1970),
+                        "value": item.value
+                    ] as [String: Any]
+                }
+
+                emaLines.append([
+                    "period": line.period,
+                    "color": line.colorHex,
+                    "lineWidth": line.lineWidth,
+                    "data": jsData
+                ])
+            }
+
+            guard !emaLines.isEmpty else {
+                clearExponentialMovingAverages(into: webView)
+                return
+            }
+
+            // Convert to JSON
+            if let jsonData = try? JSONSerialization.data(withJSONObject: emaLines),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                let js = "setExponentialMovingAverages('\(jsonString.replacingOccurrences(of: "'", with: "\\'"))')"
+                webView.evaluateJavaScript(js, completionHandler: nil)
+            }
+        }
+
+        func clearExponentialMovingAverages(into webView: WKWebView) {
+            let js = "clearExponentialMovingAverages()"
             webView.evaluateJavaScript(js, completionHandler: nil)
         }
 

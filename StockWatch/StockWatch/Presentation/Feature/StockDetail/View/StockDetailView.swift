@@ -97,6 +97,8 @@ private struct StockDetailContentView: View {
                             maCalculationCandles: state.maCalculationCandles,
                             maConfiguration: state.maConfiguration,
                             isMAEnabled: state.isMAEnabled,
+                            emaConfiguration: state.emaConfiguration,
+                            isEMAEnabled: state.isEMAEnabled,
                             isVolumeEnabled: state.isVolumeEnabled,
                             volumeMAConfiguration: state.volumeMAConfiguration,
                             isRSIEnabled: state.isRSIEnabled,

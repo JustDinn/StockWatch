@@ -53,6 +53,36 @@ enum TechnicalIndicatorCalculator {
         return ema
     }
 
+    /// Exponential Moving Average Time Series — 각 캔들마다 EMA 값 계산
+    /// - Parameters:
+    ///   - candles: 캔들 데이터 배열
+    ///   - period: 이동평균 기간
+    ///   - priceSource: 계산 기준 가격 (종가/시가)
+    /// - Returns: (timestamp, ema value) 배열. period개 미만은 건너뜀.
+    static func emaTimeSeries(candles: [Candle], period: Int, priceSource: EMAPriceSource = .close) -> [(timestamp: Date, value: Double)] {
+        guard period > 0, !candles.isEmpty, candles.count >= period else { return [] }
+
+        let keyPath: KeyPath<Candle, Double> = priceSource == .close ? \.close : \.open
+        var result: [(Date, Double)] = []
+
+        // multiplier k = 2 / (period + 1)
+        let k = 2.0 / Double(period + 1)
+
+        // 첫 EMA 값은 SMA로 초기화 (index = period - 1)
+        let initialSlice = candles.prefix(period)
+        var ema = initialSlice.map { $0[keyPath: keyPath] }.reduce(0, +) / Double(period)
+        result.append((candles[period - 1].timestamp, ema))
+
+        // 이후 EMA 값 계산
+        for index in period..<candles.count {
+            let price = candles[index][keyPath: keyPath]
+            ema = price * k + ema * (1 - k)
+            result.append((candles[index].timestamp, ema))
+        }
+
+        return result
+    }
+
     /// Volume Simple Moving Average Time Series — 각 캔들마다 거래량 SMA 값 계산
     /// - Parameters:
     ///   - candles: 캔들 데이터 배열
