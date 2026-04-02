@@ -17,11 +17,31 @@
       z-index: 10;
       transform: translateY(-50%);
     }
+    .pane-label {
+      position: absolute;
+      left: 6px;
+      pointer-events: none;
+      z-index: 5;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 3px;
+      font-size: 11px;
+      font-family: -apple-system, sans-serif;
+      line-height: 1.2;
+    }
+    .pane-label-name {
+      color: #888888;
+    }
+    .pane-label-value {
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
   <div id="chart">
     <div id="overlay-container"></div>
+    <div id="pane-label-container"></div>
   </div>
   <script src="https://unpkg.com/lightweight-charts@5.1.0/dist/lightweight-charts.standalone.production.js"></script>
   <script>
@@ -169,10 +189,86 @@
           if (panes.length > 1) panes[1].setHeight(80);
         }
 
-
+        repositionPaneLabels();
       } catch (e) {
         console.error('Failed to update pane heights:', e);
       }
+    }
+
+    var paneLabelData = [];
+
+    function repositionPaneLabels() {
+      try {
+        var container = document.getElementById('pane-label-container');
+        var panes = chart.panes();
+        var labels = container.querySelectorAll('.pane-label');
+        var cumulativeY = 0;
+        for (var i = 0; i < panes.length; i++) {
+          var h = panes[i].getHeight();
+          for (var j = 0; j < labels.length; j++) {
+            if (parseInt(labels[j].getAttribute('data-pane')) === i) {
+              labels[j].style.top = (cumulativeY + 4) + 'px';
+            }
+          }
+          cumulativeY += h;
+        }
+      } catch (e) {
+        console.error('Failed to reposition pane labels:', e);
+      }
+    }
+
+    function updatePaneLabels(jsonString) {
+      try {
+        var items = JSON.parse(jsonString);
+        paneLabelData = items;
+        var container = document.getElementById('pane-label-container');
+        container.innerHTML = '';
+
+        var panes = chart.panes();
+        var cumulativeY = 0;
+        var paneYMap = {};
+        for (var i = 0; i < panes.length; i++) {
+          paneYMap[i] = cumulativeY;
+          cumulativeY += panes[i].getHeight();
+        }
+
+        for (var k = 0; k < items.length; k++) {
+          var item = items[k];
+          var paneY = paneYMap[item.paneIndex] !== undefined ? paneYMap[item.paneIndex] : 0;
+
+          var div = document.createElement('div');
+          div.className = 'pane-label';
+          div.setAttribute('data-pane', item.paneIndex);
+          div.style.top = (paneY + 4) + 'px';
+
+          var nameSpan = document.createElement('span');
+          nameSpan.className = 'pane-label-name';
+          nameSpan.textContent = item.label;
+          div.appendChild(nameSpan);
+
+          for (var v = 0; v < item.values.length; v++) {
+            var valSpan = document.createElement('span');
+            valSpan.className = 'pane-label-value';
+            valSpan.style.color = item.values[v].colorHex;
+            valSpan.textContent = '(' + item.values[v].period + ')';
+            div.appendChild(valSpan);
+          }
+
+          container.appendChild(div);
+        }
+
+        // Reposition after pane heights are fully applied
+        setTimeout(function() {
+          repositionPaneLabels();
+        }, 100);
+      } catch (e) {
+        console.error('Failed to update pane labels:', e);
+      }
+    }
+
+    function clearPaneLabels() {
+      paneLabelData = [];
+      document.getElementById('pane-label-container').innerHTML = '';
     }
 
     function setVolumeData(jsonString) {
@@ -442,10 +538,13 @@
           // Only show overlay for the specific active separator if touching
           overlay.style.display = (isTouching && i === activeSeparatorIndex) ? 'block' : 'none';
         }
+
+        // Update pane labels position during resize
+        repositionPaneLabels();
       } catch (e) {
         console.error('Failed to sync overlays:', e);
       }
-      
+
       if (isTouching) {
         rafId = requestAnimationFrame(syncOverlays);
       }
@@ -510,6 +609,11 @@
       });
       syncOverlays();
     }, { passive: true });
+
+    // Subscribe to pane resize events to update label positions
+    chart.subscribePaneResize(function() {
+      repositionPaneLabels();
+    });
   </script>
 </body>
 </html>

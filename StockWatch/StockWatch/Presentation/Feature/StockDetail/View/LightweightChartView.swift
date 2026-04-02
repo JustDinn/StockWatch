@@ -106,6 +106,13 @@ struct LightweightChartView: UIViewRepresentable {
                     } else {
                         coordinator.clearRSI(into: webView)
                     }
+                    coordinator.injectPaneLabels(
+                        isVolumeEnabled: volumeEnabled,
+                        volumeMAConfiguration: volumeMAConfig,
+                        isRSIEnabled: rsiEnabled,
+                        rsiConfiguration: rsiConfig,
+                        into: webView
+                    )
                 }
                 context.coordinator.lastInjectedDataID = context.coordinator.dataID(for: candles)
             } else {
@@ -155,6 +162,13 @@ struct LightweightChartView: UIViewRepresentable {
                         } else {
                             coordinator.clearRSI(into: webView)
                         }
+                        coordinator.injectPaneLabels(
+                            isVolumeEnabled: volumeEnabled,
+                            volumeMAConfiguration: volumeMAConfig,
+                            isRSIEnabled: rsiEnabled,
+                            rsiConfiguration: rsiConfig,
+                            into: webView
+                        )
                     }
                 } else {
                     // dataID 변경 없음 (설정만 바뀐 경우): setData() 재호출 없으므로 즉시 주입
@@ -190,6 +204,13 @@ struct LightweightChartView: UIViewRepresentable {
                     } else {
                         context.coordinator.clearRSI(into: webView)
                     }
+                    context.coordinator.injectPaneLabels(
+                        isVolumeEnabled: isVolumeEnabled,
+                        volumeMAConfiguration: volumeMAConfiguration,
+                        isRSIEnabled: isRSIEnabled,
+                        rsiConfiguration: rsiConfiguration,
+                        into: webView
+                    )
                 }
             }
         } else {
@@ -276,6 +297,13 @@ extension LightweightChartView {
                         into: webView
                     )
                 }
+                self.injectPaneLabels(
+                    isVolumeEnabled: self.pendingIsVolumeEnabled,
+                    volumeMAConfiguration: self.pendingVolumeMAConfiguration,
+                    isRSIEnabled: self.pendingIsRSIEnabled,
+                    rsiConfiguration: self.pendingRSIConfiguration,
+                    into: webView
+                )
             }
         }
 
@@ -503,6 +531,40 @@ extension LightweightChartView {
         func clearRSI(into webView: WKWebView) {
             let js = "clearRSI()"
             webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+
+        func injectPaneLabels(
+            isVolumeEnabled: Bool,
+            volumeMAConfiguration: VolumeMAConfiguration?,
+            isRSIEnabled: Bool,
+            rsiConfiguration: RSIConfiguration?,
+            into webView: WKWebView
+        ) {
+            var items: [[String: Any]] = []
+
+            if isVolumeEnabled {
+                var values: [[String: Any]] = []
+                if let volumeMA = volumeMAConfiguration, volumeMA.line.isEnabled {
+                    values.append(["period": volumeMA.line.period, "colorHex": volumeMA.line.colorHex])
+                }
+                items.append(["paneIndex": 1, "label": "거래량", "values": values])
+            }
+
+            if isRSIEnabled, let rsiConfig = rsiConfiguration {
+                let rsiPaneIndex = isVolumeEnabled ? 2 : 1
+                let values: [[String: Any]] = [["period": rsiConfig.line.period, "colorHex": rsiConfig.line.colorHex]]
+                items.append(["paneIndex": rsiPaneIndex, "label": "RSI", "values": values])
+            }
+
+            guard !items.isEmpty,
+                  let jsonData = try? JSONSerialization.data(withJSONObject: items),
+                  let jsonString = String(data: jsonData, encoding: .utf8) else {
+                webView.evaluateJavaScript("clearPaneLabels()", completionHandler: nil)
+                return
+            }
+
+            let escaped = jsonString.replacingOccurrences(of: "'", with: "\\'")
+            webView.evaluateJavaScript("updatePaneLabels('\(escaped)')", completionHandler: nil)
         }
 
         private func buildJSArray(_ candles: [Candle]) -> String {
