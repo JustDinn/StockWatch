@@ -10,6 +10,7 @@ enum IndicatorTab: String, CaseIterable {
 
 enum TechnicalIndicator: String, CaseIterable, Hashable, Identifiable {
     case movingAverage
+    case exponentialMovingAverage
     case volume
     case rsi
 
@@ -17,25 +18,28 @@ enum TechnicalIndicator: String, CaseIterable, Hashable, Identifiable {
 
     var title: String {
         switch self {
-        case .movingAverage: return "이동평균선"
-        case .volume:        return "거래량"
-        case .rsi:           return "RSI"
+        case .movingAverage:            return "이동평균선"
+        case .exponentialMovingAverage: return "지수이동평균선"
+        case .volume:                   return "거래량"
+        case .rsi:                      return "RSI"
         }
     }
 
     var description: String {
         switch self {
-        case .movingAverage: return "지난 n일 동안의 주가 평균값을 이은 선"
-        case .volume:        return "거래량을 가격대별로 비교할 수 있는 막대그래프"
-        case .rsi:           return "주가의 상승/하락 강도를 나타내는 0~100 사이의 지표"
+        case .movingAverage:            return "지난 n일 동안의 주가 평균값을 이은 선"
+        case .exponentialMovingAverage: return "주가의 평균 가격 중 최근 가격에 더 높은 가중치를 부여한 이동평균선"
+        case .volume:                   return "거래량을 가격대별로 비교할 수 있는 막대그래프"
+        case .rsi:                      return "주가의 상승/하락 강도를 나타내는 0~100 사이의 지표"
         }
     }
 
     var tab: IndicatorTab {
         switch self {
-        case .movingAverage: return .upper
-        case .volume:        return .lower
-        case .rsi:           return .lower
+        case .movingAverage:            return .upper
+        case .exponentialMovingAverage: return .upper
+        case .volume:                   return .lower
+        case .rsi:                      return .lower
         }
     }
 

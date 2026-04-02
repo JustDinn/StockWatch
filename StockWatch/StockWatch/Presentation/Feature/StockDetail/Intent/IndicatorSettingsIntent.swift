@@ -9,6 +9,7 @@ enum IndicatorSettingsIntent {
     case apply
     case selectTab(IndicatorTab)
     case stageMAConfig(MAIndicatorConfiguration)
+    case stageEMAConfig(EMAIndicatorConfiguration)
     case stageVolumeConfig(VolumeMAConfiguration)
     case stageRSIConfig(RSIConfiguration)
 }

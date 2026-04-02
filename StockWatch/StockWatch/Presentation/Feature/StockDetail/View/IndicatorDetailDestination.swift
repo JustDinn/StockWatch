@@ -11,6 +11,8 @@ struct IndicatorDetailDestination: View {
     let indicator: TechnicalIndicator
     let onMAConfirm: ((MAIndicatorConfiguration) -> Void)?
     let initialMAState: MAIndicatorState?
+    let onEMAConfirm: ((EMAIndicatorConfiguration) -> Void)?
+    let initialEMAState: EMAIndicatorState?
     let onVolumeConfirm: ((VolumeMAConfiguration) -> Void)?
     let initialVolumeState: VolumeIndicatorState?
     let onRSIConfirm: ((RSIConfiguration) -> Void)?
@@ -20,6 +22,8 @@ struct IndicatorDetailDestination: View {
         indicator: TechnicalIndicator,
         initialMAState: MAIndicatorState? = nil,
         onMAConfirm: ((MAIndicatorConfiguration) -> Void)? = nil,
+        initialEMAState: EMAIndicatorState? = nil,
+        onEMAConfirm: ((EMAIndicatorConfiguration) -> Void)? = nil,
         initialVolumeState: VolumeIndicatorState? = nil,
         onVolumeConfirm: ((VolumeMAConfiguration) -> Void)? = nil,
         initialRSIState: RSIIndicatorState? = nil,
@@ -28,6 +32,8 @@ struct IndicatorDetailDestination: View {
         self.indicator = indicator
         self.initialMAState = initialMAState
         self.onMAConfirm = onMAConfirm
+        self.initialEMAState = initialEMAState
+        self.onEMAConfirm = onEMAConfirm
         self.initialVolumeState = initialVolumeState
         self.onVolumeConfirm = onVolumeConfirm
         self.initialRSIState = initialRSIState
@@ -39,6 +45,14 @@ struct IndicatorDetailDestination: View {
         case .movingAverage:
             if let onConfirm = onMAConfirm {
                 MAIndicatorDetailView(initialState: initialMAState, onConfirm: onConfirm)
+            } else {
+                Text("설정 오류")
+                    .navigationTitle(indicator.title)
+                    .navigationBarTitleDisplayMode(.inline)
+            }
+        case .exponentialMovingAverage:
+            if let onConfirm = onEMAConfirm {
+                EMAIndicatorDetailView(initialState: initialEMAState, onConfirm: onConfirm)
             } else {
                 Text("설정 오류")
                     .navigationTitle(indicator.title)

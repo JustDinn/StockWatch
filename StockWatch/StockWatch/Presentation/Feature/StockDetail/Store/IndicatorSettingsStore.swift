@@ -19,6 +19,9 @@ final class IndicatorSettingsStore: ObservableObject {
         if manager.isMAEnabled {
             initialState.enabledIndicators.insert(.movingAverage)
         }
+        if manager.isEMAEnabled {
+            initialState.enabledIndicators.insert(.exponentialMovingAverage)
+        }
         if manager.isVolumeEnabled {
             initialState.enabledIndicators.insert(.volume)
         }
@@ -39,6 +42,7 @@ final class IndicatorSettingsStore: ObservableObject {
         case .resetAll:
             state.enabledIndicators = []
             state.stagedMAConfig = nil
+            state.stagedEMAConfig = nil
             state.stagedRSIConfig = nil
         case .selectTab(let tab):
             state.selectedTab = tab
@@ -46,6 +50,8 @@ final class IndicatorSettingsStore: ObservableObject {
             apply()
         case .stageMAConfig(let config):
             state.stagedMAConfig = config
+        case .stageEMAConfig(let config):
+            state.stagedEMAConfig = config
         case .stageVolumeConfig(let config):
             state.stagedVolumeConfig = config
         case .stageRSIConfig(let config):
@@ -55,6 +61,10 @@ final class IndicatorSettingsStore: ObservableObject {
 
     var currentMAState: MAIndicatorState {
         MAIndicatorState(configuration: manager.maConfiguration)
+    }
+
+    var currentEMAState: EMAIndicatorState {
+        EMAIndicatorState(configuration: manager.emaConfiguration)
     }
 
     var currentVolumeState: VolumeIndicatorState {
@@ -78,8 +88,14 @@ final class IndicatorSettingsStore: ObservableObject {
             manager.updateMAConfiguration(config)
         }
 
+        // 지수이동평균선 설정 적용
+        if let config = state.stagedEMAConfig {
+            manager.updateEMAConfiguration(config)
+        }
+
         // 활성화 상태 적용
         manager.updateMAEnabled(state.enabledIndicators.contains(.movingAverage))
+        manager.updateEMAEnabled(state.enabledIndicators.contains(.exponentialMovingAverage))
         manager.updateVolumeEnabled(state.enabledIndicators.contains(.volume))
         manager.updateRSIEnabled(state.enabledIndicators.contains(.rsi))
 
@@ -95,6 +111,7 @@ final class IndicatorSettingsStore: ObservableObject {
 
         // staged 설정 초기화
         state.stagedMAConfig = nil
+        state.stagedEMAConfig = nil
         state.stagedVolumeConfig = nil
         state.stagedRSIConfig = nil
     }

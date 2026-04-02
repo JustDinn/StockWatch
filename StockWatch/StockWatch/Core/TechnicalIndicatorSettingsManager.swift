@@ -28,6 +28,18 @@ final class TechnicalIndicatorSettingsManager: ObservableObject {
         }
     }
 
+    @Published private(set) var emaConfiguration: EMAIndicatorConfiguration {
+        didSet {
+            saveEMAConfiguration()
+        }
+    }
+
+    @Published private(set) var isEMAEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(isEMAEnabled, forKey: Keys.isEMAEnabled)
+        }
+    }
+
     @Published private(set) var isVolumeEnabled: Bool {
         didSet {
             UserDefaults.standard.set(isVolumeEnabled, forKey: Keys.isVolumeEnabled)
@@ -57,6 +69,8 @@ final class TechnicalIndicatorSettingsManager: ObservableObject {
     private enum Keys {
         static let maConfiguration = "technical_indicator_ma_configuration"
         static let isMAEnabled = "technical_indicator_ma_enabled"
+        static let emaConfiguration = "technical_indicator_ema_configuration"
+        static let isEMAEnabled = "technical_indicator_ema_enabled"
         static let isVolumeEnabled = "technical_indicator_volume_enabled"
         static let volumeMAConfiguration = "technical_indicator_volume_ma_configuration"
         static let isRSIEnabled = "technical_indicator_rsi_enabled"
@@ -68,6 +82,8 @@ final class TechnicalIndicatorSettingsManager: ObservableObject {
     private init() {
         self.maConfiguration = Self.loadMAConfiguration()
         self.isMAEnabled = UserDefaults.standard.bool(forKey: Keys.isMAEnabled)
+        self.emaConfiguration = Self.loadEMAConfiguration()
+        self.isEMAEnabled = UserDefaults.standard.bool(forKey: Keys.isEMAEnabled)
         self.isVolumeEnabled = UserDefaults.standard.bool(forKey: Keys.isVolumeEnabled)
         self.volumeMAConfiguration = Self.loadVolumeMAConfiguration()
         self.isRSIEnabled = UserDefaults.standard.bool(forKey: Keys.isRSIEnabled)
@@ -84,6 +100,16 @@ final class TechnicalIndicatorSettingsManager: ObservableObject {
     /// 이동평균선 활성화 상태 업데이트
     func updateMAEnabled(_ enabled: Bool) {
         self.isMAEnabled = enabled
+    }
+
+    /// 지수이동평균선 설정 업데이트
+    func updateEMAConfiguration(_ configuration: EMAIndicatorConfiguration) {
+        self.emaConfiguration = configuration
+    }
+
+    /// 지수이동평균선 활성화 상태 업데이트
+    func updateEMAEnabled(_ enabled: Bool) {
+        self.isEMAEnabled = enabled
     }
 
     /// 거래량 활성화 상태 업데이트
@@ -110,6 +136,8 @@ final class TechnicalIndicatorSettingsManager: ObservableObject {
     func reset() {
         self.maConfiguration = MAIndicatorConfiguration.defaultConfiguration
         self.isMAEnabled = false
+        self.emaConfiguration = EMAIndicatorConfiguration.defaultConfiguration
+        self.isEMAEnabled = false
         self.isVolumeEnabled = false
         self.volumeMAConfiguration = VolumeMAConfiguration.defaultConfiguration
         self.isRSIEnabled = false
@@ -125,6 +153,15 @@ final class TechnicalIndicatorSettingsManager: ObservableObject {
             UserDefaults.standard.set(data, forKey: Keys.maConfiguration)
         } catch {
             print("Failed to save MA configuration: \(error)")
+        }
+    }
+
+    private func saveEMAConfiguration() {
+        do {
+            let data = try JSONEncoder().encode(emaConfiguration)
+            UserDefaults.standard.set(data, forKey: Keys.emaConfiguration)
+        } catch {
+            print("Failed to save EMA configuration: \(error)")
         }
     }
 
@@ -181,6 +218,19 @@ final class TechnicalIndicatorSettingsManager: ObservableObject {
         } catch {
             print("Failed to load MA configuration: \(error)")
             return MAIndicatorConfiguration.defaultConfiguration
+        }
+    }
+
+    private static func loadEMAConfiguration() -> EMAIndicatorConfiguration {
+        guard let data = UserDefaults.standard.data(forKey: Keys.emaConfiguration) else {
+            return EMAIndicatorConfiguration.defaultConfiguration
+        }
+
+        do {
+            return try JSONDecoder().decode(EMAIndicatorConfiguration.self, from: data)
+        } catch {
+            print("Failed to load EMA configuration: \(error)")
+            return EMAIndicatorConfiguration.defaultConfiguration
         }
     }
 }

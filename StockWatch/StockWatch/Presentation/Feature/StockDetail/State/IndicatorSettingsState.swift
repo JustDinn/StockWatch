@@ -7,6 +7,7 @@ struct IndicatorSettingsState: Equatable {
     var selectedTab: IndicatorTab = .upper
     var enabledIndicators: Set<TechnicalIndicator> = []
     var stagedMAConfig: MAIndicatorConfiguration?
+    var stagedEMAConfig: EMAIndicatorConfiguration?
     var stagedVolumeConfig: VolumeMAConfiguration?
     var stagedRSIConfig: RSIConfiguration?
 

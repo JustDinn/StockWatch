@@ -71,6 +71,10 @@ struct IndicatorSettingsView: View {
                             onMAConfirm: { config in
                                 store.action(.stageMAConfig(config))
                             },
+                            initialEMAState: store.currentEMAState,
+                            onEMAConfirm: { config in
+                                store.action(.stageEMAConfig(config))
+                            },
                             initialVolumeState: store.currentVolumeState,
                             onVolumeConfirm: { config in
                                 store.action(.stageVolumeConfig(config))
