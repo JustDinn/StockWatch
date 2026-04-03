@@ -381,7 +381,7 @@
     var rsiUpperPriceLine = null;
     var rsiMiddlePriceLine = null;
     var rsiLowerPriceLine = null;
-    var rsiBandSeries = null;
+    var rsiBandPrimitive = null;
 
     function setRSIData(jsonString) {
       try {
@@ -453,7 +453,7 @@
           });
         }
 
-        // 배경 음영: 하한선~상한선 구간 AreaSeries
+        // 배경 음영: 하한선~상한선 구간을 Primitive로 canvas에 직접 사각형 그리기
         if (bgEnabled && lowerEnabled && upperEnabled && data.length > 0) {
           var hex = bgColor.replace('#', '');
           var r = parseInt(hex.substring(0, 2), 16);
@@ -461,24 +461,36 @@
           var b = parseInt(hex.substring(4, 6), 16);
           var bgFill = 'rgba(' + r + ',' + g + ',' + b + ',0.15)';
 
-          rsiBandSeries = chart.addSeries(LightweightCharts.AreaSeries, {
-            topColor: bgFill,
-            bottomColor: bgFill,
-            lineColor: 'rgba(0,0,0,0)',
-            lineWidth: 0,
-            priceLineVisible: false,
-            lastValueVisible: false,
-            crosshairMarkerVisible: false,
-            priceScaleId: 'rsi'
-          }, rsiPaneIndex);
-
-          var bandData = data.map(function(d) {
-            return { time: d.time, value: upperValue };
-          });
-          rsiBandSeries.setData(bandData);
-          rsiBandSeries.applyOptions({
-            baseValue: { type: 'price', price: lowerValue }
-          });
+          rsiBandPrimitive = {
+            _upper: upperValue,
+            _lower: lowerValue,
+            _fill: bgFill,
+            _series: rsiSeries,
+            paneViews: function() {
+              var self = this;
+              return [{
+                renderer: function() {
+                  return {
+                    draw: function(target) {
+                      var yTop = self._series.priceToCoordinate(self._upper);
+                      var yBottom = self._series.priceToCoordinate(self._lower);
+                      if (yTop == null || yBottom == null) return;
+                      target.useMediaCoordinateSpace(function(scope) {
+                        scope.context.fillStyle = self._fill;
+                        scope.context.fillRect(0, yTop, scope.mediaSize.width, yBottom - yTop);
+                      });
+                    }
+                  };
+                }
+              }];
+            }
+          };
+          try {
+            rsiSeries.attachPrimitive(rsiBandPrimitive);
+          } catch(e) {
+            console.error('Failed to attach RSI band primitive:', e);
+            rsiBandPrimitive = null;
+          }
         }
 
         updatePaneHeights();
@@ -488,23 +500,19 @@
     }
 
     function clearRSI() {
-      try {
-        rsiUpperPriceLine = null;
-        rsiMiddlePriceLine = null;
-        rsiLowerPriceLine = null;
+      rsiUpperPriceLine = null;
+      rsiMiddlePriceLine = null;
+      rsiLowerPriceLine = null;
 
-        if (rsiBandSeries) {
-          chart.removeSeries(rsiBandSeries);
-          rsiBandSeries = null;
-        }
-        if (rsiSeries) {
-          chart.removeSeries(rsiSeries);
-          rsiSeries = null;
-        }
-        updatePaneHeights();
-      } catch (e) {
-        console.error('Failed to clear RSI:', e);
+      if (rsiBandPrimitive) {
+        try { if (rsiSeries) rsiSeries.detachPrimitive(rsiBandPrimitive); } catch(e) {}
+        rsiBandPrimitive = null;
       }
+      if (rsiSeries) {
+        try { chart.removeSeries(rsiSeries); } catch(e) { console.error('Failed to remove rsiSeries:', e); }
+        rsiSeries = null;
+      }
+      updatePaneHeights();
     }
 
     var edgeDebounceTimer = null;
