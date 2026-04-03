@@ -189,15 +189,16 @@ extension StockDetailStore {
     }
 
     private func requiredWarmupCount() -> Int {
-        // 년봉/월봉은 warmup 불필요 (기간이 너무 길어 MA/RSI 의미 없음)
+        // 년봉/월봉은 MA warmup 불필요 (기간이 너무 길어 의미 없음)
         // 예: 200일 MA를 년봉에 적용하면 200년치 데이터 필요 → API 에러 발생
-        guard state.selectedPeriod == .day || state.selectedPeriod == .week else {
-            return 0
-        }
+        // 단, RSI는 년봉/월봉에서도 period(14) 정도면 충분하므로 예외적으로 허용
+        let isShortPeriod = state.selectedPeriod == .day || state.selectedPeriod == .week
 
         var periods: [Int] = [0]
-        if state.isMAEnabled, let config = state.maConfiguration {
-            periods.append(contentsOf: config.lines.map(\.period))
+        if isShortPeriod {
+            if state.isMAEnabled, let config = state.maConfiguration {
+                periods.append(contentsOf: config.lines.map(\.period))
+            }
         }
         if state.isRSIEnabled, let config = state.rsiConfiguration {
             periods.append(config.line.period)
