@@ -20,7 +20,7 @@ extension ChartPeriod {
         case .day:   return "6mo"
         case .week:  return "2y"
         case .month: return "5y"
-        case .year:  return "20y"
+        case .year:  return "20y"  // 미사용: interval=1y Yahoo Finance 미지원으로 UseCase에서 3mo 집계 방식 사용
         }
     }
 

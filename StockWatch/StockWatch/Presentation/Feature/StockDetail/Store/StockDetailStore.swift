@@ -77,6 +77,10 @@ final class StockDetailStore: ObservableObject {
             state.hasMoreOlderCandles = true
             state.isLoadingOlderCandles = false
             state.pendingOlderCandles = nil
+            state.candlestickData = nil
+            state.maCalculationCandles = nil
+            state.isChartLoading = true
+            state.chartErrorMessage = nil
             chartTask?.cancel()
             chartTask = Task { await reloadChart(period: period) }
         case .loadOlderCandles:
@@ -185,6 +189,12 @@ extension StockDetailStore {
     }
 
     private func requiredWarmupCount() -> Int {
+        // 년봉/월봉은 warmup 불필요 (기간이 너무 길어 MA/RSI 의미 없음)
+        // 예: 200일 MA를 년봉에 적용하면 200년치 데이터 필요 → API 에러 발생
+        guard state.selectedPeriod == .day || state.selectedPeriod == .week else {
+            return 0
+        }
+
         var periods: [Int] = [0]
         if state.isMAEnabled, let config = state.maConfiguration {
             periods.append(contentsOf: config.lines.map(\.period))
