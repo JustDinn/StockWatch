@@ -10,6 +10,16 @@ struct LightweightChartView: UIViewRepresentable {
 
     let candles: [Candle]
     var olderCandles: [Candle]? = nil
+    /// MA 계산 전용 캔들 (warmup 포함). nil이면 candles로 계산
+    var maCalculationCandles: [Candle]? = nil
+    var maConfiguration: MAIndicatorConfiguration? = nil
+    var isMAEnabled: Bool = false
+    var emaConfiguration: EMAIndicatorConfiguration? = nil
+    var isEMAEnabled: Bool = false
+    var isVolumeEnabled: Bool = false
+    var volumeMAConfiguration: VolumeMAConfiguration? = nil
+    var isRSIEnabled: Bool = false
+    var rsiConfiguration: RSIConfiguration? = nil
     var onReachedLeftEdge: (() -> Void)? = nil
     var onOlderDataInjected: (() -> Void)? = nil
 
@@ -60,17 +70,196 @@ struct LightweightChartView: UIViewRepresentable {
         if context.coordinator.isLoaded {
             context.coordinator.injectColors(into: webView)
             if let older = olderCandles {
-                context.coordinator.injectOlderData(older, into: webView)
+                // olderCandles가 있을 때는 appendOlderData 완료 후 MA/EMA/Volume/RSI 주입 (타이밍 보장)
+                let maEnabled = isMAEnabled
+                let maConfig = maConfiguration
+                let emaEnabled = isEMAEnabled
+                let emaConfig = emaConfiguration
+                let maCalcCandles = maCalculationCandles
+                let displayCandles = candles
+                let volumeEnabled = isVolumeEnabled
+                let volumeMAConfig = volumeMAConfiguration
+                let rsiEnabled = isRSIEnabled
+                let rsiConfig = rsiConfiguration
+                context.coordinator.injectOlderData(older, into: webView) { [weak coordinator = context.coordinator] in
+                    guard let coordinator, let webView = coordinator.webView else { return }
+                    if maEnabled, let config = maConfig {
+                        coordinator.injectMovingAverages(
+                            candles: displayCandles,
+                            maCalculationCandles: maCalcCandles,
+                            configuration: config,
+                            into: webView
+                        )
+                    } else {
+                        coordinator.clearMovingAverages(into: webView)
+                    }
+                    if emaEnabled, let config = emaConfig {
+                        coordinator.injectExponentialMovingAverages(
+                            candles: displayCandles,
+                            maCalculationCandles: maCalcCandles,
+                            configuration: config,
+                            into: webView
+                        )
+                    } else {
+                        coordinator.clearExponentialMovingAverages(into: webView)
+                    }
+                    if volumeEnabled {
+                        coordinator.injectOlderVolumeData(older, into: webView)
+                        if let volumeMAConfig {
+                            coordinator.injectVolumeMA(candles: displayCandles, maCalculationCandles: nil, configuration: volumeMAConfig, into: webView)
+                        }
+                    }
+                    if rsiEnabled, let config = rsiConfig {
+                        coordinator.injectRSI(
+                            candles: displayCandles,
+                            maCalculationCandles: maCalcCandles,
+                            configuration: config,
+                            isVolumeEnabled: volumeEnabled,
+                            into: webView
+                        )
+                    } else {
+                        coordinator.clearRSI(into: webView)
+                    }
+                    coordinator.injectPaneLabels(
+                        isVolumeEnabled: volumeEnabled,
+                        volumeMAConfiguration: volumeMAConfig,
+                        isRSIEnabled: rsiEnabled,
+                        rsiConfiguration: rsiConfig,
+                        into: webView
+                    )
+                }
                 context.coordinator.lastInjectedDataID = context.coordinator.dataID(for: candles)
             } else {
                 let newID = context.coordinator.dataID(for: candles)
                 if newID != context.coordinator.lastInjectedDataID {
-                    context.coordinator.injectData(candles, into: webView)
+                    // 새 캔들 데이터가 있을 때: setData() 완료 후 MA/EMA/Volume/RSI 주입 (타이밍 보장)
                     context.coordinator.lastInjectedDataID = newID
+                    let maEnabled = isMAEnabled
+                    let maConfig = maConfiguration
+                    let emaEnabled = isEMAEnabled
+                    let emaConfig = emaConfiguration
+                    let maCalcCandles = maCalculationCandles
+                    let volumeEnabled = isVolumeEnabled
+                    let volumeMAConfig = volumeMAConfiguration
+                    let rsiEnabled = isRSIEnabled
+                    let rsiConfig = rsiConfiguration
+                    context.coordinator.injectData(candles, into: webView) { [weak coordinator = context.coordinator] in
+                        guard let coordinator, let webView = coordinator.webView else { return }
+
+                        if maEnabled, let config = maConfig {
+                            coordinator.injectMovingAverages(
+                                candles: candles,
+                                maCalculationCandles: maCalcCandles,
+                                configuration: config,
+                                into: webView
+                            )
+                        } else {
+                            coordinator.clearMovingAverages(into: webView)
+                        }
+                        if emaEnabled, let config = emaConfig {
+                            coordinator.injectExponentialMovingAverages(
+                                candles: candles,
+                                maCalculationCandles: maCalcCandles,
+                                configuration: config,
+                                into: webView
+                            )
+                        } else {
+                            coordinator.clearExponentialMovingAverages(into: webView)
+                        }
+                        if volumeEnabled {
+                            coordinator.injectVolumeData(candles, into: webView) { [weak coordinator] in
+                                guard let coordinator, let webView = coordinator.webView else { return }
+                                if let volumeMAConfig {
+                                    coordinator.injectVolumeMA(candles: candles, maCalculationCandles: maCalcCandles, configuration: volumeMAConfig, into: webView)
+                                }
+                            }
+                        } else {
+                            coordinator.clearVolume(into: webView)
+                            coordinator.clearVolumeMA(into: webView)
+                        }
+                        if rsiEnabled, let config = rsiConfig {
+                            coordinator.injectRSI(
+                                candles: candles,
+                                maCalculationCandles: maCalcCandles,
+                                configuration: config,
+                                isVolumeEnabled: volumeEnabled,
+                                into: webView
+                            )
+                        } else {
+                            coordinator.clearRSI(into: webView)
+                        }
+                        coordinator.injectPaneLabels(
+                            isVolumeEnabled: volumeEnabled,
+                            volumeMAConfiguration: volumeMAConfig,
+                            isRSIEnabled: rsiEnabled,
+                            rsiConfiguration: rsiConfig,
+                            into: webView
+                        )
+                    }
+                } else {
+                    // dataID 변경 없음 (설정만 바뀐 경우): setData() 재호출 없으므로 즉시 주입
+                    if isMAEnabled, let config = maConfiguration {
+                        context.coordinator.injectMovingAverages(
+                            candles: candles,
+                            maCalculationCandles: maCalculationCandles,
+                            configuration: config,
+                            into: webView
+                        )
+                    } else {
+                        context.coordinator.clearMovingAverages(into: webView)
+                    }
+                    if isEMAEnabled, let config = emaConfiguration {
+                        context.coordinator.injectExponentialMovingAverages(
+                            candles: candles,
+                            maCalculationCandles: maCalculationCandles,
+                            configuration: config,
+                            into: webView
+                        )
+                    } else {
+                        context.coordinator.clearExponentialMovingAverages(into: webView)
+                    }
+                    if isVolumeEnabled {
+                        context.coordinator.injectVolumeData(candles, into: webView) { [weak coordinator = context.coordinator] in
+                            guard let coordinator, let webView = coordinator.webView else { return }
+                            if let volumeMAConfiguration {
+                                coordinator.injectVolumeMA(candles: candles, maCalculationCandles: maCalculationCandles, configuration: volumeMAConfiguration, into: webView)
+                            }
+                        }
+                    } else {
+                        context.coordinator.clearVolume(into: webView)
+                        context.coordinator.clearVolumeMA(into: webView)
+                    }
+                    if isRSIEnabled, let config = rsiConfiguration {
+                        context.coordinator.injectRSI(
+                            candles: candles,
+                            maCalculationCandles: maCalculationCandles,
+                            configuration: config,
+                            isVolumeEnabled: isVolumeEnabled,
+                            into: webView
+                        )
+                    } else {
+                        context.coordinator.clearRSI(into: webView)
+                    }
+                    context.coordinator.injectPaneLabels(
+                        isVolumeEnabled: isVolumeEnabled,
+                        volumeMAConfiguration: volumeMAConfiguration,
+                        isRSIEnabled: isRSIEnabled,
+                        rsiConfiguration: rsiConfiguration,
+                        into: webView
+                    )
                 }
             }
         } else {
             context.coordinator.pendingCandles = candles
+            context.coordinator.pendingIsMAEnabled = isMAEnabled
+            context.coordinator.pendingMAConfiguration = maConfiguration
+            context.coordinator.pendingMACalculationCandles = maCalculationCandles
+            context.coordinator.pendingIsEMAEnabled = isEMAEnabled
+            context.coordinator.pendingEMAConfiguration = emaConfiguration
+            context.coordinator.pendingIsVolumeEnabled = isVolumeEnabled
+            context.coordinator.pendingVolumeMAConfiguration = volumeMAConfiguration
+            context.coordinator.pendingIsRSIEnabled = isRSIEnabled
+            context.coordinator.pendingRSIConfiguration = rsiConfiguration
         }
     }
 }
@@ -96,6 +285,15 @@ extension LightweightChartView {
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         var webView: WKWebView?
         var pendingCandles: [Candle] = []
+        var pendingIsMAEnabled: Bool = false
+        var pendingMAConfiguration: MAIndicatorConfiguration? = nil
+        var pendingMACalculationCandles: [Candle]? = nil
+        var pendingIsEMAEnabled: Bool = false
+        var pendingEMAConfiguration: EMAIndicatorConfiguration? = nil
+        var pendingIsVolumeEnabled: Bool = false
+        var pendingVolumeMAConfiguration: VolumeMAConfiguration? = nil
+        var pendingIsRSIEnabled: Bool = false
+        var pendingRSIConfiguration: RSIConfiguration? = nil
         var isLoaded = false
         var onReachedLeftEdge: (() -> Void)?
         var onOlderDataInjected: (() -> Void)?
@@ -110,8 +308,51 @@ extension LightweightChartView {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             isLoaded = true
             injectColors(into: webView)
-            injectData(pendingCandles, into: webView)
             lastInjectedDataID = dataID(for: pendingCandles)
+            injectData(pendingCandles, into: webView) { [weak self] in
+                guard let self, let webView = self.webView else { return }
+
+                if self.pendingIsMAEnabled, let config = self.pendingMAConfiguration {
+                    self.injectMovingAverages(
+                        candles: self.pendingCandles,
+                        maCalculationCandles: self.pendingMACalculationCandles,
+                        configuration: config,
+                        into: webView
+                    )
+                }
+                if self.pendingIsEMAEnabled, let config = self.pendingEMAConfiguration {
+                    self.injectExponentialMovingAverages(
+                        candles: self.pendingCandles,
+                        maCalculationCandles: self.pendingMACalculationCandles,
+                        configuration: config,
+                        into: webView
+                    )
+                }
+                if self.pendingIsVolumeEnabled {
+                    self.injectVolumeData(self.pendingCandles, into: webView) { [weak self] in
+                        guard let self, let webView = self.webView else { return }
+                        if let config = self.pendingVolumeMAConfiguration {
+                            self.injectVolumeMA(candles: self.pendingCandles, maCalculationCandles: self.pendingMACalculationCandles, configuration: config, into: webView)
+                        }
+                    }
+                }
+                if self.pendingIsRSIEnabled, let config = self.pendingRSIConfiguration {
+                    self.injectRSI(
+                        candles: self.pendingCandles,
+                        maCalculationCandles: self.pendingMACalculationCandles,
+                        configuration: config,
+                        isVolumeEnabled: self.pendingIsVolumeEnabled,
+                        into: webView
+                    )
+                }
+                self.injectPaneLabels(
+                    isVolumeEnabled: self.pendingIsVolumeEnabled,
+                    volumeMAConfiguration: self.pendingVolumeMAConfiguration,
+                    isRSIEnabled: self.pendingIsRSIEnabled,
+                    rsiConfiguration: self.pendingRSIConfiguration,
+                    into: webView
+                )
+            }
         }
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -128,20 +369,31 @@ extension LightweightChartView {
             webView.evaluateJavaScript(js, completionHandler: nil)
         }
 
-        func injectData(_ candles: [Candle], into webView: WKWebView) {
-            guard !candles.isEmpty else { return }
+        func injectData(_ candles: [Candle], into webView: WKWebView, completion: (() -> Void)? = nil) {
+            guard !candles.isEmpty else {
+                completion?()
+                return
+            }
             let jsData = buildJSArray(candles)
             let js = "setData('[\(jsData)]')"
-            webView.evaluateJavaScript(js, completionHandler: nil)
+            webView.evaluateJavaScript(js) { _, _ in
+                DispatchQueue.main.async {
+                    completion?()
+                }
+            }
         }
 
-        func injectOlderData(_ candles: [Candle], into webView: WKWebView) {
-            guard !candles.isEmpty else { return }
+        func injectOlderData(_ candles: [Candle], into webView: WKWebView, completion: (() -> Void)? = nil) {
+            guard !candles.isEmpty else {
+                completion?()
+                return
+            }
             let jsData = buildJSArray(candles)
             let js = "appendOlderData('[\(jsData)]')"
             webView.evaluateJavaScript(js) { [weak self] _, _ in
                 DispatchQueue.main.async {
                     self?.onOlderDataInjected?()
+                    completion?()
                 }
             }
         }
@@ -151,10 +403,287 @@ extension LightweightChartView {
             return "\(candles.count)_\(Int(first.timestamp.timeIntervalSince1970))_\(Int(last.timestamp.timeIntervalSince1970))"
         }
 
+        func injectMovingAverages(
+            candles: [Candle],
+            maCalculationCandles: [Candle]?,
+            configuration: MAIndicatorConfiguration,
+            into webView: WKWebView
+        ) {
+            let calcCandles = maCalculationCandles ?? candles
+            guard !candles.isEmpty, !configuration.lines.isEmpty else {
+                clearMovingAverages(into: webView)
+                return
+            }
+
+            var maLines: [[String: Any]] = []
+
+            for line in configuration.lines {
+                let smaData = TechnicalIndicatorCalculator.smaTimeSeries(
+                    candles: calcCandles,
+                    period: line.period,
+                    priceSource: line.priceSource
+                )
+                let displayStart = candles.first?.timestamp ?? Date.distantPast
+                let filteredSmaData = smaData.filter { $0.timestamp >= displayStart }
+                guard !filteredSmaData.isEmpty else { continue }
+
+                let jsData = filteredSmaData.map { item in
+                    [
+                        "time": Int(item.timestamp.timeIntervalSince1970),
+                        "value": item.value
+                    ] as [String: Any]
+                }
+
+                maLines.append([
+                    "period": line.period,
+                    "color": line.colorHex,
+                    "lineWidth": line.lineWidth,
+                    "data": jsData
+                ])
+            }
+
+            guard !maLines.isEmpty else {
+                clearMovingAverages(into: webView)
+                return
+            }
+
+            // Convert to JSON
+            if let jsonData = try? JSONSerialization.data(withJSONObject: maLines),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                let js = "setMovingAverages('\(jsonString.replacingOccurrences(of: "'", with: "\\'"))')"
+                webView.evaluateJavaScript(js, completionHandler: nil)
+            }
+        }
+
+        func clearMovingAverages(into webView: WKWebView) {
+            let js = "clearMovingAverages()"
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+
+        func injectExponentialMovingAverages(
+            candles: [Candle],
+            maCalculationCandles: [Candle]?,
+            configuration: EMAIndicatorConfiguration,
+            into webView: WKWebView
+        ) {
+            let calcCandles = maCalculationCandles ?? candles
+            guard !candles.isEmpty, !configuration.lines.isEmpty else {
+                clearExponentialMovingAverages(into: webView)
+                return
+            }
+
+            var emaLines: [[String: Any]] = []
+
+            for line in configuration.lines {
+                let emaData = TechnicalIndicatorCalculator.emaTimeSeries(
+                    candles: calcCandles,
+                    period: line.period,
+                    priceSource: line.priceSource
+                )
+                let displayStart = candles.first?.timestamp ?? Date.distantPast
+                let filteredEmaData = emaData.filter { $0.timestamp >= displayStart }
+                guard !filteredEmaData.isEmpty else { continue }
+
+                let jsData = filteredEmaData.map { item in
+                    [
+                        "time": Int(item.timestamp.timeIntervalSince1970),
+                        "value": item.value
+                    ] as [String: Any]
+                }
+
+                emaLines.append([
+                    "period": line.period,
+                    "color": line.colorHex,
+                    "lineWidth": line.lineWidth,
+                    "data": jsData
+                ])
+            }
+
+            guard !emaLines.isEmpty else {
+                clearExponentialMovingAverages(into: webView)
+                return
+            }
+
+            // Convert to JSON
+            if let jsonData = try? JSONSerialization.data(withJSONObject: emaLines),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                let js = "setExponentialMovingAverages('\(jsonString.replacingOccurrences(of: "'", with: "\\'"))')"
+                webView.evaluateJavaScript(js, completionHandler: nil)
+            }
+        }
+
+        func clearExponentialMovingAverages(into webView: WKWebView) {
+            let js = "clearExponentialMovingAverages()"
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+
+        func injectVolumeData(_ candles: [Candle], into webView: WKWebView, completion: (() -> Void)? = nil) {
+            guard !candles.isEmpty else { completion?(); return }
+            let jsData = buildVolumeJSArray(candles)
+            let js = "setVolumeData('[\(jsData)]')"
+            webView.evaluateJavaScript(js) { _, _ in
+                DispatchQueue.main.async {
+                    completion?()
+                }
+            }
+        }
+
+        func injectOlderVolumeData(_ candles: [Candle], into webView: WKWebView) {
+            guard !candles.isEmpty else { return }
+            let jsData = buildVolumeJSArray(candles)
+            let js = "appendOlderVolumeData('[\(jsData)]')"
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+
+        func clearVolume(into webView: WKWebView) {
+            let js = "clearVolume()"
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+
+        func injectVolumeMA(
+            candles: [Candle],
+            maCalculationCandles: [Candle]?,
+            configuration: VolumeMAConfiguration,
+            into webView: WKWebView
+        ) {
+            let line = configuration.line
+            guard line.isEnabled, !candles.isEmpty else {
+                clearVolumeMA(into: webView)
+                return
+            }
+
+            let calcCandles = maCalculationCandles ?? candles
+            let smaData = TechnicalIndicatorCalculator.volumeSmaTimeSeries(candles: calcCandles, period: line.period)
+            let displayStart = candles.first?.timestamp ?? Date.distantPast
+            let filteredSmaData = smaData.filter { $0.timestamp >= displayStart }
+            guard !filteredSmaData.isEmpty else {
+                clearVolumeMA(into: webView)
+                return
+            }
+
+            let jsData = filteredSmaData.map { item in
+                ["time": Int(item.timestamp.timeIntervalSince1970), "value": item.value] as [String: Any]
+            }
+
+            let payload: [String: Any] = [
+                "color": line.colorHex,
+                "lineWidth": line.lineWidth,
+                "data": jsData
+            ]
+
+            if let jsonData = try? JSONSerialization.data(withJSONObject: payload),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                let js = "setVolumeMA('\(jsonString.replacingOccurrences(of: "'", with: "\\'"))')"
+                webView.evaluateJavaScript(js, completionHandler: nil)
+            }
+        }
+
+        func clearVolumeMA(into webView: WKWebView) {
+            let js = "clearVolumeMA()"
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+
+        func injectRSI(
+            candles: [Candle],
+            maCalculationCandles: [Candle]?,
+            configuration: RSIConfiguration,
+            isVolumeEnabled: Bool,
+            into webView: WKWebView
+        ) {
+            guard configuration.line.isEnabled, !candles.isEmpty else {
+                clearRSI(into: webView)
+                return
+            }
+
+            let calcCandles = maCalculationCandles ?? candles
+            let rsiData = TechnicalIndicatorCalculator.rsiTimeSeries(
+                candles: calcCandles,
+                period: configuration.line.period
+            )
+            let displayStart = candles.first?.timestamp ?? Date.distantPast
+            let filteredData = rsiData.filter { $0.timestamp >= displayStart }
+            guard !filteredData.isEmpty else {
+                clearRSI(into: webView)
+                return
+            }
+
+            let jsData = filteredData.map { item in
+                ["time": Int(item.timestamp.timeIntervalSince1970), "value": item.value] as [String: Any]
+            }
+
+            let payload: [String: Any] = [
+                "data": jsData,
+                "lineColor": configuration.line.colorHex,
+                "lineWidth": configuration.line.lineWidth,
+                "upperEnabled": configuration.upperLevel.isEnabled,
+                "upperValue": configuration.upperLevel.value,
+                "middleEnabled": configuration.middleLevel.isEnabled,
+                "middleValue": configuration.middleLevel.value,
+                "lowerEnabled": configuration.lowerLevel.isEnabled,
+                "lowerValue": configuration.lowerLevel.value,
+                "bgEnabled": configuration.background.isEnabled,
+                "bgColor": configuration.background.colorHex,
+                "volumeEnabled": isVolumeEnabled
+            ]
+
+            if let jsonData = try? JSONSerialization.data(withJSONObject: payload),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                let js = "setRSIData('\(jsonString.replacingOccurrences(of: "'", with: "\\'"))')"
+                webView.evaluateJavaScript(js, completionHandler: nil)
+            }
+        }
+
+        func clearRSI(into webView: WKWebView) {
+            let js = "clearRSI()"
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+
+        func injectPaneLabels(
+            isVolumeEnabled: Bool,
+            volumeMAConfiguration: VolumeMAConfiguration?,
+            isRSIEnabled: Bool,
+            rsiConfiguration: RSIConfiguration?,
+            into webView: WKWebView
+        ) {
+            var items: [[String: Any]] = []
+
+            if isVolumeEnabled {
+                var values: [[String: Any]] = []
+                if let volumeMA = volumeMAConfiguration, volumeMA.line.isEnabled {
+                    values.append(["period": volumeMA.line.period, "colorHex": volumeMA.line.colorHex])
+                }
+                items.append(["paneIndex": 1, "label": "거래량", "values": values])
+            }
+
+            if isRSIEnabled, let rsiConfig = rsiConfiguration {
+                let rsiPaneIndex = isVolumeEnabled ? 2 : 1
+                let values: [[String: Any]] = [["period": rsiConfig.line.period, "colorHex": rsiConfig.line.colorHex]]
+                items.append(["paneIndex": rsiPaneIndex, "label": "RSI", "values": values])
+            }
+
+            guard !items.isEmpty,
+                  let jsonData = try? JSONSerialization.data(withJSONObject: items),
+                  let jsonString = String(data: jsonData, encoding: .utf8) else {
+                webView.evaluateJavaScript("clearPaneLabels()", completionHandler: nil)
+                return
+            }
+
+            let escaped = jsonString.replacingOccurrences(of: "'", with: "\\'")
+            webView.evaluateJavaScript("updatePaneLabels('\(escaped)')", completionHandler: nil)
+        }
+
         private func buildJSArray(_ candles: [Candle]) -> String {
             candles.map { c in
                 let time = Int(c.timestamp.timeIntervalSince1970)
                 return "{\"time\":\(time),\"open\":\(c.open),\"high\":\(c.high),\"low\":\(c.low),\"close\":\(c.close)}"
+            }.joined(separator: ",")
+        }
+
+        private func buildVolumeJSArray(_ candles: [Candle]) -> String {
+            candles.map { c in
+                let time = Int(c.timestamp.timeIntervalSince1970)
+                let color = c.close >= c.open ? bodyUpColorHex : bodyDownColorHex
+                return "{\"time\":\(time),\"value\":\(c.volume),\"color\":\"\(color)\"}"
             }.joined(separator: ",")
         }
     }

@@ -16,9 +16,7 @@ enum BadgeResetService {
     static func reset() async {
         do {
             _ = try await functions.httpsCallable("resetBadgeCount").call()
-        } catch {
-            print("<< [BadgeResetService] 뱃지 리셋 실패: \(error)")
-        }
+        } catch { }
 
         try? await UNUserNotificationCenter.current().setBadgeCount(0)
     }
@@ -26,9 +24,7 @@ enum BadgeResetService {
     static func decrement() async {
         do {
             _ = try await functions.httpsCallable("decrementBadgeCount").call()
-        } catch {
-            print("<< [BadgeResetService] 뱃지 감소 실패: \(error)")
-        }
+        } catch { }
 
         let current = await MainActor.run { UIApplication.shared.applicationIconBadgeNumber }
         try? await UNUserNotificationCenter.current().setBadgeCount(max(0, current - 1))

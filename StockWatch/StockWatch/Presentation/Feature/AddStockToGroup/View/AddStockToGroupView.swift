@@ -16,7 +16,6 @@ struct AddStockToGroupView: View {
 
     init(groupName: String, onConfirm: @escaping ([SearchResult], [String: String]) -> Void) {
         self.groupName = groupName
-        print("<< [AddStockToGroupView] init - groupName: \(groupName)")
         _store = StateObject(wrappedValue: AddStockToGroupStore(
             tickerUseCase: TickerUseCase(repository: CompositeTickerRepository()),
             fetchLogoUseCase: FetchStockLogoUseCase(repository: StockLogoRepository()),
@@ -27,8 +26,7 @@ struct AddStockToGroupView: View {
     var body: some View {
         VStack(spacing: 0) {
             FilledSearchBar(text: $searchText)
-                .onChange(of: searchText) { oldValue, newValue in
-                    print("<< [AddStockToGroupView] onChange triggered - oldValue: '\(oldValue)' newValue: '\(newValue)'")
+                .onChange(of: searchText) { _, newValue in
                     store.action(.search(newValue))
                 }
 

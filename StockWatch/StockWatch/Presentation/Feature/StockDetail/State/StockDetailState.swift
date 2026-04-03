@@ -65,6 +65,8 @@ struct StockDetailState: Equatable {
     var isFavorite: Bool
     /// 전략 적용 화면 표시 여부
     var isShowingApplyStrategy: Bool
+    /// 기술적 지표 설정 화면 표시 여부
+    var isShowingIndicatorSettings: Bool
     /// 관심 종목 그룹 선택 모달 표시 여부
     var isShowingFavoriteModal: Bool
     /// 캔들스틱 차트 데이터 (nil이면 차트 미표시)
@@ -87,6 +89,26 @@ struct StockDetailState: Equatable {
     var toastMessage: String?
     /// 되돌리기용 삭제 정보
     var undoInfo: UndoFavoriteInfo?
+    /// 이동평균선 설정
+    var maConfiguration: MAIndicatorConfiguration?
+    /// 이동평균선 활성화 여부
+    var isMAEnabled: Bool
+    /// MA 계산 전용 캔들 (warmup 포함 전체). nil이면 candlestickData.candles로 계산
+    var maCalculationCandles: [Candle]?
+    /// 지수이동평균선 설정
+    var emaConfiguration: EMAIndicatorConfiguration?
+    /// 지수이동평균선 활성화 여부
+    var isEMAEnabled: Bool
+    /// 거래량 차트 활성화 여부
+    var isVolumeEnabled: Bool
+    /// 거래량 이동평균선 설정
+    var volumeMAConfiguration: VolumeMAConfiguration?
+    /// RSI 활성화 여부
+    var isRSIEnabled: Bool
+    /// RSI 설정
+    var rsiConfiguration: RSIConfiguration?
+    /// 차트 상단 지표 라벨 펼침 여부
+    var isIndicatorLabelExpanded: Bool
 
     init(ticker: String) {
         self.ticker = ticker
@@ -99,6 +121,7 @@ struct StockDetailState: Equatable {
         self.errorMessage = nil
         self.isFavorite = false
         self.isShowingApplyStrategy = false
+        self.isShowingIndicatorSettings = false
         self.isShowingFavoriteModal = false
         self.candlestickData = nil
         self.isChartLoading = false
@@ -110,6 +133,16 @@ struct StockDetailState: Equatable {
         self.isShowingToast = false
         self.toastMessage = nil
         self.undoInfo = nil
+        self.maConfiguration = nil
+        self.isMAEnabled = false
+        self.maCalculationCandles = nil
+        self.emaConfiguration = nil
+        self.isEMAEnabled = false
+        self.isVolumeEnabled = false
+        self.volumeMAConfiguration = nil
+        self.isRSIEnabled = false
+        self.rsiConfiguration = nil
+        self.isIndicatorLabelExpanded = false
     }
 
     /// 가격 표시 문자열 (예: "₩193,900", "$150.25", "¥2,500"), 소수점 셋째자리에서 반올림
@@ -137,5 +170,25 @@ struct StockDetailState: Equatable {
     /// 아바타에 표시할 이니셜 (티커 앞 2글자, 예: "AA")
     var initials: String {
         String(ticker.prefix(2)).uppercased()
+    }
+
+    /// 차트 상단 오버레이에 표시할 활성화된 지표 라벨 목록
+    var upperIndicatorLabels: [UpperIndicatorLabel] {
+        var labels: [UpperIndicatorLabel] = []
+        if isMAEnabled, let config = maConfiguration, !config.lines.isEmpty {
+            labels.append(UpperIndicatorLabel(
+                id: TechnicalIndicator.movingAverage.rawValue,
+                name: TechnicalIndicator.movingAverage.title,
+                values: config.lines.map { IndicatorValue(period: $0.period, colorHex: $0.colorHex) }
+            ))
+        }
+        if isEMAEnabled, let config = emaConfiguration, !config.lines.isEmpty {
+            labels.append(UpperIndicatorLabel(
+                id: TechnicalIndicator.exponentialMovingAverage.rawValue,
+                name: TechnicalIndicator.exponentialMovingAverage.title,
+                values: config.lines.map { IndicatorValue(period: $0.period, colorHex: $0.colorHex) }
+            ))
+        }
+        return labels
     }
 }

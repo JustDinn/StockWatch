@@ -94,6 +94,15 @@ private struct StockDetailContentView: View {
                         LightweightChartView(
                             candles: data.candles,
                             olderCandles: state.pendingOlderCandles,
+                            maCalculationCandles: state.maCalculationCandles,
+                            maConfiguration: state.maConfiguration,
+                            isMAEnabled: state.isMAEnabled,
+                            emaConfiguration: state.emaConfiguration,
+                            isEMAEnabled: state.isEMAEnabled,
+                            isVolumeEnabled: state.isVolumeEnabled,
+                            volumeMAConfiguration: state.volumeMAConfiguration,
+                            isRSIEnabled: state.isRSIEnabled,
+                            rsiConfiguration: state.rsiConfiguration,
                             onReachedLeftEdge: { store.action(.loadOlderCandles) },
                             onOlderDataInjected: { store.action(.clearPendingOlderCandles) }
                         )
@@ -105,6 +114,13 @@ private struct StockDetailContentView: View {
                                     .fill(.ultraThinMaterial)
                                 ProgressView()
                             }
+                        }
+                        .overlay(alignment: .topLeading) {
+                            ChartIndicatorLabelView(
+                                labels: state.upperIndicatorLabels,
+                                isExpanded: state.isIndicatorLabelExpanded,
+                                onToggle: { store.action(.toggleIndicatorLabelExpanded) }
+                            )
                         }
                     } else if state.isChartLoading {
                         RoundedRectangle(cornerRadius: 12)
@@ -132,8 +148,26 @@ private struct StockDetailContentView: View {
             }
          }
          .navigationBarTitleDisplayMode(.inline)
+         .toolbar {
+             ToolbarItem(placement: .navigationBarTrailing) {
+                 Button {
+                     store.action(.navigateToIndicatorSettings)
+                 } label: {
+                     Image(systemName: "gearshape")
+                 }
+             }
+         }
          .navigationDestination(isPresented: store.isShowingApplyStrategyBinding) {
              StrategyView(ticker: store.state.ticker)
+         }
+         .navigationDestination(isPresented: store.isShowingIndicatorSettingsBinding) {
+             IndicatorSettingsView()
+         }
+         .onChange(of: store.state.isShowingIndicatorSettings) { _, newValue in
+             if !newValue {
+                 // IndicatorSettingsView가 dismiss되면 설정 리로드
+                 store.action(.reloadIndicatorSettings)
+             }
          }
          .task {
              store.action(.loadDetail)
