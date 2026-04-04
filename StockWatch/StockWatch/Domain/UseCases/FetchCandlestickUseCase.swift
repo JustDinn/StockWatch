@@ -41,15 +41,17 @@ final class FetchCandlestickUseCase: FetchCandlestickUseCaseProtocol {
             data = try await repository.fetchCandlesticks(ticker: ticker, range: "2y", interval: period.interval)
         } else if period == .year {
             // Yahoo Finance가 interval=1y를 더 이상 지원하지 않으므로
-            // interval=3mo(분기봉)로 30년치를 받아 연도별로 집계하여 년봉으로 변환
-            let period2 = Int(Date().timeIntervalSince1970)
-            let period1 = period2 - Int(60 * 60 * 24 * 365 * 30)
-            let quarterly = try await repository.fetchCandlesticks(ticker: ticker, interval: "3mo", period1: period1, period2: period2)
+            // interval=3mo(분기봉)로 받아 연도별로 집계하여 년봉으로 변환
+            // period1/period2 방식은 약 52개(13년치) 분기봉 반환 제한이 있으므로
+            // range=max 방식으로 상장일 이후 전체 분기봉을 받아 집계
+            let quarterly = try await repository.fetchCandlesticks(ticker: ticker, range: "max", interval: "3mo")
             data = aggregateToYearly(quarterly, ticker: ticker)
         } else {
             data = try await repository.fetchCandlesticks(ticker: ticker, period: period)
         }
-        let limited = Array(data.candles.suffix(totalNeeded))
+        // 년봉은 전체 데이터가 적으므로(예: NVDA 28개) suffix 없이 전체 반환
+        // suffix로 자르면 RSI 계산에 필요한 히스토리(period개)가 부족해짐
+        let limited = period == .year ? data.candles : Array(data.candles.suffix(totalNeeded))
         return CandlestickData(ticker: data.ticker, candles: limited)
     }
 
@@ -114,14 +116,10 @@ final class FetchCandlestickUseCase: FetchCandlestickUseCaseProtocol {
         let warmupInterval = intervalSeconds * Double(warmupCount) * 1.5
         let period1 = Int(before.timeIntervalSince1970 - pageInterval - warmupInterval)
 
-        // 년봉은 interval=1y 미지원 → 3mo로 받아 연도별 집계
+        // 년봉은 interval=1y 미지원 → range=max+3mo로 받아 연도별 집계
+        // period1/period2 방식은 약 52개(13년치) 제한이 있으므로 range=max 사용
         if period == .year {
-            let quarterly = try await repository.fetchCandlesticks(
-                ticker: ticker,
-                interval: "3mo",
-                period1: period1,
-                period2: period2
-            )
+            let quarterly = try await repository.fetchCandlesticks(ticker: ticker, range: "max", interval: "3mo")
             return aggregateToYearly(quarterly, ticker: ticker)
         }
 

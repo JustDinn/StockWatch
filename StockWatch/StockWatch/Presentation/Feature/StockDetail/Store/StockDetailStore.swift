@@ -177,13 +177,18 @@ extension StockDetailStore {
     }
 
     /// warmup 캔들을 MA 계산 전용으로 분리하고, display 캔들만 candlestickData에 저장
+    /// maCalculationCandles는 warmupCount와 무관하게 항상 전체 데이터를 저장:
+    /// injectRSI에서 calcCandles = maCalculationCandles ?? candles 이므로
+    /// nil이면 display candles(suffix로 잘린 일부)만으로 RSI를 계산해 값이 부족해짐
     private func applyFetchedCandles(_ data: CandlestickData, warmupCount: Int) {
         if warmupCount > 0, data.candles.count > warmupCount {
             state.maCalculationCandles = data.candles
             let displayCandles = Array(data.candles.dropFirst(warmupCount))
             state.candlestickData = CandlestickData(ticker: data.ticker, candles: displayCandles)
         } else {
-            state.maCalculationCandles = nil
+            // warmupCount=0이어도 maCalculationCandles에 전체 저장
+            // → injectRSI가 candles(suffix로 잘린 일부) 대신 전체로 RSI 계산하도록 보장
+            state.maCalculationCandles = data.candles
             state.candlestickData = data
         }
     }
@@ -191,7 +196,8 @@ extension StockDetailStore {
     private func requiredWarmupCount() -> Int {
         // 년봉/월봉은 MA warmup 불필요 (기간이 너무 길어 의미 없음)
         // 예: 200일 MA를 년봉에 적용하면 200년치 데이터 필요 → API 에러 발생
-        // 단, RSI는 년봉/월봉에서도 period(14) 정도면 충분하므로 예외적으로 허용
+        // RSI도 년봉/월봉에서는 warmup 0으로 처리:
+        // 년봉은 총 캔들 수가 적어(예: NVDA 28개) warmup 14개를 잘라내면 절반이 사라짐
         let isShortPeriod = state.selectedPeriod == .day || state.selectedPeriod == .week
 
         var periods: [Int] = [0]
@@ -199,9 +205,9 @@ extension StockDetailStore {
             if state.isMAEnabled, let config = state.maConfiguration {
                 periods.append(contentsOf: config.lines.map(\.period))
             }
-        }
-        if state.isRSIEnabled, let config = state.rsiConfiguration {
-            periods.append(config.line.period)
+            if state.isRSIEnabled, let config = state.rsiConfiguration {
+                periods.append(config.line.period)
+            }
         }
         return periods.max() ?? 0
     }
@@ -237,6 +243,11 @@ extension StockDetailStore {
                     displayOlderCandles = Array(allOlderBeforeCurrent.dropFirst(warmupCount))
                 } else {
                     displayOlderCandles = warmupCount > 0 ? [] : allOlderBeforeCurrent
+                }
+                guard !displayOlderCandles.isEmpty else {
+                    state.hasMoreOlderCandles = false
+                    state.isLoadingOlderCandles = false
+                    return
                 }
 
                 // display 캔들: older display + 기존 display (중복 제거, 시간순)
