@@ -132,12 +132,11 @@ final class FetchCandlestickUseCase: FetchCandlestickUseCaseProtocol {
             return aggregateToYearly(quarterly, ticker: ticker)
         }
 
-        let result = try await repository.fetchCandlesticks(
+        return try await repository.fetchCandlesticks(
             ticker: ticker,
             interval: period.interval,
             period1: period1,
             period2: period2
         )
-        return result
     }
 }

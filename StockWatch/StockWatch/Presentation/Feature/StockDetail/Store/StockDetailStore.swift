@@ -220,31 +220,22 @@ extension StockDetailStore {
         state.isLoadingOlderCandles = true
         state.pendingOlderCandles = nil
 
-        let warmupCount = requiredWarmupCount()
-
         do {
+            // warmupCount=0: display 스크롤용 과거 데이터 조회에 warmup 불필요
+            // MA 계산용 warmup은 prefetchOlderCandlesIfNeeded()에서 이미 확보됨
             let olderData = try await fetchCandlestickUseCase.fetchOlderCandles(
                 ticker: state.ticker,
                 period: state.selectedPeriod,
                 before: oldestCandle.timestamp,
-                warmupCount: warmupCount
+                warmupCount: 0
             )
             guard !Task.isCancelled else { return }
 
             if olderData.candles.isEmpty {
                 state.hasMoreOlderCandles = false
             } else {
-                // warmup 부분과 display 부분을 분리
-                // olderData.candles는 (warmup 포함) before 이전 데이터
-                // before 이전 캔들만 display에 포함 (중복 제거를 위해 timestamp 기준)
                 let beforeTimestamp = oldestCandle.timestamp
-                let allOlderBeforeCurrent = olderData.candles.filter { $0.timestamp < beforeTimestamp }
-                let displayOlderCandles: [Candle]
-                if warmupCount > 0, allOlderBeforeCurrent.count > warmupCount {
-                    displayOlderCandles = Array(allOlderBeforeCurrent.dropFirst(warmupCount))
-                } else {
-                    displayOlderCandles = warmupCount > 0 ? [] : allOlderBeforeCurrent
-                }
+                let displayOlderCandles = olderData.candles.filter { $0.timestamp < beforeTimestamp }
                 guard !displayOlderCandles.isEmpty else {
                     state.hasMoreOlderCandles = false
                     state.isLoadingOlderCandles = false
@@ -259,7 +250,7 @@ extension StockDetailStore {
                     .values
                     .sorted { $0.timestamp < $1.timestamp }
 
-                // MA 계산용: 전체 older(warmup 포함) + 기존 MA 캔들(warmup 포함) (중복 제거, 시간순)
+                // MA 계산용: 전체 older + 기존 MA 캔들 (중복 제거, 시간순)
                 let existingMACandles = state.maCalculationCandles ?? existingCandles
                 let mergedForMA = (olderData.candles + existingMACandles)
                     .reduce(into: [Date: Candle]()) { dict, candle in

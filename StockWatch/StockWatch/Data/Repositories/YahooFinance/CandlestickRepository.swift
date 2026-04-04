@@ -3,6 +3,8 @@
 //  StockWatch
 //
 
+import Foundation
+
 final class CandlestickRepository: CandlestickRepositoryProtocol {
 
     private let networkService: NetworkServiceProtocol
