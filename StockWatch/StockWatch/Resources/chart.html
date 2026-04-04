@@ -165,7 +165,7 @@
             lineWidth: line.lineWidth,
             priceLineVisible: false,
             lastValueVisible: false
-          });
+          }, 0);
           series.setData(line.data);
           maSeriesMap[line.period] = series;
         }
@@ -192,7 +192,7 @@
             lineWidth: line.lineWidth,
             priceLineVisible: false,
             lastValueVisible: false
-          });
+          }, 0);
           series.setData(line.data);
           emaSeriesMap[line.period] = series;
         }

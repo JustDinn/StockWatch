@@ -30,7 +30,6 @@ final class FetchCandlestickUseCase: FetchCandlestickUseCaseProtocol {
     private let defaultWeeklyCapacity = 104
     /// 월봉 기본 range("5y")로 확보 가능한 근사 캔들 수
     private let defaultMonthlyCapacity = 60
-
     private let repository: CandlestickRepositoryProtocol
 
     init(repository: CandlestickRepositoryProtocol) {
