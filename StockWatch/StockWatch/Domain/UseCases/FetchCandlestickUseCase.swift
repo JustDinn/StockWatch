@@ -26,6 +26,10 @@ final class FetchCandlestickUseCase: FetchCandlestickUseCaseProtocol {
     private let initialCandleCount = 20
     /// 일봉 기본 range("6mo")로 확보 가능한 근사 캔들 수
     private let defaultDailyCapacity = 125
+    /// 주봉 기본 range("2y")로 확보 가능한 근사 캔들 수
+    private let defaultWeeklyCapacity = 104
+    /// 월봉 기본 range("5y")로 확보 가능한 근사 캔들 수
+    private let defaultMonthlyCapacity = 60
 
     private let repository: CandlestickRepositoryProtocol
 
@@ -39,6 +43,12 @@ final class FetchCandlestickUseCase: FetchCandlestickUseCaseProtocol {
         let data: CandlestickData
         if period == .day && totalNeeded > defaultDailyCapacity {
             data = try await repository.fetchCandlesticks(ticker: ticker, range: "2y", interval: period.interval)
+        } else if period == .week && totalNeeded > defaultWeeklyCapacity {
+            // 주봉 2y=~104개로 부족할 때 5y=~260개로 확장
+            data = try await repository.fetchCandlesticks(ticker: ticker, range: "5y", interval: period.interval)
+        } else if period == .month && totalNeeded > defaultMonthlyCapacity {
+            // 월봉 5y=~60개로 부족할 때 10y=~120개로 확장
+            data = try await repository.fetchCandlesticks(ticker: ticker, range: "10y", interval: period.interval)
         } else if period == .year {
             // Yahoo Finance가 interval=1y를 더 이상 지원하지 않으므로
             // interval=3mo(분기봉)로 받아 연도별로 집계하여 년봉으로 변환
