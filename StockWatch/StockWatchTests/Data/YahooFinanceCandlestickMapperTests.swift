@@ -144,6 +144,52 @@ final class YahooFinanceCandlestickMapperTests: XCTestCase {
         XCTAssertEqual(result.candles[0].volume, 1_100_000.0)
     }
 
+    // 월봉: 같은 달(2026-04) 다른 날짜 타임스탬프 → 1개 캔들로 중복 제거, 마지막 값 사용
+    func test_map_sameMonthDifferentDayTimestamps_deduplicatedToLastValue() {
+        // Given: 2026-04-01 00:00 ET (월 시작 스냅샷) vs 2026-04-02 14:30 ET (장중 확정)
+        let monthStartTimestamp: TimeInterval = 1_775_016_000  // 2026-04-01 00:00 ET
+        let midMonthTimestamp: TimeInterval   = 1_775_154_600  // 2026-04-02 14:30 ET
+        let dto = makeDTO(
+            timestamps: [monthStartTimestamp, midMonthTimestamp],
+            opens:   [200.0, 201.0],
+            highs:   [210.0, 211.0],
+            lows:    [195.0, 196.0],
+            closes:  [205.0, 208.0],
+            volumes: [5_000_000.0, 5_500_000.0]
+        )
+
+        // When
+        let result = sut.map(dto: dto, ticker: "AAPL", interval: "1mo")
+
+        // Then: 중복 제거로 1개 캔들만 반환, 마지막 데이터(최신) 값 사용
+        XCTAssertEqual(result.candles.count, 1)
+        XCTAssertEqual(result.candles[0].close, 208.0)
+        XCTAssertEqual(result.candles[0].volume, 5_500_000.0)
+    }
+
+    // 주봉: 같은 주(2026-03-30 주) 다른 날짜 타임스탬프 → 1개 캔들로 중복 제거, 마지막 값 사용
+    func test_map_sameWeekDifferentDayTimestamps_deduplicatedToLastValue() {
+        // Given: 2026-03-30 00:00 ET (주 시작 월요일) vs 2026-04-02 14:30 ET (같은 주 목요일)
+        let weekStartTimestamp: TimeInterval = 1_774_843_200  // 2026-03-30 00:00 ET (Mon)
+        let midWeekTimestamp: TimeInterval   = 1_775_154_600  // 2026-04-02 14:30 ET (Thu)
+        let dto = makeDTO(
+            timestamps: [weekStartTimestamp, midWeekTimestamp],
+            opens:   [200.0, 201.0],
+            highs:   [210.0, 212.0],
+            lows:    [195.0, 196.0],
+            closes:  [205.0, 209.0],
+            volumes: [3_000_000.0, 3_200_000.0]
+        )
+
+        // When
+        let result = sut.map(dto: dto, ticker: "AAPL", interval: "1wk")
+
+        // Then: 중복 제거로 1개 캔들만 반환, 마지막 데이터(최신) 값 사용
+        XCTAssertEqual(result.candles.count, 1)
+        XCTAssertEqual(result.candles[0].close, 209.0)
+        XCTAssertEqual(result.candles[0].volume, 3_200_000.0)
+    }
+
     // result가 nil → 빈 캔들 반환
     func test_map_withNilResult_returnsEmptyCandlestickData() {
         // Given
