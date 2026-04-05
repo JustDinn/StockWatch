@@ -77,6 +77,10 @@ final class StockDetailStore: ObservableObject {
             state.hasMoreOlderCandles = true
             state.isLoadingOlderCandles = false
             state.pendingOlderCandles = nil
+            state.candlestickData = nil
+            state.maCalculationCandles = nil
+            state.isChartLoading = true
+            state.chartErrorMessage = nil
             chartTask?.cancel()
             chartTask = Task { await reloadChart(period: period) }
         case .loadOlderCandles:
@@ -173,62 +177,73 @@ extension StockDetailStore {
     }
 
     /// warmup 캔들을 MA 계산 전용으로 분리하고, display 캔들만 candlestickData에 저장
+    /// maCalculationCandles는 warmupCount와 무관하게 항상 전체 데이터를 저장:
+    /// injectRSI에서 calcCandles = maCalculationCandles ?? candles 이므로
+    /// nil이면 display candles(suffix로 잘린 일부)만으로 RSI를 계산해 값이 부족해짐
     private func applyFetchedCandles(_ data: CandlestickData, warmupCount: Int) {
         if warmupCount > 0, data.candles.count > warmupCount {
             state.maCalculationCandles = data.candles
             let displayCandles = Array(data.candles.dropFirst(warmupCount))
             state.candlestickData = CandlestickData(ticker: data.ticker, candles: displayCandles)
         } else {
-            state.maCalculationCandles = nil
-            state.candlestickData = data
+            // warmupCount=0이거나 데이터가 warmupCount보다 적어 warmup 분리 불가한 경우
+            // maCalculationCandles에 전체 저장 → MA/RSI 계산 정확도 보장
+            // display는 최근 20개만 표시 → 일봉/주봉과 동일한 UX
+            // (MA 포인트가 display 캔들 전체를 커버하도록 보장)
+            state.maCalculationCandles = data.candles
+            let displayCandles = Array(data.candles.suffix(20))
+            state.candlestickData = CandlestickData(ticker: data.ticker, candles: displayCandles)
         }
     }
 
     private func requiredWarmupCount() -> Int {
+        // 년봉은 MA warmup 불필요 (총 캔들 수가 적어(예: NVDA 28개) warmup을 잘라내면 절반이 사라짐)
+        // 월봉은 warmup 적용: period=100, 200 등 긴 MA를 계산하려면 10y 범위 확장이 필요
+        let isShortPeriod = state.selectedPeriod == .day || state.selectedPeriod == .week || state.selectedPeriod == .month
+
         var periods: [Int] = [0]
-        if state.isMAEnabled, let config = state.maConfiguration {
-            periods.append(contentsOf: config.lines.map(\.period))
-        }
-        if state.isRSIEnabled, let config = state.rsiConfiguration {
-            periods.append(config.line.period)
+        if isShortPeriod {
+            if state.isMAEnabled, let config = state.maConfiguration {
+                periods.append(contentsOf: config.lines.map(\.period))
+            }
+            if state.isEMAEnabled, let config = state.emaConfiguration {
+                periods.append(contentsOf: config.lines.map(\.period))
+            }
+            if state.isRSIEnabled, let config = state.rsiConfiguration {
+                periods.append(config.line.period)
+            }
         }
         return periods.max() ?? 0
     }
 
     private func loadOlderCandles() async {
         guard let existingCandles = state.candlestickData?.candles,
-              let oldestCandle = existingCandles.first else { return }
+              let oldestDisplayCandle = existingCandles.first else { return }
 
         state.isLoadingOlderCandles = true
         state.pendingOlderCandles = nil
 
-        let warmupCount = requiredWarmupCount()
-
         do {
+            // display용: display candles의 oldest 기준으로 과거 데이터 요청
             let olderData = try await fetchCandlestickUseCase.fetchOlderCandles(
                 ticker: state.ticker,
                 period: state.selectedPeriod,
-                before: oldestCandle.timestamp,
-                warmupCount: warmupCount
+                before: oldestDisplayCandle.timestamp,
+                warmupCount: 0
             )
             guard !Task.isCancelled else { return }
 
             if olderData.candles.isEmpty {
                 state.hasMoreOlderCandles = false
             } else {
-                // warmup 부분과 display 부분을 분리
-                // olderData.candles는 (warmup 포함) before 이전 데이터
-                // before 이전 캔들만 display에 포함 (중복 제거를 위해 timestamp 기준)
-                let beforeTimestamp = oldestCandle.timestamp
-                let allOlderBeforeCurrent = olderData.candles.filter { $0.timestamp < beforeTimestamp }
-                let displayOlderCandles: [Candle]
-                if warmupCount > 0, allOlderBeforeCurrent.count > warmupCount {
-                    displayOlderCandles = Array(allOlderBeforeCurrent.dropFirst(warmupCount))
-                } else {
-                    displayOlderCandles = warmupCount > 0 ? [] : allOlderBeforeCurrent
+                let displayOlderCandles = olderData.candles.filter { $0.timestamp < oldestDisplayCandle.timestamp }
+                guard !displayOlderCandles.isEmpty else {
+                    state.hasMoreOlderCandles = false
+                    state.isLoadingOlderCandles = false
+                    return
                 }
 
-                // display 캔들: older display + 기존 display (중복 제거, 시간순)
+                // display 캔들 merge (기존과 동일)
                 let mergedDisplay = (displayOlderCandles + existingCandles)
                     .reduce(into: [Date: Candle]()) { dict, candle in
                         dict[candle.timestamp] = candle
@@ -236,9 +251,22 @@ extension StockDetailStore {
                     .values
                     .sorted { $0.timestamp < $1.timestamp }
 
-                // MA 계산용: 전체 older(warmup 포함) + 기존 MA 캔들(warmup 포함) (중복 제거, 시간순)
+                // MA 계산용: maCalculationCandles의 oldest 기준으로 별도 API 호출
+                // (display oldest와 maCalc oldest가 다를 수 있어 — warmup으로 이미 더 과거를 보유 중)
                 let existingMACandles = state.maCalculationCandles ?? existingCandles
-                let mergedForMA = (olderData.candles + existingMACandles)
+                var maOlderCandles: [Candle] = []
+                if let oldestMACandle = existingMACandles.first {
+                    let olderMAData = try await fetchCandlestickUseCase.fetchOlderCandles(
+                        ticker: state.ticker,
+                        period: state.selectedPeriod,
+                        before: oldestMACandle.timestamp,
+                        warmupCount: 0
+                    )
+                    guard !Task.isCancelled else { return }
+                    maOlderCandles = olderMAData.candles.filter { $0.timestamp < oldestMACandle.timestamp }
+                }
+
+                let mergedForMA = (maOlderCandles + existingMACandles)
                     .reduce(into: [Date: Candle]()) { dict, candle in
                         dict[candle.timestamp] = candle
                     }
@@ -256,6 +284,41 @@ extension StockDetailStore {
         state.isLoadingOlderCandles = false
     }
 
+    /// MA 계산에 필요한 캔들 수가 부족할 때 자동으로 과거 데이터를 프리패치한다.
+    /// API 한계로 초기 로드 시 충분한 데이터를 받지 못한 경우(예: 월봉 MA200)에 사용.
+    /// display 캔들은 건드리지 않고 maCalculationCandles만 확장한다.
+    private func prefetchOlderCandlesIfNeeded(requiredCount: Int) async {
+        guard requiredCount > 0 else { return }
+        let maxIterations = 5
+        var iterations = 0
+        while let maCandles = state.maCalculationCandles,
+              maCandles.count < requiredCount,
+              !Task.isCancelled,
+              iterations < maxIterations {
+            guard let oldest = maCandles.first else { break }
+            do {
+                let olderData = try await fetchCandlestickUseCase.fetchOlderCandles(
+                    ticker: state.ticker,
+                    period: state.selectedPeriod,
+                    before: oldest.timestamp,
+                    warmupCount: 0
+                )
+                guard !Task.isCancelled else { return }
+                guard !olderData.candles.isEmpty else { break }
+                // MA 계산용 캔들만 병합 (display 캔들은 변경하지 않음)
+                let existingMACandles = state.maCalculationCandles ?? []
+                let merged = (olderData.candles + existingMACandles)
+                    .reduce(into: [Date: Candle]()) { dict, candle in dict[candle.timestamp] = candle }
+                    .values
+                    .sorted { $0.timestamp < $1.timestamp }
+                state.maCalculationCandles = merged
+            } catch {
+                break
+            }
+            iterations += 1
+        }
+    }
+
     private func reloadChart(period: ChartPeriod) async {
         state.isChartLoading = true
         state.chartErrorMessage = nil
@@ -265,6 +328,9 @@ extension StockDetailStore {
         case .success(let data):
             guard !Task.isCancelled else { return }
             applyFetchedCandles(data, warmupCount: warmupCount)
+            // MA 계산에 필요한 캔들이 부족하면 자동으로 과거 데이터를 추가 로드
+            // (예: 월봉 MA200은 200개 필요하지만 API 최대 121개 반환 → 자동 프리패치)
+            await prefetchOlderCandlesIfNeeded(requiredCount: warmupCount)
         case .failure(let error):
             guard !Task.isCancelled else { return }
             state.chartErrorMessage = error.localizedDescription

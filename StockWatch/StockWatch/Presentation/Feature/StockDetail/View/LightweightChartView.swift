@@ -415,6 +415,8 @@ extension LightweightChartView {
                 return
             }
 
+            let displayStart = candles.first?.timestamp ?? Date.distantPast
+
             var maLines: [[String: Any]] = []
 
             for line in configuration.lines {
@@ -423,7 +425,6 @@ extension LightweightChartView {
                     period: line.period,
                     priceSource: line.priceSource
                 )
-                let displayStart = candles.first?.timestamp ?? Date.distantPast
                 let filteredSmaData = smaData.filter { $0.timestamp >= displayStart }
                 guard !filteredSmaData.isEmpty else { continue }
 
@@ -472,6 +473,8 @@ extension LightweightChartView {
                 return
             }
 
+            let displayStart = candles.first?.timestamp ?? Date.distantPast
+
             var emaLines: [[String: Any]] = []
 
             for line in configuration.lines {
@@ -480,7 +483,6 @@ extension LightweightChartView {
                     period: line.period,
                     priceSource: line.priceSource
                 )
-                let displayStart = candles.first?.timestamp ?? Date.distantPast
                 let filteredEmaData = emaData.filter { $0.timestamp >= displayStart }
                 guard !filteredEmaData.isEmpty else { continue }
 
