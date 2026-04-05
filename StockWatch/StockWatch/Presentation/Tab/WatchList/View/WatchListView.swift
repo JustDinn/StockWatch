@@ -781,13 +781,15 @@ private struct WatchListStockRow: View {
     let onRemove: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             logoView
             nameColumn
-            Spacer()
+                .frame(minWidth: 80, maxWidth: 120, alignment: .leading)
+            Spacer(minLength: 8)
             sparklineColumn
-            Spacer()
+            Spacer(minLength: 8)
             priceColumn
+                .frame(width: 90, alignment: .trailing)
             heartButton
         }
         .padding(.horizontal, 16)
