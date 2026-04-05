@@ -206,6 +206,9 @@ extension StockDetailStore {
             if state.isMAEnabled, let config = state.maConfiguration {
                 periods.append(contentsOf: config.lines.map(\.period))
             }
+            if state.isEMAEnabled, let config = state.emaConfiguration {
+                periods.append(contentsOf: config.lines.map(\.period))
+            }
             if state.isRSIEnabled, let config = state.rsiConfiguration {
                 periods.append(config.line.period)
             }
