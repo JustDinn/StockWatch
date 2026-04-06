@@ -745,7 +745,7 @@ private struct WatchListSortHeaderView: View {
             }
             Color.clear.frame(width: 26)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 20)
         .padding(.vertical, 8)
     }
 
@@ -818,6 +818,7 @@ private struct WatchListStockRow: View {
                 .font(.pretendard(size: 18))
         }
         .buttonStyle(.plain)
+        .frame(width: 26)
     }
 
     @ViewBuilder
