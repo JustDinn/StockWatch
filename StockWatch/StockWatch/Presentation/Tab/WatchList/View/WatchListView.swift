@@ -20,7 +20,7 @@ struct WatchListView: View {
 // MARK: - Content View
 
 private struct WatchListContentView: View {
-
+    
     @StateObject private var store: WatchListStore
     @State private var isShowingGroupManageModal = false
     @State private var isShowingAddStock = false
@@ -726,6 +726,23 @@ private struct WatchListGroupManageModalView: View {
 
 // MARK: - Sort Header
 
+// MARK: - Layout Constants
+
+private enum WatchListLayout {
+    static let logoSize: CGFloat = 44
+    static let logoTrailingPad: CGFloat = 4
+    static let rowHSpacing: CGFloat = 8
+    /// 종목명 leading offset = logo(44) + logoPad(4) + hStackSpacing(8)
+    static let nameLeadingOffset: CGFloat = logoSize + logoTrailingPad + rowHSpacing
+    static let sparklineWidth: CGFloat = 60
+    static let sparklineHeight: CGFloat = 32
+    static let priceColumnWidth: CGFloat = 52
+    static let changeColumnWidth: CGFloat = 52
+    static let columnSpacing: CGFloat = 6
+    static let heartWidth: CGFloat = 26
+    static let sparklineTrailingPad: CGFloat = 16
+}
+
 private struct WatchListSortHeaderView: View {
     let sortCriteria: WatchListSortCriteria?
     let sortDirection: WatchListSortDirection
@@ -734,12 +751,20 @@ private struct WatchListSortHeaderView: View {
     var body: some View {
         HStack(spacing: 0) {
             sortButton(label: sortCriteria == .name ? "가나다 순" : "종목", criteria: .name)
-            Spacer()
-            sortButton(label: "현재가", criteria: .price)
-            Spacer()
-            sortButton(label: "등락", criteria: .changePercent)
+                .padding(.leading, WatchListLayout.nameLeadingOffset)
+            Spacer(minLength: 0)
+            // sparkline 자리 확보 (행과 동일하게)
+            Color.clear.frame(width: WatchListLayout.sparklineWidth)
+                .padding(.trailing, WatchListLayout.sparklineTrailingPad)
+            HStack(spacing: WatchListLayout.columnSpacing) {
+                sortButton(label: "현재가", criteria: .price)
+                    .frame(width: WatchListLayout.priceColumnWidth, alignment: .leading)
+                sortButton(label: "등락", criteria: .changePercent)
+                    .frame(width: WatchListLayout.changeColumnWidth, alignment: .leading)
+            }
+            Color.clear.frame(width: WatchListLayout.heartWidth)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 20)
         .padding(.vertical, 8)
     }
 
@@ -781,18 +806,23 @@ private struct WatchListStockRow: View {
     let onRemove: () -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 0) {
             logoView
+                .padding(.trailing, WatchListLayout.logoTrailingPad + WatchListLayout.rowHSpacing)
             nameColumn
-                .frame(minWidth: 80, maxWidth: 120, alignment: .leading)
-            Spacer(minLength: 8)
+            Spacer(minLength: 0)
             sparklineColumn
-            Spacer(minLength: 8)
-            priceColumn
-                .frame(width: 90, alignment: .trailing)
+                .frame(width: WatchListLayout.sparklineWidth, height: WatchListLayout.sparklineHeight)
+                .padding(.trailing, WatchListLayout.sparklineTrailingPad)
+            HStack(spacing: WatchListLayout.columnSpacing) {
+                currentPriceColumn
+                    .frame(width: WatchListLayout.priceColumnWidth, alignment: .trailing)
+                changePercentColumn
+                    .frame(width: WatchListLayout.changeColumnWidth, alignment: .trailing)
+            }
             heartButton
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 20)
         .padding(.vertical, 12)
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
@@ -807,6 +837,7 @@ private struct WatchListStockRow: View {
                 .font(.pretendard(size: 18))
         }
         .buttonStyle(.plain)
+        .frame(width: 26)
     }
 
     @ViewBuilder
@@ -854,20 +885,31 @@ private struct WatchListStockRow: View {
                 isPositive: (quoteData?.priceChangePercent ?? 0) >= 0,
                 currentPrice: quoteData?.currentPrice
             )
-            .frame(width: 60, height: 32)
+        } else {
+            Color.clear
         }
     }
 
-    private var priceColumn: some View {
+    private var currentPriceColumn: some View {
+        VStack(alignment: .trailing, spacing: 2) {
+            if let data = quoteData {
+                Text(formattedPrice(data.currentPrice, currency: data.currency))
+                    .font(.pretendardMedium(size: 15))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+        }
+    }
+
+    private var changePercentColumn: some View {
         VStack(alignment: .trailing, spacing: 2) {
             if let data = quoteData {
                 let positive = data.priceChangePercent >= 0
                 Text(String(format: "%@%.2f%%", positive ? "+" : "", data.priceChangePercent))
                     .font(.pretendardMedium(size: 15))
                     .foregroundStyle(positive ? Color(hex: "#ef5350") : Color(hex: "#1976d2"))
-                Text(formattedPrice(data.currentPrice, currency: data.currency))
-                    .font(.pretendardCaption)
-                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
         }
     }
