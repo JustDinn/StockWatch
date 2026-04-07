@@ -15,4 +15,9 @@ extension String {
         if hasSuffix(".HNX") || hasSuffix(".HCM") { return "VND" }
         return "USD"
     }
+
+    /// 국내 주식 여부 (KOSPI: .KS, KOSDAQ: .KQ, KONEX: .KX)
+    var isDomesticTicker: Bool {
+        hasSuffix(".KS") || hasSuffix(".KQ") || hasSuffix(".KX")
+    }
 }

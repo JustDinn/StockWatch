@@ -16,19 +16,17 @@ struct ForceUpdateView: View {
 
             VStack(spacing: 16) {
                 Text("스톡워치 업데이트 안내")
-                    .font(.title3)
-                    .fontWeight(.bold)
+                    .font(.pretendardTitle3)
                     .multilineTextAlignment(.center)
 
                 Text("더 나은 서비스 이용을 위해\n최신 버전으로 업데이트 해주세요.")
-                    .font(.subheadline)
+                    .font(.pretendardSubheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
                 Button(action: onUpdate) {
                     Text("업데이트")
-                        .font(.body)
-                        .fontWeight(.semibold)
+                        .font(.pretendardSemibold(size: 17))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)

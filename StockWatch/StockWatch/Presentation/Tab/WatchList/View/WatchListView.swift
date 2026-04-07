@@ -20,7 +20,7 @@ struct WatchListView: View {
 // MARK: - Content View
 
 private struct WatchListContentView: View {
-
+    
     @StateObject private var store: WatchListStore
     @State private var isShowingGroupManageModal = false
     @State private var isShowingAddStock = false
@@ -37,7 +37,9 @@ private struct WatchListContentView: View {
             addFavoriteToGroupUseCase: AddFavoriteToGroupUseCase(repository: repository),
             fetchStockQuoteUseCase: FetchStockQuoteUseCase(repository: StockQuoteRepository()),
             fetchGroupIdsForTickerUseCase: FetchGroupIdsForTickerUseCase(repository: repository),
-            updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCase(repository: repository)
+            updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCase(repository: repository),
+            fetchSparklineUseCase: FetchSparklineUseCase(repository: CandlestickRepository()),
+            fetchExchangeRateUseCase: FetchExchangeRateUseCase(repository: ExchangeRateRepository())
         ))
     }
 
@@ -91,6 +93,17 @@ private struct WatchListContentView: View {
                 }
                 .onAppear {
                     store.action(.loadGroups)
+                }
+                .safeAreaInset(edge: .bottom) {
+                    if !store.state.dbGroups.isEmpty {
+                        WatchListMarketFilterBar(
+                            selectedFilter: store.state.marketFilter,
+                            onSelect: { store.action(.selectMarketFilter($0)) }
+                        )
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 24)
+                    }
                 }
             }
 
@@ -200,21 +213,21 @@ private struct WatchListContentView: View {
     private var emptyView: some View {
         VStack(spacing: 16) {
             Image(systemName: "heart.slash")
-                .font(.system(size: 48))
+                .font(.pretendard(size: 48))
                 .foregroundStyle(.secondary)
 
             Text("관심 종목이 없습니다")
-                .font(.headline)
+                .font(.pretendardHeadline)
                 .foregroundStyle(.secondary)
 
             Text("종목 상세 화면에서\n하트를 눌러 관심 종목을 추가해보세요")
-                .font(.subheadline)
+                .font(.pretendardSubheadline)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
 
             Button(action: { isShowingAddStock = true }) {
                 Label("추가하기", systemImage: "plus")
-                    .font(.subheadline.weight(.medium))
+                    .font(.pretendardMedium(size: 15))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
@@ -229,10 +242,16 @@ private struct WatchListContentView: View {
     private var stockList: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                ForEach(store.state.favorites, id: \.ticker) { item in
+                WatchListSortHeaderView(
+                    sortCriteria: store.state.sortCriteria,
+                    sortDirection: store.state.sortDirection,
+                    onToggle: { store.action(.toggleSort($0)) }
+                )
+                ForEach(store.sortedFavorites, id: \.ticker) { item in
                     WatchListStockRow(
                         item: item,
                         quoteData: store.state.priceData[item.ticker],
+                        sparklineData: store.state.sparklineData[item.ticker],
                         displayName: displayName(for: item),
                         onTap: { store.action(.selectTicker(item.ticker)) },
                         onRemove: { store.action(.removeFavoriteWithUndo(ticker: item.ticker)) }
@@ -266,20 +285,20 @@ private struct WatchListGroupOnboardingView: View {
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "folder.badge.plus")
-                .font(.system(size: 48))
+                .font(.pretendard(size: 48))
                 .foregroundStyle(.secondary)
 
             Text("워치리스트 그룹이 없습니다")
-                .font(.headline)
+                .font(.pretendardHeadline)
                 .foregroundStyle(.secondary)
 
             Text("그룹을 만들어 워치리스트를 구성해보세요")
-                .font(.subheadline)
+                .font(.pretendardSubheadline)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
 
             Button("그룹 만들기", action: onCreateGroup)
-                .font(.subheadline.weight(.medium))
+                .font(.pretendardMedium(size: 15))
                 .foregroundStyle(.blue)
                 .padding(.top, 4)
         }
@@ -327,7 +346,7 @@ private struct WatchListGroupTabBar: View {
                             .id(group.id)
                     }
                     Button("그룹관리", action: onAddGroup)
-                        .font(.subheadline)
+                        .font(.pretendardSubheadline)
                         .foregroundStyle(.blue)
                         .padding(.horizontal, 4)
                 }
@@ -389,7 +408,7 @@ private struct WatchListGroupTabBar: View {
         let wiggleCondition = !isDragged && isInEditMode
 
         Text(group.name)
-            .font(.subheadline.weight(isSelected ? .semibold : .regular))
+            .font(isSelected ? .pretendardSemibold(size: 15) : .pretendardSubheadline)
             .foregroundStyle(isSelected ? Color.primary : Color.secondary)
             .padding(.horizontal, 14)
             .padding(.vertical, 6)
@@ -533,7 +552,7 @@ private struct GroupNameInputModalView: View {
     var body: some View {
         VStack(spacing: 0) {
             Text(title)
-                .font(.headline)
+                .font(.pretendardHeadline)
                 .padding(.top, 24)
                 .padding(.bottom, 20)
 
@@ -573,16 +592,16 @@ private struct GroupNameInputModalView: View {
                 HStack(alignment: .top) {
                     if isShowingLimitError {
                         Text("그룹 이름은 20자 이내로 입력해주세요.")
-                            .font(.caption)
+                            .font(.pretendardCaption)
                             .foregroundStyle(.red)
                     } else if let error = errorMessage {
                         Text(error)
-                            .font(.caption)
+                            .font(.pretendardCaption)
                             .foregroundStyle(.red)
                     }
                     Spacer()
                     Text("\(name.count)/\(maxLength)")
-                        .font(.caption)
+                        .font(.pretendardCaption)
                         .foregroundStyle(isShowingLimitError ? .red : .secondary)
                 }
             }
@@ -634,10 +653,10 @@ private struct WatchListGroupManageModalView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "plus.circle.fill")
                         .foregroundStyle(.blue)
-                        .font(.title3)
+                        .font(.pretendardTitle3)
                     Text("새 그룹 추가")
                         .foregroundStyle(.blue)
-                        .font(.subheadline)
+                        .font(.pretendardSubheadline)
                     Spacer()
                 }
                 .padding(.horizontal, 20)
@@ -683,15 +702,15 @@ private struct WatchListGroupManageModalView: View {
             } label: {
                 Image(systemName: "minus.circle.fill")
                     .foregroundStyle(.red)
-                    .font(.title3)
+                    .font(.pretendardTitle3)
             }
             .buttonStyle(.plain)
             Text(group.name)
-                .font(.subheadline)
+                .font(.pretendardSubheadline)
             Button { onRenameGroup(group) } label: {
                 Image(systemName: "pencil")
                     .foregroundStyle(.secondary)
-                    .font(.subheadline)
+                    .font(.pretendardSubheadline)
             }
             .buttonStyle(.plain)
             Spacer()
@@ -705,24 +724,105 @@ private struct WatchListGroupManageModalView: View {
     }
 }
 
+// MARK: - Sort Header
+
+// MARK: - Layout Constants
+
+private enum WatchListLayout {
+    static let logoSize: CGFloat = 44
+    static let logoTrailingPad: CGFloat = 4
+    static let rowHSpacing: CGFloat = 8
+    /// 종목명 leading offset = logo(44) + logoPad(4) + hStackSpacing(8)
+    static let nameLeadingOffset: CGFloat = logoSize + logoTrailingPad + rowHSpacing
+    static let sparklineWidth: CGFloat = 60
+    static let sparklineHeight: CGFloat = 32
+    static let priceColumnWidth: CGFloat = 52
+    static let changeColumnWidth: CGFloat = 52
+    static let columnSpacing: CGFloat = 6
+    static let heartWidth: CGFloat = 26
+    static let sparklineTrailingPad: CGFloat = 16
+}
+
+private struct WatchListSortHeaderView: View {
+    let sortCriteria: WatchListSortCriteria?
+    let sortDirection: WatchListSortDirection
+    let onToggle: (WatchListSortCriteria) -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            sortButton(label: sortCriteria == .name ? "가나다 순" : "종목", criteria: .name)
+                .padding(.leading, WatchListLayout.nameLeadingOffset)
+            Spacer(minLength: 0)
+            // sparkline 자리 확보 (행과 동일하게)
+            Color.clear.frame(width: WatchListLayout.sparklineWidth)
+                .padding(.trailing, WatchListLayout.sparklineTrailingPad)
+            HStack(spacing: WatchListLayout.columnSpacing) {
+                sortButton(label: "현재가", criteria: .price)
+                    .frame(width: WatchListLayout.priceColumnWidth, alignment: .leading)
+                sortButton(label: "등락", criteria: .changePercent)
+                    .frame(width: WatchListLayout.changeColumnWidth, alignment: .leading)
+            }
+            Color.clear.frame(width: WatchListLayout.heartWidth)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 8)
+    }
+
+    private func sortButton(label: String, criteria: WatchListSortCriteria) -> some View {
+        let isActive = sortCriteria == criteria
+        return Button {
+            onToggle(criteria)
+        } label: {
+            HStack(spacing: 4) {
+                Text(label)
+                    .font(.pretendardMedium(size: 13))
+                sortIcon(isActive: isActive)
+            }
+            .foregroundStyle(isActive ? .blue : .secondary)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func sortIcon(isActive: Bool) -> some View {
+        Group {
+            if isActive {
+                Image(systemName: sortDirection == .ascending ? "arrow.up" : "arrow.down")
+            } else {
+                Image(systemName: "chevron.up.chevron.down")
+            }
+        }
+        .font(.system(size: 11, weight: .medium))
+    }
+}
+
 // MARK: - Stock Row
 
 private struct WatchListStockRow: View {
     let item: FavoriteItem
     let quoteData: StockQuote?
+    let sparklineData: SparklineData?
     let displayName: String
     let onTap: () -> Void
     let onRemove: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 0) {
             logoView
+                .padding(.trailing, WatchListLayout.logoTrailingPad + WatchListLayout.rowHSpacing)
             nameColumn
-            Spacer()
-            priceColumn
+            Spacer(minLength: 0)
+            sparklineColumn
+                .frame(width: WatchListLayout.sparklineWidth, height: WatchListLayout.sparklineHeight)
+                .padding(.trailing, WatchListLayout.sparklineTrailingPad)
+            HStack(spacing: WatchListLayout.columnSpacing) {
+                currentPriceColumn
+                    .frame(width: WatchListLayout.priceColumnWidth, alignment: .trailing)
+                changePercentColumn
+                    .frame(width: WatchListLayout.changeColumnWidth, alignment: .trailing)
+            }
             heartButton
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 20)
         .padding(.vertical, 12)
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
@@ -734,9 +834,10 @@ private struct WatchListStockRow: View {
         } label: {
             Image(systemName: "heart.fill")
                 .foregroundStyle(.red)
-                .font(.system(size: 18))
+                .font(.pretendard(size: 18))
         }
         .buttonStyle(.plain)
+        .frame(width: 26)
     }
 
     @ViewBuilder
@@ -760,7 +861,7 @@ private struct WatchListStockRow: View {
             .frame(width: size, height: size)
             .overlay(
                 Text(String(item.ticker.prefix(2)).uppercased())
-                    .font(.subheadline.bold())
+                    .font(.pretendardBold(size: 15))
                     .foregroundStyle(.blue)
             )
     }
@@ -768,24 +869,47 @@ private struct WatchListStockRow: View {
     private var nameColumn: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(displayName)
-                .font(.subheadline.weight(.medium))
+                .font(.pretendardMedium(size: 15))
                 .lineLimit(1)
             Text(item.ticker)
-                .font(.caption)
+                .font(.pretendardCaption)
                 .foregroundStyle(.secondary)
         }
     }
 
-    private var priceColumn: some View {
+    @ViewBuilder
+    private var sparklineColumn: some View {
+        if let sparkline = sparklineData, sparkline.closePrices.count >= 2 {
+            SparklineView(
+                closePrices: sparkline.closePrices,
+                isPositive: (quoteData?.priceChangePercent ?? 0) >= 0,
+                currentPrice: quoteData?.currentPrice
+            )
+        } else {
+            Color.clear
+        }
+    }
+
+    private var currentPriceColumn: some View {
+        VStack(alignment: .trailing, spacing: 2) {
+            if let data = quoteData {
+                Text(formattedPrice(data.currentPrice, currency: data.currency))
+                    .font(.pretendardMedium(size: 15))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+        }
+    }
+
+    private var changePercentColumn: some View {
         VStack(alignment: .trailing, spacing: 2) {
             if let data = quoteData {
                 let positive = data.priceChangePercent >= 0
                 Text(String(format: "%@%.2f%%", positive ? "+" : "", data.priceChangePercent))
-                    .font(.subheadline.weight(.medium))
+                    .font(.pretendardMedium(size: 15))
                     .foregroundStyle(positive ? Color(hex: "#ef5350") : Color(hex: "#1976d2"))
-                Text(formattedPrice(data.currentPrice, currency: data.currency))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
         }
     }
@@ -813,11 +937,11 @@ private struct WatchListAddStockRow: View {
                 .frame(width: 44, height: 44)
                 .overlay(
                     Image(systemName: "plus")
-                        .font(.title3.weight(.medium))
+                        .font(.pretendardMedium(size: 20))
                         .foregroundStyle(.secondary)
                 )
             Text("종목 추가하기")
-                .font(.subheadline)
+                .font(.pretendardSubheadline)
                 .foregroundStyle(.secondary)
             Spacer()
         }
@@ -825,6 +949,41 @@ private struct WatchListAddStockRow: View {
         .padding(.vertical, 12)
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
+    }
+}
+
+// MARK: - Market Filter Bar
+
+private struct WatchListMarketFilterBar: View {
+    let selectedFilter: WatchListMarketFilter
+    let onSelect: (WatchListMarketFilter) -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(WatchListMarketFilter.allCases, id: \.self) { filter in
+                Button {
+                    onSelect(filter)
+                } label: {
+                    Text(filter.rawValue)
+                        .font(selectedFilter == filter ? .pretendardBold(size: 14) : .pretendardMedium(size: 14))
+                        .foregroundStyle(selectedFilter == filter ? Color.primary : Color.secondary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            Group {
+                                if selectedFilter == filter {
+                                    Capsule()
+                                        .fill(Color(.systemBackground))
+                                        .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
+                                }
+                            }
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(Capsule().fill(Color(.systemGray6)))
     }
 }
 

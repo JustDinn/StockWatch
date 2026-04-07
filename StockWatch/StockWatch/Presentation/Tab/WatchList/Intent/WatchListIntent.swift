@@ -49,4 +49,8 @@ enum WatchListIntent {
     case removeFavoriteWithUndo(ticker: String)
     /// 토스트 "되돌리기" 탭 → 관심 목록 복원
     case undoRemoveFavorite
+    /// 정렬 기준 토글 (같은 기준: asc→desc→none, 다른 기준: asc)
+    case toggleSort(WatchListSortCriteria)
+    /// 시장 필터 선택 (전체/국내주식/해외주식)
+    case selectMarketFilter(WatchListMarketFilter)
 }

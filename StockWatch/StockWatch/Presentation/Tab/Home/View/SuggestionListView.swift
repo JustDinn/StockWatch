@@ -42,15 +42,15 @@ struct SuggestionListView: View {
     private var emptyView: some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.magnifyingglass")
-                .font(.system(size: 48))
+                .font(.pretendard(size: 48))
                 .foregroundStyle(.secondary)
 
             Text("검색 결과가 없습니다")
-                .font(.headline)
+                .font(.pretendardHeadline)
                 .foregroundStyle(.secondary)
 
             Text("종목명 또는 티커로 검색해주세요")
-                .font(.subheadline)
+                .font(.pretendardSubheadline)
                 .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -66,12 +66,11 @@ private struct SuggestionRow: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(result.description)
-                    .font(.headline)
-                    .fontWeight(.bold)
+                    .font(.pretendardBold(size: 17))
                     .lineLimit(1)
 
                 Text(result.displayTicker)
-                    .font(.subheadline)
+                    .font(.pretendardSubheadline)
                     .foregroundStyle(.secondary)
             }
 

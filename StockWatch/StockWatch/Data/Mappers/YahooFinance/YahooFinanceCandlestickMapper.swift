@@ -7,7 +7,7 @@ import Foundation
 
 final class YahooFinanceCandlestickMapper {
 
-    func map(dto: YahooFinanceCandlestickDTO, ticker: String) -> CandlestickData {
+    func map(dto: YahooFinanceCandlestickDTO, ticker: String, interval: String = "1d") -> CandlestickData {
         guard
             let result = dto.chart.result?.first,
             let timestamps = result.timestamp,
@@ -32,7 +32,7 @@ final class YahooFinanceCandlestickMapper {
 
             let volume = (i < volumes.count ? volumes[i] : nil) ?? 0.0
             let rawDate = Date(timeIntervalSince1970: timestamps[i])
-            let timestamp = normalizeToNYSEMidnight(rawDate)
+            let timestamp = normalizeTimestamp(rawDate, interval: interval)
 
             return Candle(
                 timestamp: timestamp,
@@ -51,10 +51,26 @@ final class YahooFinanceCandlestickMapper {
         return CandlestickData(ticker: ticker, candles: sortedCandles)
     }
 
-    private func normalizeToNYSEMidnight(_ date: Date) -> Date {
+    private func normalizeTimestamp(_ date: Date, interval: String) -> Date {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "America/New_York")!
-        let components = calendar.dateComponents([.year, .month, .day], from: date)
-        return calendar.date(from: components) ?? date
+
+        switch interval {
+        case "1wk":
+            // 해당 주의 월요일 자정으로 정규화 (weekday: 1=Sun, 2=Mon, ..., 7=Sat)
+            let weekday = calendar.component(.weekday, from: date)
+            let daysToMonday = weekday == 1 ? -6 : -(weekday - 2)
+            let monday = calendar.date(byAdding: .day, value: daysToMonday, to: date) ?? date
+            let components = calendar.dateComponents([.year, .month, .day], from: monday)
+            return calendar.date(from: components) ?? date
+        case "1mo", "3mo":
+            // 해당 달의 1일 자정으로 정규화
+            let components = calendar.dateComponents([.year, .month], from: date)
+            return calendar.date(from: components) ?? date
+        default:
+            // "1d": 해당 날짜의 자정으로 정규화 (기존 동작)
+            let components = calendar.dateComponents([.year, .month, .day], from: date)
+            return calendar.date(from: components) ?? date
+        }
     }
 }

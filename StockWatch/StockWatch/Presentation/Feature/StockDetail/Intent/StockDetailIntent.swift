@@ -21,10 +21,16 @@ enum StockDetailIntent {
     case dismissToast
     /// 전략 적용 화면으로 이동
     case navigateToApplyStrategy
+    /// 기술적 지표 설정 화면으로 이동
+    case navigateToIndicatorSettings
     /// 봉 주기 선택
     case selectPeriod(ChartPeriod)
     /// 차트 좌측 끝 도달 시 과거 데이터 로드
     case loadOlderCandles
     /// 과거 캔들 차트 주입 완료 후 pending 초기화
     case clearPendingOlderCandles
+    /// 기술적 지표 설정 리로드
+    case reloadIndicatorSettings
+    /// 차트 상단 지표 라벨 펼침/접힘 토글
+    case toggleIndicatorLabelExpanded
 }

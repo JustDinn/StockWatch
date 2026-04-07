@@ -17,6 +17,7 @@ struct FilledSearchBar: View {
                 .foregroundStyle(.secondary)
 
             TextField(placeholder, text: $text)
+                .font(.pretendardSubheadline)
                 .autocorrectionDisabled(true)
                 .textInputAutocapitalization(.never)
                 .onSubmit {

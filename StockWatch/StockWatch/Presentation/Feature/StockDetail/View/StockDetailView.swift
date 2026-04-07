@@ -61,10 +61,10 @@ private struct StockDetailContentView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 6) {
                                 Text(state.companyName)
-                                    .font(.subheadline.bold())
+                                    .font(.pretendardBold(size: 15))
 
                                 Text(state.ticker)
-                                    .font(.subheadline.bold())
+                                    .font(.pretendardBold(size: 15))
                                     .foregroundStyle(.secondary)
 
                                 Button {
@@ -78,10 +78,10 @@ private struct StockDetailContentView: View {
                             // 가격 정보
                             HStack(spacing: 8) {
                                 Text(state.formattedPrice)
-                                    .font(.title2.bold())
+                                    .font(.pretendardTitle2)
 
                                 Text(state.formattedChangePercent)
-                                    .font(.subheadline)
+                                    .font(.pretendardSubheadline)
                                     .foregroundStyle(state.isPositiveChange ? Color(hex: upColorHex) : Color(hex: downColorHex))
                             }
                         }
@@ -94,6 +94,15 @@ private struct StockDetailContentView: View {
                         LightweightChartView(
                             candles: data.candles,
                             olderCandles: state.pendingOlderCandles,
+                            maCalculationCandles: state.maCalculationCandles,
+                            maConfiguration: state.maConfiguration,
+                            isMAEnabled: state.isMAEnabled,
+                            emaConfiguration: state.emaConfiguration,
+                            isEMAEnabled: state.isEMAEnabled,
+                            isVolumeEnabled: state.isVolumeEnabled,
+                            volumeMAConfiguration: state.volumeMAConfiguration,
+                            isRSIEnabled: state.isRSIEnabled,
+                            rsiConfiguration: state.rsiConfiguration,
                             onReachedLeftEdge: { store.action(.loadOlderCandles) },
                             onOlderDataInjected: { store.action(.clearPendingOlderCandles) }
                         )
@@ -105,6 +114,13 @@ private struct StockDetailContentView: View {
                                     .fill(.ultraThinMaterial)
                                 ProgressView()
                             }
+                        }
+                        .overlay(alignment: .topLeading) {
+                            ChartIndicatorLabelView(
+                                labels: state.upperIndicatorLabels,
+                                isExpanded: state.isIndicatorLabelExpanded,
+                                onToggle: { store.action(.toggleIndicatorLabelExpanded) }
+                            )
                         }
                     } else if state.isChartLoading {
                         RoundedRectangle(cornerRadius: 12)
@@ -132,8 +148,26 @@ private struct StockDetailContentView: View {
             }
          }
          .navigationBarTitleDisplayMode(.inline)
+         .toolbar {
+             ToolbarItem(placement: .navigationBarTrailing) {
+                 Button {
+                     store.action(.navigateToIndicatorSettings)
+                 } label: {
+                     Image(systemName: "gearshape")
+                 }
+             }
+         }
          .navigationDestination(isPresented: store.isShowingApplyStrategyBinding) {
              StrategyView(ticker: store.state.ticker)
+         }
+         .navigationDestination(isPresented: store.isShowingIndicatorSettingsBinding) {
+             IndicatorSettingsView()
+         }
+         .onChange(of: store.state.isShowingIndicatorSettings) { _, newValue in
+             if !newValue {
+                 // IndicatorSettingsView가 dismiss되면 설정 리로드
+                 store.action(.reloadIndicatorSettings)
+             }
          }
          .task {
              store.action(.loadDetail)
@@ -194,9 +228,7 @@ private struct StockDetailContentView: View {
                     store.action(.selectPeriod(period))
                 } label: {
                     Text(period.rawValue)
-                        .font(.footnote.weight(
-                            state.selectedPeriod == period ? .bold : .regular
-                        ))
+                        .font(state.selectedPeriod == period ? .pretendardBold(size: 13) : .pretendardFootnote)
                         .foregroundStyle(
                             state.selectedPeriod == period
                                 ? Color.primary
@@ -244,7 +276,7 @@ private struct StockDetailContentView: View {
             .frame(width: 48, height: 48)
             .overlay(
                 Text(state.initials)
-                    .font(.title2.bold())
+                    .font(.pretendardTitle2)
                     .foregroundStyle(.blue)
             )
     }
