@@ -146,7 +146,7 @@ export async function sendFcm(
         ticker,
         strategyId,
         signal,
-        strategyName: `${strategyDisplayName(strategyId)} ${signalLabel} 신호`,
+        strategyName: `${ticker} ${signalLabel} 신호 ${signal === "buy" ? "📈" : "📉"}`,
         body,
         logoURL: logoURL ?? "",
       },

@@ -178,11 +178,11 @@ private extension AppDelegate {
         let aps = userInfo["aps"] as? [String: Any]
         let alert = aps?["alert"] as? [String: Any]
 
-        let strategyName = userInfo["strategyName"] as? String
-            ?? (alert?["title"] as? String)
+        let strategyName = (alert?["title"] as? String)
+            ?? (userInfo["strategyName"] as? String)
             ?? "알림"
-        let body = userInfo["body"] as? String
-            ?? (alert?["body"] as? String)
+        let body = (alert?["body"] as? String)
+            ?? (userInfo["body"] as? String)
             ?? ""
         let logoURL = userInfo["logoURL"] as? String ?? ""
 
