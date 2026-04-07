@@ -437,14 +437,14 @@ describe("buildNotificationBody - SMA", () => {
     const body = buildNotificationBody("sma_cross", "buy", {
       type: "sma", shortPeriod: 20, longPeriod: 50,
     });
-    expect(body).toBe("SMA 20/50 골든 크로스 — 매수 신호");
+    expect(body).toBe("이동평균선 20/50 골든 크로스");
   });
 
   test("SMA sell: 데드 크로스 메시지에 단기/장기 기간이 포함된다", () => {
     const body = buildNotificationBody("sma_cross", "sell", {
       type: "sma", shortPeriod: 20, longPeriod: 50,
     });
-    expect(body).toBe("SMA 20/50 데드 크로스 — 매도 신호");
+    expect(body).toBe("이동평균선 20/50 데드 크로스");
   });
 });
 
@@ -453,14 +453,14 @@ describe("buildNotificationBody - EMA", () => {
     const body = buildNotificationBody("ema_cross", "buy", {
       type: "ema", shortPeriod: 12, longPeriod: 26,
     });
-    expect(body).toBe("EMA 12/26 골든 크로스 — 매수 신호");
+    expect(body).toBe("지수이동평균선 12/26 골든 크로스");
   });
 
   test("EMA sell: 데드 크로스 메시지에 단기/장기 기간이 포함된다", () => {
     const body = buildNotificationBody("ema_cross", "sell", {
       type: "ema", shortPeriod: 12, longPeriod: 26,
     });
-    expect(body).toBe("EMA 12/26 데드 크로스 — 매도 신호");
+    expect(body).toBe("지수이동평균선 12/26 데드 크로스");
   });
 });
 
@@ -483,7 +483,7 @@ describe("FCM 발송 시 알림 body에 조건값이 포함된다", () => {
     await evaluateAndNotify(cond);
 
     const payload = mockSend.mock.calls[0][0];
-    expect(payload.notification.body).toBe("SMA 5/20 골든 크로스 — 매수 신호");
+    expect(payload.notification.body).toBe("이동평균선 5/20 골든 크로스");
   });
 });
 

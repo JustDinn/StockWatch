@@ -138,7 +138,7 @@ export async function sendFcm(
     const messageId = await getMessaging().send({
       token: fcmToken,
       notification: {
-        title: `${ticker} ${signalLabel} 신호`,
+        title: `${ticker} ${signalLabel} 신호 ${signal === "buy" ? "📈" : "📉"}`,
         body,
       },
       data: {
@@ -181,25 +181,25 @@ export function buildNotificationBody(
       const period = params.period ?? 14;
       if (signal === "buy") {
         const threshold = params.oversoldThreshold ?? 30;
-        return `RSI(${period}) 과매도 구간(${threshold} 이하) 진입 — 매수 신호`;
+        return `RSI(${period}) 과매도 구간(${threshold} 이하) 진입`;
       } else {
         const threshold = params.overboughtThreshold ?? 70;
-        return `RSI(${period}) 과매수 구간(${threshold} 이상) 진입 — 매도 신호`;
+        return `RSI(${period}) 과매수 구간(${threshold} 이상) 진입`;
       }
     }
     case "sma": {
       const s = params.shortPeriod ?? 20;
       const l = params.longPeriod ?? 50;
       return signal === "buy"
-        ? `SMA ${s}/${l} 골든 크로스 — 매수 신호`
-        : `SMA ${s}/${l} 데드 크로스 — 매도 신호`;
+        ? `이동평균선 ${s}/${l} 골든 크로스`
+        : `이동평균선 ${s}/${l} 데드 크로스`;
     }
     case "ema": {
       const s = params.shortPeriod ?? 12;
       const l = params.longPeriod ?? 26;
       return signal === "buy"
-        ? `EMA ${s}/${l} 골든 크로스 — 매수 신호`
-        : `EMA ${s}/${l} 데드 크로스 — 매도 신호`;
+        ? `지수이동평균선 ${s}/${l} 골든 크로스`
+        : `지수이동평균선 ${s}/${l} 데드 크로스`;
     }
   }
 }
