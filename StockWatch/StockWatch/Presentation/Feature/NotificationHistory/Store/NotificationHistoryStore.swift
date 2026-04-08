@@ -16,6 +16,7 @@ final class NotificationHistoryStore: ObservableObject {
 
     private let fetchUseCase: FetchNotificationHistoryUseCaseProtocol
     private let markAsReadUseCase: MarkNotificationAsReadUseCaseProtocol
+    private let fetchLogoUseCase: FetchStockLogoUseCaseProtocol
     private let notificationCenterService: NotificationCenterServiceProtocol
     private let badgeService: BadgeServiceProtocol
 
@@ -26,12 +27,14 @@ final class NotificationHistoryStore: ObservableObject {
     init(
         fetchUseCase: FetchNotificationHistoryUseCaseProtocol,
         markAsReadUseCase: MarkNotificationAsReadUseCaseProtocol,
+        fetchLogoUseCase: FetchStockLogoUseCaseProtocol,
         notificationCenterService: NotificationCenterServiceProtocol = NotificationCenterService(),
         badgeService: BadgeServiceProtocol = LiveBadgeService(),
         state: NotificationHistoryState = NotificationHistoryState()
     ) {
         self.fetchUseCase = fetchUseCase
         self.markAsReadUseCase = markAsReadUseCase
+        self.fetchLogoUseCase = fetchLogoUseCase
         self.notificationCenterService = notificationCenterService
         self.badgeService = badgeService
         self.state = state
@@ -47,6 +50,8 @@ final class NotificationHistoryStore: ObservableObject {
             handleSelectNotification(item)
         case .markAsRead(let id):
             handleMarkAsRead(id: id)
+        case .logoURLFetched(let ticker, let url):
+            state.logoURLs[ticker] = url
         }
     }
 
@@ -90,9 +95,22 @@ private extension NotificationHistoryStore {
 
     func loadNotifications() {
         do {
-            state.notifications = try fetchUseCase.execute()
+            let items = try fetchUseCase.execute()
+            state.notifications = items
+            fetchLogos(for: items)
         } catch {
             state.notifications = []
+        }
+    }
+
+    func fetchLogos(for items: [NotificationItem]) {
+        let tickers = Set(items.map { $0.ticker })
+        for ticker in tickers {
+            Task {
+                guard let url = try? await fetchLogoUseCase.execute(ticker: ticker),
+                      !url.isEmpty else { return }
+                action(.logoURLFetched(ticker: ticker, url: url))
+            }
         }
     }
 

@@ -70,7 +70,11 @@ extension AppDelegate: MessagingDelegate {
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         guard let token = fcmToken else { return }
         FCMTokenManager.shared.save(token: token)
+        
+        
+        print("<< fcmToken: \(token)")
 
+        
         Task {
             guard let uid = Auth.auth().currentUser?.uid else { return }
             try? await AlertRegistrationRepository().updateFCMToken(userId: uid, newToken: token)
