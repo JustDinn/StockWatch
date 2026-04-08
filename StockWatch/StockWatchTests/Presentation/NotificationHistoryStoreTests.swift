@@ -50,6 +50,16 @@ final class MockBadgeService: BadgeServiceProtocol {
     }
 }
 
+final class MockFetchStockLogoUseCase: FetchStockLogoUseCaseProtocol {
+    var stubbedURLs: [String: String] = [:]
+    var executeCallCount = 0
+
+    func execute(ticker: String) async throws -> String {
+        executeCallCount += 1
+        return stubbedURLs[ticker] ?? ""
+    }
+}
+
 // MARK: - Tests
 
 @MainActor
@@ -58,6 +68,7 @@ final class NotificationHistoryStoreTests: XCTestCase {
     private var sut: NotificationHistoryStore!
     private var mockFetchUseCase: MockFetchNotificationHistoryUseCase!
     private var mockMarkAsReadUseCase: MockMarkNotificationAsReadUseCase!
+    private var mockFetchLogoUseCase: MockFetchStockLogoUseCase!
     private var mockNotificationCenterService: MockNotificationCenterService!
     private var mockBadgeService: MockBadgeService!
 
@@ -65,11 +76,13 @@ final class NotificationHistoryStoreTests: XCTestCase {
         super.setUp()
         mockFetchUseCase = MockFetchNotificationHistoryUseCase()
         mockMarkAsReadUseCase = MockMarkNotificationAsReadUseCase()
+        mockFetchLogoUseCase = MockFetchStockLogoUseCase()
         mockNotificationCenterService = MockNotificationCenterService()
         mockBadgeService = MockBadgeService()
         sut = NotificationHistoryStore(
             fetchUseCase: mockFetchUseCase,
             markAsReadUseCase: mockMarkAsReadUseCase,
+            fetchLogoUseCase: mockFetchLogoUseCase,
             notificationCenterService: mockNotificationCenterService,
             badgeService: mockBadgeService
         )
@@ -79,6 +92,7 @@ final class NotificationHistoryStoreTests: XCTestCase {
         sut = nil
         mockFetchUseCase = nil
         mockMarkAsReadUseCase = nil
+        mockFetchLogoUseCase = nil
         mockNotificationCenterService = nil
         mockBadgeService = nil
         super.tearDown()
@@ -133,6 +147,50 @@ final class NotificationHistoryStoreTests: XCTestCase {
         // Assert
         XCTAssertEqual(mockNotificationCenterService.removeCallCount, 1)
         XCTAssertEqual(mockNotificationCenterService.removeCalledWithId, "cond1_AAPL_28000000")
+    }
+
+    // MARK: - fetchLogos
+
+    func test_action_loadNotifications_fetchesLogosForUniqueTickers() async {
+        // Arrange
+        let makeItem = { (id: String, ticker: String) in
+            NotificationItem(id: id, conditionId: id, ticker: ticker, logoURL: "", strategyName: "Test", body: "", receivedAt: Date(), isRead: false)
+        }
+        mockFetchUseCase.stubbedResult = [
+            makeItem("id1", "AAPL"),
+            makeItem("id2", "AAPL"),  // 중복 ticker
+            makeItem("id3", "MSFT")
+        ]
+        mockFetchLogoUseCase.stubbedURLs = ["AAPL": "https://logo/aapl.png", "MSFT": "https://logo/msft.png"]
+
+        // Act
+        sut.action(.loadNotifications)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // Assert: 중복 AAPL은 1회만 fetch → 총 2회
+        XCTAssertEqual(mockFetchLogoUseCase.executeCallCount, 2)
+    }
+
+    func test_action_logoURLFetched_updatesStateLogoURLs() {
+        // Act
+        sut.action(.logoURLFetched(ticker: "AAPL", url: "https://logo/aapl.png"))
+
+        // Assert
+        XCTAssertEqual(sut.state.logoURLs["AAPL"], "https://logo/aapl.png")
+    }
+
+    func test_action_loadNotifications_withEmptyLogoURL_doesNotUpdateLogoURLs() async {
+        // Arrange
+        let item = NotificationItem(id: "id1", conditionId: "id1", ticker: "AAPL", logoURL: "", strategyName: "Test", body: "", receivedAt: Date(), isRead: false)
+        mockFetchUseCase.stubbedResult = [item]
+        mockFetchLogoUseCase.stubbedURLs = [:]  // 빈 URL 반환
+
+        // Act
+        sut.action(.loadNotifications)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // Assert
+        XCTAssertNil(sut.state.logoURLs["AAPL"])
     }
 
     func test_handleMarkAsRead_whenItemIsAlreadyRead_doesNotCallRemoveDeliveredNotification() async {

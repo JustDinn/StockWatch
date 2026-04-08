@@ -35,4 +35,6 @@ struct NotificationHistoryState: Equatable {
     var notifications: [NotificationItem] = []
     /// 선택된 알림 항목 (nil이면 상세 화면 미표시)
     var selectedNotification: NotificationItem? = nil
+    /// ticker → 로고 URL 매핑 (로드 후 비동기로 채워짐)
+    var logoURLs: [String: String] = [:]
 }

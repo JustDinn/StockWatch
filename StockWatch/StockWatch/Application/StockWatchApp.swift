@@ -70,7 +70,7 @@ extension AppDelegate: MessagingDelegate {
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         guard let token = fcmToken else { return }
         FCMTokenManager.shared.save(token: token)
-
+        
         Task {
             guard let uid = Auth.auth().currentUser?.uid else { return }
             try? await AlertRegistrationRepository().updateFCMToken(userId: uid, newToken: token)
@@ -178,11 +178,14 @@ private extension AppDelegate {
         let aps = userInfo["aps"] as? [String: Any]
         let alert = aps?["alert"] as? [String: Any]
 
-        let strategyName = userInfo["strategyName"] as? String
-            ?? (alert?["title"] as? String)
+        let rawTitle = (alert?["title"] as? String)
+            ?? (userInfo["strategyName"] as? String)
             ?? "알림"
-        let body = userInfo["body"] as? String
-            ?? (alert?["body"] as? String)
+        let displayName = KoreanStockDictionary.shared.entries
+            .first(where: { $0.ticker == ticker })?.nameKo ?? ticker
+        let strategyName = rawTitle.replacingOccurrences(of: ticker, with: displayName)
+        let body = (alert?["body"] as? String)
+            ?? (userInfo["body"] as? String)
             ?? ""
         let logoURL = userInfo["logoURL"] as? String ?? ""
 

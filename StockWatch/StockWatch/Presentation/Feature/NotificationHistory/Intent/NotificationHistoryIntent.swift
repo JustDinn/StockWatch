@@ -11,4 +11,6 @@ enum NotificationHistoryIntent {
     case selectNotification(NotificationItem)
     /// 개별 알림 읽음 처리 (알림센터 탭 등 외부에서 직접 호출 시)
     case markAsRead(id: String)
+    /// 로고 URL fetch 완료 → State에 저장
+    case logoURLFetched(ticker: String, url: String)
 }

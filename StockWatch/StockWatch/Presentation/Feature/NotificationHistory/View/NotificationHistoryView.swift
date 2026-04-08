@@ -28,7 +28,8 @@ private struct NotificationHistoryContentView: View {
         let repository = NotificationHistoryRepository(modelContext: modelContext)
         _store = StateObject(wrappedValue: NotificationHistoryStore(
             fetchUseCase: FetchNotificationHistoryUseCase(repository: repository),
-            markAsReadUseCase: MarkNotificationAsReadUseCase(repository: repository)
+            markAsReadUseCase: MarkNotificationAsReadUseCase(repository: repository),
+            fetchLogoUseCase: FetchStockLogoUseCase(repository: StockLogoRepository())
         ))
     }
 
@@ -120,7 +121,7 @@ private struct NotificationHistoryContentView: View {
                     .opacity(item.isRead ? 0 : 1)
 
                 // 종목 로고 아이콘
-                logoIcon(ticker: item.ticker, logoURL: item.logoURL)
+                logoIcon(ticker: item.ticker, logoURL: store.state.logoURLs[item.ticker] ?? item.logoURL)
 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
@@ -135,7 +136,7 @@ private struct NotificationHistoryContentView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    Text("\(item.ticker) · \(item.body)")
+                    Text("\(item.body)")
                         .font(.pretendardSubheadline)
                         .foregroundStyle(.secondary)
                 }
