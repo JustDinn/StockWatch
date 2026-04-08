@@ -432,6 +432,32 @@ describe("buildNotificationBody - RSI", () => {
   });
 });
 
+// MARK: - 한글 기업명 변환 검증
+
+import { getKoreanName } from "./alertEvaluator";
+
+describe("getKoreanName", () => {
+  test("AAPL → 애플", () => {
+    expect(getKoreanName("AAPL")).toBe("애플");
+  });
+
+  test("NVDA → 엔비디아", () => {
+    expect(getKoreanName("NVDA")).toBe("엔비디아");
+  });
+
+  test("005930.KS → 삼성전자", () => {
+    expect(getKoreanName("005930.KS")).toBe("삼성전자");
+  });
+
+  test("^KS11 → 코스피", () => {
+    expect(getKoreanName("^KS11")).toBe("코스피");
+  });
+
+  test("한글명이 없는 티커는 ticker 그대로 반환", () => {
+    expect(getKoreanName("UNKNOWNTICKER")).toBe("UNKNOWNTICKER");
+  });
+});
+
 describe("buildNotificationBody - SMA", () => {
   test("SMA buy: 골든 크로스 메시지에 단기/장기 기간이 포함된다", () => {
     const body = buildNotificationBody("sma_cross", "buy", {
@@ -468,6 +494,58 @@ describe("buildNotificationBody - params 없는 fallback", () => {
   test("params가 없으면 기존 포맷 메시지를 반환한다", () => {
     const body = buildNotificationBody("rsi", "buy", undefined);
     expect(body).toBe("RSI 조건이 충족되었습니다");
+  });
+});
+
+// MARK: - FCM payload 한글 기업명 통합 검증
+// getKoreanName()이 실제 FCM 발송 경로(sendFcm)에서 올바르게 동작하는지 증명
+
+describe("FCM payload 한글 기업명 통합 검증", () => {
+  test("AAPL 데드크로스 시 FCM notification.title과 data.strategyName에 '애플'이 포함된다", async () => {
+    // Arrange: AAPL 데드크로스 캔들 데이터
+    const { closes, timestamps } = makeCandlesForDeadCross(10, 100);
+    mockFetchCandles.mockResolvedValue({ closes, timestamps });
+
+    const condition = makeCondition({
+      ticker: "AAPL",
+      strategyId: "sma_cross",
+      parameters: JSON.stringify({ type: "sma", shortPeriod: 10, longPeriod: 100 }),
+    });
+
+    // Act
+    await evaluateAndNotify(condition);
+
+    // Assert: FCM이 발송됨
+    expect(mockSend).toHaveBeenCalledTimes(1);
+    const payload = mockSend.mock.calls[0][0];
+
+    // notification.title에 티커 대신 한글명이 포함된다
+    expect(payload.notification.title).toContain("애플");
+    expect(payload.notification.title).not.toContain("AAPL");
+
+    // data.strategyName에도 한글명이 포함된다
+    expect(payload.data.strategyName).toContain("애플");
+    expect(payload.data.strategyName).not.toContain("AAPL");
+  });
+
+  test("한글명이 없는 ticker는 ticker 그대로 FCM notification.title에 포함된다", async () => {
+    // Arrange: 알 수 없는 티커로 데드크로스
+    const { closes, timestamps } = makeCandlesForDeadCross(10, 100);
+    mockFetchCandles.mockResolvedValue({ closes, timestamps });
+
+    const condition = makeCondition({
+      ticker: "UNKNOWNTICKER",
+      strategyId: "sma_cross",
+      parameters: JSON.stringify({ type: "sma", shortPeriod: 10, longPeriod: 100 }),
+    });
+
+    // Act
+    await evaluateAndNotify(condition);
+
+    // Assert: ticker 그대로 title에 포함된다
+    expect(mockSend).toHaveBeenCalledTimes(1);
+    const payload = mockSend.mock.calls[0][0];
+    expect(payload.notification.title).toContain("UNKNOWNTICKER");
   });
 });
 

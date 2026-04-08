@@ -5,6 +5,145 @@ import { evaluateEma, EmaParams } from "./evaluators/emaEvaluator";
 import { evaluateRsi, RsiParams } from "./evaluators/rsiEvaluator";
 import { fetchCandles, CandleData } from "./yahooFinance";
 
+// MARK: - Korean Stock Name Map
+
+const KOREAN_STOCK_NAMES: Record<string, string> = {
+  // 미국 빅테크
+  "AAPL": "애플",
+  "MSFT": "마이크로소프트",
+  "GOOGL": "알파벳",
+  "GOOG": "알파벳",
+  "AMZN": "아마존",
+  "NVDA": "엔비디아",
+  "META": "메타",
+  "TSLA": "테슬라",
+  "AVGO": "브로드컴",
+  "ORCL": "오라클",
+  // 미국 반도체/하드웨어
+  "AMD": "AMD",
+  "INTC": "인텔",
+  "QCOM": "퀄컴",
+  "TXN": "텍사스 인스트루먼트",
+  "MU": "마이크론",
+  "AMAT": "어플라이드 머티리얼즈",
+  "LRCX": "램 리서치",
+  "KLAC": "KLA",
+  "MRVL": "마벨 테크놀로지",
+  "ARM": "ARM",
+  // 미국 소프트웨어/인터넷
+  "NFLX": "넷플릭스",
+  "CRM": "세일즈포스",
+  "ADBE": "어도비",
+  "NOW": "서비스나우",
+  "SNOW": "스노우플레이크",
+  "PLTR": "팔란티어",
+  "UBER": "우버",
+  "ABNB": "에어비앤비",
+  "SHOP": "쇼피파이",
+  "SPOT": "스포티파이",
+  "COIN": "코인베이스",
+  "RBLX": "로블록스",
+  "SNAP": "스냅",
+  "PINS": "핀터레스트",
+  // 미국 금융
+  "JPM": "JP모건",
+  "BAC": "뱅크오브아메리카",
+  "GS": "골드만삭스",
+  "MS": "모건스탠리",
+  "WFC": "웰스파고",
+  "C": "씨티그룹",
+  "BRK-B": "버크셔해서웨이",
+  "V": "비자",
+  "MA": "마스터카드",
+  "PYPL": "페이팔",
+  "SQ": "블록",
+  // 미국 헬스케어/바이오
+  "JNJ": "존슨앤존슨",
+  "LLY": "일라이릴리",
+  "UNH": "유나이티드헬스",
+  "MRK": "머크",
+  "PFE": "화이자",
+  "ABBV": "애브비",
+  "TMO": "써모피셔",
+  "AMGN": "암젠",
+  // 미국 소비재/유통
+  "WMT": "월마트",
+  "COST": "코스트코",
+  "TGT": "타깃",
+  "HD": "홈디포",
+  "NKE": "나이키",
+  "MCD": "맥도날드",
+  "SBUX": "스타벅스",
+  "DIS": "디즈니",
+  // 미국 에너지/산업
+  "XOM": "엑슨모빌",
+  "CVX": "쉐브론",
+  "BA": "보잉",
+  "CAT": "캐터필러",
+  "GE": "GE",
+  "MMM": "3M",
+  // 미국 통신
+  "T": "AT&T",
+  "VZ": "버라이즌",
+  // 지수/ETF
+  "^GSPC": "S&P500",
+  "^IXIC": "나스닥",
+  "^DJI": "다우존스",
+  "^VIX": "VIX",
+  "^KS11": "코스피",
+  "^KQ11": "코스닥",
+  "SPY": "SPY",
+  "QQQ": "QQQ",
+  "TQQQ": "TQQQ",
+  "SQQQ": "SQQQ",
+  // 한국 주요 종목
+  "005930.KS": "삼성전자",
+  "000660.KS": "SK하이닉스",
+  "005380.KS": "현대차",
+  "000270.KS": "기아",
+  "051910.KS": "LG화학",
+  "006400.KS": "삼성SDI",
+  "035420.KS": "NAVER",
+  "035720.KS": "카카오",
+  "068270.KS": "셀트리온",
+  "207940.KS": "삼성바이오로직스",
+  "005490.KS": "POSCO홀딩스",
+  "003550.KS": "LG",
+  "012330.KS": "현대모비스",
+  "028260.KS": "삼성물산",
+  "066570.KS": "LG전자",
+  "009540.KS": "HD한국조선해양",
+  "015760.KS": "한국전력",
+  "011170.KS": "롯데케미칼",
+  "032830.KS": "삼성생명",
+  "055550.KS": "신한지주",
+  "105560.KS": "KB금융",
+  "086790.KS": "하나금융지주",
+  "316140.KS": "우리금융지주",
+  "003490.KS": "대한항공",
+  "000810.KS": "삼성화재",
+  "096770.KS": "SK이노베이션",
+  "017670.KS": "SK텔레콤",
+  "030200.KS": "KT",
+  "018260.KS": "삼성에스디에스",
+  "011200.KS": "HMM",
+  // 코스닥 주요 종목
+  "247540.KQ": "에코프로비엠",
+  "086520.KQ": "에코프로",
+  "373220.KQ": "LG에너지솔루션",
+  "196170.KQ": "알테오젠",
+  "263750.KQ": "펄어비스",
+  "293490.KQ": "카카오게임즈",
+  "112040.KQ": "위메이드",
+  "035900.KQ": "JYP엔터",
+  "041510.KQ": "에스엠",
+  "352820.KQ": "하이브",
+};
+
+export function getKoreanName(ticker: string): string {
+  return KOREAN_STOCK_NAMES[ticker] ?? ticker;
+}
+
 // MARK: - Types
 
 export interface AlertCondition {
@@ -138,7 +277,7 @@ export async function sendFcm(
     const messageId = await getMessaging().send({
       token: fcmToken,
       notification: {
-        title: `${ticker} ${signalLabel} 신호 ${signal === "buy" ? "📈" : "📉"}`,
+        title: `${getKoreanName(ticker)} ${signalLabel} 신호 ${signal === "buy" ? "📈" : "📉"}`,
         body,
       },
       data: {
@@ -146,7 +285,7 @@ export async function sendFcm(
         ticker,
         strategyId,
         signal,
-        strategyName: `${ticker} ${signalLabel} 신호 ${signal === "buy" ? "📈" : "📉"}`,
+        strategyName: `${getKoreanName(ticker)} ${signalLabel} 신호 ${signal === "buy" ? "📈" : "📉"}`,
         body,
         logoURL: logoURL ?? "",
       },
