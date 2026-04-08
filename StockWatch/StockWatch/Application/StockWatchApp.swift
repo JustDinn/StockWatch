@@ -73,6 +73,9 @@ extension AppDelegate: MessagingDelegate {
         
         
         print("<< fcmToken: \(token)")
+        
+        
+        
 
         
         Task {
@@ -182,9 +185,12 @@ private extension AppDelegate {
         let aps = userInfo["aps"] as? [String: Any]
         let alert = aps?["alert"] as? [String: Any]
 
-        let strategyName = (alert?["title"] as? String)
+        let rawTitle = (alert?["title"] as? String)
             ?? (userInfo["strategyName"] as? String)
             ?? "알림"
+        let displayName = KoreanStockDictionary.shared.entries
+            .first(where: { $0.ticker == ticker })?.nameKo ?? ticker
+        let strategyName = rawTitle.replacingOccurrences(of: ticker, with: displayName)
         let body = (alert?["body"] as? String)
             ?? (userInfo["body"] as? String)
             ?? ""
