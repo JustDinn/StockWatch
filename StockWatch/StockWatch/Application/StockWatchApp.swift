@@ -12,6 +12,7 @@ import FirebaseCore
 import FirebaseMessaging
 import UserNotifications
 import PretendardKit
+import IQKeyboardManagerSwift
 
 // MARK: - AppDelegate
 
@@ -34,7 +35,11 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     ) -> Bool {
         FirebaseApp.configure()
         PretendardKit.register()
-
+        
+        IQKeyboardManager.shared.isEnabled = true
+        IQKeyboardManager.shared.resignOnTouchOutside = true
+        IQKeyboardManager.shared.keyboardDistance = 20
+        
         Messaging.messaging().delegate = self
         UNUserNotificationCenter.current().delegate = self
 
