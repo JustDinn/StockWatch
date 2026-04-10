@@ -24,6 +24,8 @@ final class WatchListStore: ObservableObject {
     private let fetchSparklineUseCase: FetchSparklineUseCaseProtocol
     private let fetchExchangeRateUseCase: FetchExchangeRateUseCaseProtocol
     private var toastDismissTask: Task<Void, Never>?
+    private var networkMonitorTask: Task<Void, Never>?
+    private let networkMonitor: NetworkMonitorProtocol
 
     // MARK: - Init
 
@@ -38,6 +40,7 @@ final class WatchListStore: ObservableObject {
         updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCaseProtocol,
         fetchSparklineUseCase: FetchSparklineUseCaseProtocol,
         fetchExchangeRateUseCase: FetchExchangeRateUseCaseProtocol,
+        networkMonitor: NetworkMonitorProtocol = NetworkMonitor.shared,
         state: WatchListState = WatchListState()
     ) {
         self.state = state
@@ -51,6 +54,12 @@ final class WatchListStore: ObservableObject {
         self.updateFavoriteGroupsUseCase = updateFavoriteGroupsUseCase
         self.fetchSparklineUseCase = fetchSparklineUseCase
         self.fetchExchangeRateUseCase = fetchExchangeRateUseCase
+        self.networkMonitor = networkMonitor
+        listenNetworkRecovery()
+    }
+
+    deinit {
+        networkMonitorTask?.cancel()
     }
 
     // MARK: - Action
@@ -498,6 +507,15 @@ private extension WatchListStore {
             state.isShowingToast = false
             state.toastMessage = nil
             state.undoInfo = nil
+        }
+    }
+
+    private func listenNetworkRecovery() {
+        networkMonitorTask = Task {
+            for await _ in networkMonitor.makeConnectionRestoredStream() {
+                guard !state.favorites.isEmpty && state.priceData.isEmpty else { return }
+                loadPrices(for: state.favorites.map { $0.ticker })
+            }
         }
     }
 }

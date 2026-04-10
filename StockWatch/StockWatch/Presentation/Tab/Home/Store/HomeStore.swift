@@ -15,6 +15,8 @@ final class HomeStore: ObservableObject {
     @Published private(set) var state: HomeState
     private let tickerUseCase: TickerUseCaseProtocol
     private let checkUnreadUseCase: CheckUnreadNotificationUseCaseProtocol
+    private let networkMonitor: NetworkMonitorProtocol
+    private var networkMonitorTask: Task<Void, Never>?
 
     // MARK: - Init
 
@@ -23,11 +25,18 @@ final class HomeStore: ObservableObject {
             repository: TickerRepository()
         ),
         checkUnreadUseCase: CheckUnreadNotificationUseCaseProtocol,
+        networkMonitor: NetworkMonitorProtocol = NetworkMonitor.shared,
         state: HomeState = HomeState()
     ) {
         self.tickerUseCase = tickerUseCase
         self.checkUnreadUseCase = checkUnreadUseCase
+        self.networkMonitor = networkMonitor
         self.state = state
+        listenNetworkRecovery()
+    }
+
+    deinit {
+        networkMonitorTask?.cancel()
     }
 
     // MARK: - Action
@@ -76,6 +85,17 @@ final class HomeStore: ObservableObject {
 }
 
 extension HomeStore {
+
+    private func listenNetworkRecovery() {
+        networkMonitorTask = Task {
+            for await _ in networkMonitor.makeConnectionRestoredStream() {
+                // 검색 에러 상태이고 검색어가 있는 경우에만 재시도
+                if state.errorMessage != nil, !state.searchQuery.isEmpty {
+                    searchTicker(query: state.searchQuery)
+                }
+            }
+        }
+    }
 
     /// 미읽음 알림 상태 갱신
     private func loadUnreadStatus() {

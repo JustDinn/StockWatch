@@ -18,16 +18,6 @@ final class MockAddStockTickerUseCase: TickerUseCaseProtocol {
     }
 }
 
-final class MockFetchStockLogoUseCase: FetchStockLogoUseCaseProtocol {
-    var stubbedURLs: [String: String] = [:]
-    var stubbedError: Error?
-
-    func execute(ticker: String) async throws -> String {
-        if let error = stubbedError { throw error }
-        return stubbedURLs[ticker] ?? ""
-    }
-}
-
 // MARK: - Tests
 
 @MainActor

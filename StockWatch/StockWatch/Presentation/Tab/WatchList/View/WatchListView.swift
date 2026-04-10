@@ -20,8 +20,9 @@ struct WatchListView: View {
 // MARK: - Content View
 
 private struct WatchListContentView: View {
-    
+
     @StateObject private var store: WatchListStore
+    @EnvironmentObject private var networkMonitor: NetworkMonitor
     @State private var isShowingGroupManageModal = false
     @State private var isShowingAddStock = false
     @State private var isEditingGroups = false
@@ -65,8 +66,13 @@ private struct WatchListContentView: View {
                         )
                         Group {
                             if store.state.isLoading {
-                                ProgressView()
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                VStack {
+                                    ProgressView()
+                                    if !networkMonitor.isConnected {
+                                        OfflineLoadingView()
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
                             } else if store.state.favorites.isEmpty {
                                 emptyView
                             } else {

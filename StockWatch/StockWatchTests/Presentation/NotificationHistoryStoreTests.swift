@@ -52,10 +52,12 @@ final class MockBadgeService: BadgeServiceProtocol {
 
 final class MockFetchStockLogoUseCase: FetchStockLogoUseCaseProtocol {
     var stubbedURLs: [String: String] = [:]
+    var stubbedError: Error?
     var executeCallCount = 0
 
     func execute(ticker: String) async throws -> String {
         executeCallCount += 1
+        if let error = stubbedError { throw error }
         return stubbedURLs[ticker] ?? ""
     }
 }

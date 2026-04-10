@@ -25,6 +25,7 @@ struct StockDetailView: View {
 private struct StockDetailContentView: View {
 
     @StateObject private var store: StockDetailStore
+    @EnvironmentObject private var networkMonitor: NetworkMonitor
     @AppStorage("candle_body_up_color_hex") private var upColorHex: String = "#ef5350"
     @AppStorage("candle_body_down_color_hex") private var downColorHex: String = "#1976d2"
 
@@ -45,13 +46,19 @@ private struct StockDetailContentView: View {
         ZStack {
          Group {
             if state.isLoading {
-                ProgressView()
+                VStack {
+                    ProgressView()
+                    if !networkMonitor.isConnected {
+                        OfflineLoadingView()
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if state.errorMessage != nil && !networkMonitor.isConnected {
+                OfflineLoadingView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let errorMessage = state.errorMessage {
-                Text(errorMessage)
-                    .foregroundStyle(.red)
-                    .multilineTextAlignment(.center)
-                    .padding()
+                NetworkErrorView(message: errorMessage)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 VStack(spacing: 24) {
                     // 로고 + 종목 정보

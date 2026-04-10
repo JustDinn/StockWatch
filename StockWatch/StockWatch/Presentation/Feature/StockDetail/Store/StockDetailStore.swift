@@ -21,7 +21,9 @@ final class StockDetailStore: ObservableObject {
     private let updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCaseProtocol
     private var chartTask: Task<Void, Never>?
     private var toastDismissTask: Task<Void, Never>?
+    private var networkMonitorTask: Task<Void, Never>?
     private let indicatorManager = TechnicalIndicatorSettingsManager.shared
+    private let networkMonitor: NetworkMonitorProtocol
 
     // MARK: - Init
 
@@ -36,7 +38,8 @@ final class StockDetailStore: ObservableObject {
         toggleFavoriteUseCase: ToggleFavoriteUseCaseProtocol,
         checkFavoriteUseCase: CheckFavoriteUseCaseProtocol,
         fetchGroupIdsForTickerUseCase: FetchGroupIdsForTickerUseCaseProtocol,
-        updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCaseProtocol
+        updateFavoriteGroupsUseCase: UpdateFavoriteGroupsUseCaseProtocol,
+        networkMonitor: NetworkMonitorProtocol = NetworkMonitor.shared
     ) {
         self.state = StockDetailState(ticker: ticker)
         self.fetchStockDetailUseCase = fetchStockDetailUseCase
@@ -45,6 +48,12 @@ final class StockDetailStore: ObservableObject {
         self.checkFavoriteUseCase = checkFavoriteUseCase
         self.fetchGroupIdsForTickerUseCase = fetchGroupIdsForTickerUseCase
         self.updateFavoriteGroupsUseCase = updateFavoriteGroupsUseCase
+        self.networkMonitor = networkMonitor
+        listenNetworkRecovery()
+    }
+
+    deinit {
+        networkMonitorTask?.cancel()
     }
 
     // MARK: - Action
@@ -117,6 +126,23 @@ final class StockDetailStore: ObservableObject {
                 if !newValue { self.reloadFavoriteStatus() }
             }
         )
+    }
+}
+
+// MARK: - Network Recovery
+
+extension StockDetailStore {
+
+    private func listenNetworkRecovery() {
+        networkMonitorTask = Task {
+            for await _ in networkMonitor.makeConnectionRestoredStream() {
+                if state.errorMessage != nil { loadDetail() }
+                else if state.chartErrorMessage != nil {
+                    chartTask?.cancel()
+                    chartTask = Task { await reloadChart(period: state.selectedPeriod) }
+                }
+            }
+        }
     }
 }
 
