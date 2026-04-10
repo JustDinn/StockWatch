@@ -52,8 +52,10 @@ final class MockFetchCandlestickUseCase: FetchCandlestickUseCaseProtocol {
 final class MockFetchStockDetailUseCase: FetchStockDetailUseCaseProtocol {
     var stubbedResult: StockDetail?
     var stubbedError: Error?
+    private(set) var executeCallCount = 0
 
     func execute(ticker: String) async throws -> StockDetail {
+        executeCallCount += 1
         if let error = stubbedError { throw error }
         return stubbedResult ?? StockDetail(
             ticker: ticker,

@@ -23,6 +23,7 @@ private struct HomeContentView: View {
 
     @StateObject private var store: HomeStore
     @ObservedObject private var deepLinkManager = DeepLinkManager.shared
+    @EnvironmentObject private var networkMonitor: NetworkMonitor
 
     init(modelContext: ModelContext) {
         let checkUnreadUseCase = CheckUnreadNotificationUseCase(
@@ -43,12 +44,18 @@ private struct HomeContentView: View {
                 .padding(.bottom, 8)
 
                 if store.state.isLoading {
-                    ProgressView()
+                    VStack {
+                        ProgressView()
+                        if !networkMonitor.isConnected {
+                            OfflineLoadingView()
+                        }
+                    }
+                    Spacer()
+                } else if store.state.errorMessage != nil && !networkMonitor.isConnected {
+                    OfflineLoadingView()
                     Spacer()
                 } else if let errorMessage = store.state.errorMessage {
-                    Text(errorMessage)
-                        .foregroundStyle(.red)
-                        .padding()
+                    NetworkErrorView(message: errorMessage)
                     Spacer()
                 } else {
                     SuggestionListView(

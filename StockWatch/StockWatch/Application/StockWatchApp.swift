@@ -252,6 +252,7 @@ struct StockWatchApp: App {
     @State private var isAuthReady = false
     @State private var isVersionCheckDone = false
     @StateObject private var forceUpdateStore = ForceUpdateStore()
+    @StateObject private var networkMonitor = NetworkMonitor.shared
 
     private let sharedContainer = Self.makeModelContainer()
 
@@ -260,6 +261,7 @@ struct StockWatchApp: App {
             ZStack {
                 if isAuthReady && isVersionCheckDone {
                     TabBarView()
+                        .environmentObject(networkMonitor)
                 } else {
                     ProgressView()
                         .task {

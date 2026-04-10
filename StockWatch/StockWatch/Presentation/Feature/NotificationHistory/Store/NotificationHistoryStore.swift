@@ -19,8 +19,10 @@ final class NotificationHistoryStore: ObservableObject {
     private let fetchLogoUseCase: FetchStockLogoUseCaseProtocol
     private let notificationCenterService: NotificationCenterServiceProtocol
     private let badgeService: BadgeServiceProtocol
+    private let networkMonitor: NetworkMonitorProtocol
 
     var lastMarkAsReadTask: Task<Void, Never>?
+    private var networkMonitorTask: Task<Void, Never>?
 
     // MARK: - Init
 
@@ -30,6 +32,7 @@ final class NotificationHistoryStore: ObservableObject {
         fetchLogoUseCase: FetchStockLogoUseCaseProtocol,
         notificationCenterService: NotificationCenterServiceProtocol = NotificationCenterService(),
         badgeService: BadgeServiceProtocol = LiveBadgeService(),
+        networkMonitor: NetworkMonitorProtocol = NetworkMonitor.shared,
         state: NotificationHistoryState = NotificationHistoryState()
     ) {
         self.fetchUseCase = fetchUseCase
@@ -37,7 +40,13 @@ final class NotificationHistoryStore: ObservableObject {
         self.fetchLogoUseCase = fetchLogoUseCase
         self.notificationCenterService = notificationCenterService
         self.badgeService = badgeService
+        self.networkMonitor = networkMonitor
         self.state = state
+        listenNetworkRecovery()
+    }
+
+    deinit {
+        networkMonitorTask?.cancel()
     }
 
     // MARK: - Action
@@ -138,6 +147,15 @@ private extension NotificationHistoryStore {
                         isRead: true
                     )
                 }
+            }
+        }
+    }
+
+    private func listenNetworkRecovery() {
+        networkMonitorTask = Task {
+            for await _ in networkMonitor.makeConnectionRestoredStream() {
+                // 알림 로드가 한 번도 성공하지 않은 경우 재시도
+                if state.notifications.isEmpty { loadNotifications() }
             }
         }
     }
